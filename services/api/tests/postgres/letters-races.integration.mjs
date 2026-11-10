@@ -11,7 +11,8 @@ test('real PostgreSQL letters: member replacement and close serialize against se
   const db = f.database(); const p = await principal(0); const partner = await principal(1);
   const lock = pauseAfterMembers(db); const tasks = []; let replacement;
   try {
-    const command = { coupleId: pairA, membershipEpoch: 1, clientId: randomUUID(), body: 'Synthetic' };
+    const command = { coupleId: pairA, membershipEpoch: 1, clientId: randomUUID(), body: 'Synthetic',
+      releaseAt: new Date(Date.now() + 120000).toISOString(), releaseTimezone: 'UTC' };
     const sending = sendLetter(lock.db, p, command); tasks.push(sending); await lock.entered;
     replacement = await f.domainPool.connect(); await replacement.query('BEGIN');
     let finished = false;
@@ -36,13 +37,16 @@ test('real PostgreSQL letters: expiration during pair lock wait rejects new send
   const { f, pairA, principal } = await lettersFixture(); const db = f.database();
   const p = await principal(0); const partner = await principal(1);
   const scope = { coupleId: pairA, membershipEpoch: 1 };
-  const command = { ...scope, clientId: randomUUID(), body: 'Synthetic' }; let held; const tasks = [];
+  const command = { ...scope, clientId: randomUUID(), body: 'Synthetic',
+      releaseAt: new Date(Date.now() + 120000).toISOString(), releaseTimezone: 'UTC' }; let held; const tasks = [];
   try {
     const sent = await sendLetter(db, p, command); assert.equal(sent.ok, true);
     await f.domainPool.query('UPDATE "session" SET "expiresAt"=clock_timestamp()+interval \'1 second\' WHERE id=ANY($1)', [[p.sessionId, partner.sessionId]]);
     held = await f.domainPool.connect(); await held.query('BEGIN'); await held.query('SELECT id FROM couples WHERE id=$1 FOR UPDATE', [pairA]);
     tasks.push(sendLetter(db, p, command), sendLetter(db, p, { ...command, clientId: randomUUID() }),
-      listLetters(db, partner, scope), openLetter(db, partner, { ...scope, letterId: sent.value.letter.id }));
+      listLetters(db, partner, scope),
+      // Release is already due on the injected trusted clock: only the expired session can deny this open.
+      openLetter({ ...db, now: () => new Date(command.releaseAt) }, partner, { ...scope, letterId: sent.value.letter.id }));
     await delay(1200); await held.query('COMMIT'); held.release(); held = null;
     for (const result of await Promise.all(tasks)) assert.deepEqual(result, { ok: false, error: 'unavailable' });
     assert.equal((await f.domainPool.query('SELECT count(*)::int AS n FROM letters')).rows[0].n, 1);
@@ -52,7 +56,8 @@ test('real PostgreSQL letters: expiration during pair lock wait rejects new send
 test('real PostgreSQL letters: command cannot be replayed into a new pair; old letter IDs remain unavailable', async () => {
   const { f, pairA, principal, usersA } = await lettersFixture(); const db = f.database(); const p = await principal(0);
   try {
-    const command = { coupleId: pairA, membershipEpoch: 1, clientId: randomUUID(), body: 'Synthetic' };
+    const command = { coupleId: pairA, membershipEpoch: 1, clientId: randomUUID(), body: 'Synthetic',
+      releaseAt: new Date(Date.now() + 120000).toISOString(), releaseTimezone: 'UTC' };
     const sent = await sendLetter(db, p, command); assert.equal(sent.ok, true);
     assert.equal((await closeCouple(db, p, pairA, 1)).ok, true);
     const newPair = randomUUID(); const connection = await f.domainPool.connect();

@@ -1,0 +1,8 @@
+Final full PostgreSQL runner exit: 0
+Tests: 109 passed; 0 failed; 0 skipped
+Duration: 130162.597056 ms
+Before/after source SHA256 comparison: identical (cmp exit 0)
+Scope: services/api/src, apps/mobile/src, packages/domain, services/api/migrations, services/api/tests/postgres
+The adjacent postgres-source-stability.sha256 records the identical before/after hashes.
+The strengthened released-letter authorization and expired-session lock-wait assertions were included.
+This final run includes the strict mobile availability-literal validation correction.

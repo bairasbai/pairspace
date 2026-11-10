@@ -151,3 +151,12 @@ are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
   долговечные черновики, ответы, чтения по согласию, правки/удаление и retention.
 - Независимая приёмка SHA, native iOS/Android, два устройства и production
   security/deployment gates остаются открыты; [доказательства](LETTERS_EVIDENCE.md).
+
+## Ограниченный шаг: scheduled synthetic-письма
+- Явное расписание с offset ISO + IANA, серверный gate тела после lock/session recheck.
+- Старые немедленные письма совместимы; неизменяемый retry включает расписание.
+- Нет фонового открытия, push или read receipts. Метаданные обновляются явно.
+- Окно 60 секунд–366 суток — provisional synthetic policy, не production retention.
+- Открыты независимая приёмка SHA, native Intl/RU/EN/accessibility и два устройства,
+  durable drafts, ответы/удаление/retention, E2EE и production security/deployment.
+- Проверки: [SCHEDULED_LETTERS_EVIDENCE](SCHEDULED_LETTERS_EVIDENCE.md).

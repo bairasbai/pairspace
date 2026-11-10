@@ -17,7 +17,8 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   useEffect(() => ownsController ? () => controller.dispose() : undefined, [controller, ownsController]);
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16 }}>
     <LettersPanel locale={locale} view={lettersView} onDraft={letters.setDraft}
-      onSend={() => { void letters.send(); }} onList={() => { void letters.list(); }}
+      onReleaseAt={letters.setReleaseAt} onReleaseTimezone={letters.setReleaseTimezone}
+      onSendLater={() => { void letters.sendLater(); }} onSend={() => { void letters.send(); }} onList={() => { void letters.list(); }}
       onOpen={id => { void letters.open(id); }} onClose={letters.close} />
     <CarePanel showSend={showCareSend} locale={locale} view={careView} onSend={() => { void care.send(); }} onRead={() => { void care.read(); }} />
     <SyntheticChatPanel {...view} locale={locale}

@@ -1,26 +1,30 @@
 import type { AuthorizedDatabase, Principal, SqlExecutor } from './contracts.ts';
 import { activeSession, validPrincipal } from './session.ts';
 import { isEpoch, isUuid } from './validation.ts';
+import { parseLetterSchedule, scheduleWithinWindow } from '../../../packages/domain/letters/schedule.ts';
 import { normalizeMessageText } from '../../../packages/domain/chat/text.ts';
 export type LetterMetadata = Readonly<{ id: string; coupleId: string; senderId: string; recipientId: string;
-  clientId: string; membershipEpoch: number; createdAt: string }>;
+  clientId: string; membershipEpoch: number; createdAt: string; releaseAt: string | null;
+  releaseTimezone: string | null; availability: 'sealed' | 'available' }>;
 export type Letter = LetterMetadata & Readonly<{ body: string }>;
 type Failure = { ok: false; error: 'invalid_request' | 'unavailable' | 'stale_membership' | 'idempotency_conflict' };
 type Result<T> = { ok: true; value: T } | Failure;
 type Row = { id: string; couple_id: string; sender_id: string; recipient_id: string;
-  client_letter_id: string; membership_epoch: number; created_at: string };
+  client_letter_id: string; membership_epoch: number; created_at: string; release_at: string | null; release_timezone: string | null };
 type BodyRow = Row & { body: string };
-const columns = 'id, couple_id, sender_id, recipient_id, client_letter_id, membership_epoch, created_at::text';
-const metadata = (r: Row): LetterMetadata => ({ id: r.id, coupleId: r.couple_id, senderId: r.sender_id,
+const columns = 'id, couple_id, sender_id, recipient_id, client_letter_id, membership_epoch, created_at::text, release_at::text, release_timezone';
+const metadata = (r: Row, now: Date): LetterMetadata => ({ id: r.id, coupleId: r.couple_id, senderId: r.sender_id,
   recipientId: r.recipient_id, clientId: r.client_letter_id, membershipEpoch: r.membership_epoch,
-  createdAt: new Date(r.created_at).toISOString() });
-const letter = (r: BodyRow): Letter => ({ ...metadata(r), body: r.body });
+  createdAt: new Date(r.created_at).toISOString(), releaseAt: r.release_at === null ? null : new Date(r.release_at).toISOString(),
+  releaseTimezone: r.release_timezone, availability: r.release_at !== null && new Date(r.release_at).getTime() > now.getTime() ? 'sealed' : 'available' });
+const letter = (r: BodyRow, now: Date): Letter => ({ ...metadata(r, now), body: r.body });
 const fail = (error: Failure['error']): Failure => ({ ok: false, error });
-type LetterScope = { coupleId: string; membershipEpoch: number; clientId?: string; body?: string; letterId?: string };
+type LetterScope = { coupleId: string; membershipEpoch: number; clientId?: string; body?: string; letterId?: string; releaseAt?: string; releaseTimezone?: string };
 function parse(input: unknown, mode: 'send' | 'list' | 'open'): LetterScope | null {
   if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
   const fields = input as Record<string, unknown>;
-  const keys = mode === 'send' ? 'body,clientId,coupleId,membershipEpoch'
+  const scheduled = mode === 'send' && ('releaseAt' in fields || 'releaseTimezone' in fields);
+  const keys = mode === 'send' ? 'body,clientId,coupleId,membershipEpoch' + (scheduled ? ',releaseAt,releaseTimezone' : '')
     : mode === 'open' ? 'coupleId,letterId,membershipEpoch' : 'coupleId,membershipEpoch';
   if (Object.keys(fields).sort().join(',') !== keys || !isUuid(fields.coupleId) || !isEpoch(fields.membershipEpoch)
     || (mode === 'send' && !isUuid(fields.clientId)) || (mode === 'open' && !isUuid(fields.letterId))) return null;
@@ -31,7 +35,9 @@ function parse(input: unknown, mode: 'send' | 'list' | 'open'): LetterScope | nu
   if (mode === 'send') {
     const body = normalizeMessageText(fields.body);
     if (!body.ok) return null;
-    return { ...scope, body: body.text } as LetterScope;
+    const schedule = scheduled ? parseLetterSchedule(fields.releaseAt, fields.releaseTimezone) : null;
+    if (scheduled && !schedule) return null;
+    return { ...scope, ...schedule, body: body.text } as LetterScope;
   }
   return scope as LetterScope;
 }
@@ -54,23 +60,25 @@ export async function sendLetter(db: AuthorizedDatabase, principal: Principal, i
     if (!await activeSession(tx, db, principal)) return fail('unavailable');
     const recipient = await authorize(tx, principal, scope, true);
     if (!recipient.ok) return recipient;
-    const now = db.now();
-    if (!Number.isFinite(now.getTime())) throw new Error('invalid_server_clock');
     if (!await activeSession(tx, db, principal)) return fail('unavailable');
+    const now = trustedNow(db);
     const previous = await tx.query<BodyRow>(`SELECT ${columns}, body FROM letters WHERE sender_id=$1 AND client_letter_id=$2`, [principal.userId, scope.clientId]);
     if (previous.rows[0]) {
       const old = previous.rows[0];
       if (old.couple_id !== scope.coupleId || old.membership_epoch !== scope.membershipEpoch
-        || old.recipient_id !== recipient.value || old.body !== scope.body) return fail('idempotency_conflict');
-      return { ok: true, value: { letter: letter(old), replay: true } };
+        || old.recipient_id !== recipient.value || old.body !== scope.body
+        || (old.release_at === null ? null : new Date(old.release_at).toISOString()) !== (scope.releaseAt ?? null)
+        || old.release_timezone !== (scope.releaseTimezone ?? null)) return fail('idempotency_conflict');
+      return { ok: true, value: { letter: letter(old, now), replay: true } };
     }
-    const inserted = await tx.query<BodyRow>(`INSERT INTO letters(couple_id,sender_id,recipient_id,client_letter_id,membership_epoch,body,created_at)
-      VALUES($1,$2,$3,$4,$5,$6,$7) RETURNING ${columns}, body`, [scope.coupleId, principal.userId, recipient.value, scope.clientId, scope.membershipEpoch, scope.body, now]);
-    return { ok: true, value: { letter: letter(inserted.rows[0]), replay: false } };
+    if (scope.releaseAt && !scheduleWithinWindow({ releaseAt: scope.releaseAt, releaseTimezone: scope.releaseTimezone! }, now)) return fail('invalid_request');
+    const inserted = await tx.query<BodyRow>(`INSERT INTO letters(couple_id,sender_id,recipient_id,client_letter_id,membership_epoch,body,created_at,release_at,release_timezone)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING ${columns}, body`, [scope.coupleId, principal.userId, recipient.value, scope.clientId, scope.membershipEpoch, scope.body, now, scope.releaseAt ?? null, scope.releaseTimezone ?? null]);
+    return { ok: true, value: { letter: letter(inserted.rows[0], now), replay: false } };
   });
 }
 async function read<T>(db: AuthorizedDatabase, principal: Principal, input: unknown, mode: 'list' | 'open',
-  query: (tx: SqlExecutor, scope: LetterScope, partner: string) => Promise<Result<T>>): Promise<Result<T>> {
+  query: (tx: SqlExecutor, scope: LetterScope, partner: string, now: Date) => Promise<Result<T>>): Promise<Result<T>> {
   if (!validPrincipal(principal)) return fail('unavailable');
   const scope = parse(input, mode);
   if (!scope) return fail('invalid_request');
@@ -79,20 +87,26 @@ async function read<T>(db: AuthorizedDatabase, principal: Principal, input: unkn
     const partner = await authorize(tx, principal, scope, false);
     if (!partner.ok) return partner;
     if (!await activeSession(tx, db, principal)) return fail('unavailable');
-    return query(tx, scope, partner.value);
+    return query(tx, scope, partner.value, trustedNow(db));
   });
 }
 export function listLetters(db: AuthorizedDatabase, principal: Principal, input: unknown): Promise<Result<{ letters: LetterMetadata[] }>> {
-  return read(db, principal, input, 'list', async (tx, scope, partner) => {
+  return read(db, principal, input, 'list', async (tx, scope, partner, now) => {
     const rows = await tx.query<Row>(`SELECT ${columns} FROM letters WHERE couple_id=$1 AND recipient_id=$2
       AND sender_id=$3 AND membership_epoch=$4 ORDER BY letters.created_at DESC, letters.id DESC LIMIT 30`, [scope.coupleId, principal.userId, partner, scope.membershipEpoch]);
-    return { ok: true, value: { letters: rows.rows.map(metadata) } };
+    return { ok: true, value: { letters: rows.rows.map(row => metadata(row, now)) } };
   });
 }
 export function openLetter(db: AuthorizedDatabase, principal: Principal, input: unknown): Promise<Result<{ letter: Letter }>> {
-  return read(db, principal, input, 'open', async (tx, scope, partner) => {
+  return read(db, principal, input, 'open', async (tx, scope, partner, now) => {
     const rows = await tx.query<BodyRow>(`SELECT ${columns}, body FROM letters WHERE couple_id=$1 AND recipient_id=$2
-      AND sender_id=$3 AND membership_epoch=$4 AND id=$5`, [scope.coupleId, principal.userId, partner, scope.membershipEpoch, scope.letterId]);
-    return rows.rows[0] ? { ok: true, value: { letter: letter(rows.rows[0]) } } : fail('unavailable');
+      AND sender_id=$3 AND membership_epoch=$4 AND id=$5 AND (release_at IS NULL OR release_at <= $6)`, [scope.coupleId, principal.userId, partner, scope.membershipEpoch, scope.letterId, now]);
+    return rows.rows[0] ? { ok: true, value: { letter: letter(rows.rows[0], now) } } : fail('unavailable');
   });
+}
+
+function trustedNow(db: AuthorizedDatabase): Date {
+  const now = db.now();
+  if (!Number.isFinite(now.getTime())) throw new Error('invalid_server_clock');
+  return now;
 }

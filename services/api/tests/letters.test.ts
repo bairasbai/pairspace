@@ -11,7 +11,7 @@ const scope = { coupleId: c1, membershipEpoch: 1 };
 const command = { ...scope, clientId: id(800), body: 'Synthetic e\u0301\r\nletter' };
 const db = () => adapter(pg);
 let letterId: string;
-beforeAll(async () => { pg = await createFixture(); await pg.exec(await readFile(new URL('../migrations/006_letters.sql', import.meta.url), 'utf8')); });
+beforeAll(async () => { pg = await createFixture(); for (const file of ['006_letters.sql', '007_scheduled_letters.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8')); });
 afterAll(async () => { await pg.close(); });
 it('sends normalized immutable text once, lists metadata only and opens only for recipient', async () => {
   expect(await listLetters(db(), principal, scope)).toEqual({ ok: true, value: { letters: [] } });

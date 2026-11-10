@@ -22,10 +22,11 @@ export function createLettersHandler(db: AuthorizedDatabase) {
         let body: unknown;
         try { body = await readJson(request); } catch { return error(400, 'invalid_request'); }
         if (!body || typeof body !== 'object' || Array.isArray(body)
-          || Object.keys(body).sort().join(',') !== 'body,client_letter_id,membership_epoch') return error(400, 'invalid_request');
+          || !['body,client_letter_id,membership_epoch', 'body,client_letter_id,membership_epoch,release_at,release_timezone'].includes(Object.keys(body).sort().join(','))) return error(400, 'invalid_request');
         const fields = body as Record<string, unknown>;
         if (!isUuid(fields.client_letter_id) || request.headers.get('idempotency-key') !== fields.client_letter_id) return error(400, 'invalid_request');
-        input = { coupleId: route[1], clientId: fields.client_letter_id, membershipEpoch: fields.membership_epoch, body: fields.body };
+        input = { coupleId: route[1], clientId: fields.client_letter_id, membershipEpoch: fields.membership_epoch, body: fields.body,
+          ...('release_at' in fields ? { releaseAt: fields.release_at, releaseTimezone: fields.release_timezone } : {}) };
       } else {
         if (request.body || [...url.searchParams.keys()].join(',') !== 'membership_epoch'
           || !/^[1-9][0-9]*$/.test(url.searchParams.get('membership_epoch') ?? '')) return error(400, 'invalid_request');

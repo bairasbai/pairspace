@@ -29,7 +29,7 @@ export type ApiApplicationConfig = Readonly<{
   enableSyntheticPairAcceptance?: boolean;
   /** Test-only fixed care signals; independent opt-in, loopback only. */
   enableSyntheticCareSignals?: boolean;
-  /** Immediate immutable synthetic letters; independent loopback-only opt-in. */
+  /** Immutable immediate/scheduled synthetic letters; independent loopback-only opt-in. */
   enableSyntheticLetters?: boolean;
   limits: BodyLimits & TransactionLimits;
 }>;

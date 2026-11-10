@@ -3,7 +3,7 @@ import type { InvitationHostSnapshot } from '../src/auth/invitations-controller'
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const context = { state: 'ready' as const, sessionId: 'session', userId: uuid(1), coupleId: uuid(2), membershipEpoch: 1 };
 const letter = { id: uuid(9), senderId: uuid(1), recipientId: uuid(4), coupleId: uuid(2), clientId: uuid(3), membershipEpoch: 1,
-  body: 'Hello', createdAt: '2026-11-10T00:00:00.000Z' };
+  body: 'Hello', releaseAt: null, releaseTimezone: null, availability: 'available' as const, createdAt: '2026-11-10T00:00:00.000Z' };
 const envelope = (value: unknown, status = 200) => new Response(JSON.stringify({ ok: true, value }), { status });
 const ack = () => envelope({ letter, replay: false }, 201);
 function fixture() {
@@ -152,4 +152,65 @@ it.each(['send', 'list'] as const)('404 on %s cannot hide unknown-ACK retry or s
   expect(f.command).toHaveBeenCalledTimes(1);
   expect(await f.operation.mock.calls[2][0].json()).toEqual({ client_letter_id: uuid(3), membership_epoch: 1, body: 'Hello' });
   expect(f.api.getSnapshot()).toMatchObject({ status: 'sent', draft: 'New separate draft' });
+});
+
+const releaseInput = '2027-01-15T09:00:00+03:00';
+const releaseAt = '2027-01-15T06:00:00.000Z';
+const releaseTimezone = 'Europe/Moscow';
+it('keeps schedule and text immutable after unknown ACK despite edits and immediate-send retry', async () => {
+  const f = fixture(); f.api.setReleaseAt(releaseInput); f.api.setReleaseTimezone(releaseTimezone);
+  f.operation.mockRejectedValueOnce(new Error('lost ack')); await f.api.sendLater();
+  f.api.setDraft('Changed'); f.api.setReleaseAt('2028-02-01T00:00:00Z'); f.api.setReleaseTimezone('UTC');
+  f.operation.mockResolvedValueOnce(envelope({ letter: { ...letter, releaseAt, releaseTimezone, availability: 'sealed' }, replay: true }));
+  await f.api.send();
+  expect(await f.operation.mock.calls[0][0].json()).toEqual(await f.operation.mock.calls[1][0].json());
+  expect(f.api.getSnapshot()).toMatchObject({ status: 'sent', draft: 'Changed', releaseTimezoneInput: 'UTC' });
+});
+it.each([['2027-02-30T00:00:00Z', 'UTC'], ['2027-03-14T02:30:00-05:00', 'America/New_York'], ['2027-01-01T00:00:00', 'UTC'], [releaseInput, 'Unknown/Zone']])('rejects invalid schedule %s %s before requests', async (date, zone) => {
+  const f = fixture(); f.api.setReleaseAt(date); f.api.setReleaseTimezone(zone); await f.api.sendLater();
+  expect(f.api.getSnapshot().status).toBe('invalid'); expect(f.operation).not.toHaveBeenCalled();
+});
+it('ignores schedule inputs for immediate send and allows corrected date after definitive server rejection', async () => {
+  const f = fixture(); f.api.setReleaseAt('bad'); f.api.setReleaseTimezone('bad'); await f.api.send();
+  expect(f.api.getSnapshot().status).toBe('sent');
+  f.api.setDraft('Hello'); f.api.setReleaseAt(releaseInput); f.api.setReleaseTimezone(releaseTimezone);
+  f.operation.mockResolvedValueOnce(new Response(JSON.stringify({ ok: false, error: 'invalid_request' }), { status: 400 })); await f.api.sendLater(); expect(f.api.getSnapshot().status).toBe('invalid');
+  f.command.mockReturnValue(uuid(5));
+  f.operation.mockResolvedValueOnce(envelope({ letter: { ...letter, clientId: uuid(5), releaseAt, releaseTimezone, availability: 'sealed' }, replay: false }));
+  await f.api.sendLater(); expect(f.api.getSnapshot().status).toBe('sent'); expect(f.command).toHaveBeenCalledTimes(3);
+  expect(f.operation.mock.calls[2][0].headers.get('Idempotency-Key')).toBe(uuid(5));
+});
+it('requires server metadata refresh to unlock; forged local time cannot open sealed letters', async () => {
+  const f = fixture(); const { body: _body, ...meta } = incoming;
+  const sealed = { ...meta, releaseAt, releaseTimezone, availability: 'sealed' };
+  f.operation.mockResolvedValueOnce(envelope({ letters: [sealed] })); await f.api.list();
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(Date.parse('2099-01-01T00:00:00Z'));
+  try { await f.api.open(meta.id); expect(f.operation).toHaveBeenCalledTimes(1); } finally { clock.mockRestore(); }
+  f.operation.mockResolvedValueOnce(envelope({ letters: [{ ...sealed, availability: 'available' }] })); await f.api.list();
+  f.operation.mockResolvedValueOnce(envelope({ letter: { ...sealed, body: 'Too early' } })); await f.api.open(meta.id);
+  expect(f.api.getSnapshot().opened).toBeNull();
+  f.operation.mockResolvedValueOnce(envelope({ letter: { ...sealed, availability: 'available', body: 'Released' } })); await f.api.open(meta.id);
+  expect(f.api.getSnapshot().opened?.body).toBe('Released');
+});
+it.each([{ releaseAt: 'bad', releaseTimezone }, { releaseAt, releaseTimezone: null }, { releaseAt, releaseTimezone, availability: 'unknown' }, { releaseAt, releaseTimezone, availability: ['available'] }, { releaseAt, releaseTimezone, availability: ['sealed'] }, { releaseAt, releaseTimezone, availability: {} }, { releaseAt: null, releaseTimezone: null, availability: 'sealed' }])('rejects invalid schedule metadata %p', async change => {
+  const f = fixture(); f.operation.mockResolvedValueOnce(envelope({ letter: { ...letter, ...change }, replay: false })); await f.api.send();
+  expect(f.api.getSnapshot().status).toBe('retry');
+});
+it('rejects a valid but substituted schedule acknowledgement and bounds/clears schedule inputs', async () => {
+  const f = fixture(); f.api.setReleaseAt(releaseInput); f.api.setReleaseTimezone(releaseTimezone);
+  f.operation.mockResolvedValueOnce(ack()); await f.api.sendLater(); expect(f.api.getSnapshot().status).toBe('retry');
+  f.api.setReleaseAt('a'.repeat(90)); f.api.setReleaseTimezone('z'.repeat(120));
+  expect(f.api.getSnapshot().releaseAtInput).toHaveLength(80); expect(f.api.getSnapshot().releaseTimezoneInput).toHaveLength(100);
+  f.controller.reset(); f.api.setReleaseAt('ignored'); f.api.setReleaseTimezone('ignored');
+  expect(f.api.getSnapshot()).toMatchObject({ releaseAtInput: '', releaseTimezoneInput: '' });
+});
+it.each([{ releaseAt: '2027-02-30T06:00:00.000Z', releaseTimezone }, { releaseAt, releaseTimezone: 'Unknown/Zone' }, { releaseAt, releaseTimezone: '+03:00' }, { releaseAt, releaseTimezone: 'x'.repeat(101) }, { releaseAt, releaseTimezone: '' }, { releaseAt: '2027-01-15T06:00:00Z', releaseTimezone }])('rejects forged release metadata %p', async change => {
+  const f = fixture(); const { body: _body, ...meta } = incoming;
+  f.operation.mockResolvedValueOnce(envelope({ letters: [{ ...meta, ...change, availability: 'sealed' }] })); await f.api.list();
+  expect(f.api.getSnapshot()).toMatchObject({ error: true, letters: [] });
+});
+it('malformed 400 cannot discard an uncertain command', async () => {
+  const f = fixture(); f.operation.mockResolvedValueOnce(envelope({}, 400)); await f.api.send();
+  expect(f.api.getSnapshot().status).toBe('retry'); f.api.setDraft('New text'); await f.api.send();
+  expect(f.command).toHaveBeenCalledTimes(1); expect(f.api.getSnapshot()).toMatchObject({ status: 'sent', draft: 'New text' });
 });

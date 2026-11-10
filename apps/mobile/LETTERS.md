@@ -1,4 +1,4 @@
-# Synthetic immediate letters
+# Synthetic immediate and scheduled letters
 
 Status: implemented for synthetic loopback tests; independent acceptance pending.
 No production, native-device or real private-content readiness is claimed.
@@ -8,7 +8,7 @@ Chat panel contains a separate private composer, explicit send-now button, expli
 partner-list button and individual open/close controls. Default offline App and
 Showcase demo do not invoke this path. Central-heart care signaling is unchanged.
 
-Drafts and unresolved immutable `{clientId,body}` commands exist only in the current
+Drafts and unresolved immutable `{clientId,body,schedule}` commands exist only in the current
 app session's RAM. Navigation between tabs preserves this controller state. Logout,
 disposal and identity/pair/epoch invalidation clear drafts, pending commands, lists
 and opened content. There is no persistent plaintext queue, autosave or draft API.
@@ -34,5 +34,24 @@ The list is a bounded window of up to 30 latest received letters, ordered on ser
 by `created_at DESC,id DESC`, not a complete archive or pagination/end-of-history
 claim. No body/title previews are present in the list response or UI.
 
-This slice has no server drafts, scheduling/sealing/release, read receipts, replies,
+This slice has no server drafts, read receipts, replies,
 editing/deletion, push or E2EE. These remain future independently specified work.
+
+## Scheduled release (synthetic only)
+
+The explicit sealed-send controls take an ISO date with an explicit UTC offset
+(e.g. `2027-01-15T09:00:00+03:00`) plus its IANA time zone (`Europe/Moscow`).
+Shared validation compares all wall-clock fields against platform Intl: unknown
+zones, invalid calendar dates and DST gaps fail; an explicit valid offset selects
+a DST fold occurrence. No automatic local-time conversion or guessed offset occurs.
+The server checks a proposed product window of 1 minute through 366 days inclusive.
+A definitive 400 lets the author correct the command; uncertain acknowledgements
+retain the original body, offset input, zone and ID even if the visible draft changes.
+
+Metadata includes nullable `releaseAt` (canonical UTC), `releaseTimezone` and server
+`availability` (`sealed` or `available`). Opening is disabled while sealed, including
+controller calls; a fresh explicit list request is required to reflect release.
+There is no client-clock countdown or auto-open. The server independently gates body
+queries at the release instant after authorization and session revalidation.
+Time and zone are shown beside each scheduled letter; immediate sending ignores
+schedule inputs. Opening has no read receipt. Server storage is plaintext, not E2EE.

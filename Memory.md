@@ -183,3 +183,12 @@ Unknown-ACK повтор сохраняет ID между вкладками; lo
 на сервере, не доставку на устройство и не прочтение. Нет scheduled/sealed, ответов,
 правок/удаления, push, AI или долговечного черновика. Это не полная функция писем
 Tan Ata и не разрешение реальных личных данных. См. docs/LETTERS_EVIDENCE.md.
+
+## 2026-11-10 — scheduled letters, synthetic only, не принято
+Следующий ограниченный шаг добавляет явную отправку на будущее и серверное открытие
+по неизменяемому instant + IANA timezone. Ввод требует явного ISO offset: DST gap
+отвергается, повтор часа выбирается offset, часы клиента не открывают письмо.
+Продуктовое synthetic-окно: 60 секунд–366 суток; старые письма остаются немедленными.
+Unknown ACK сохраняет исходные body и schedule; refresh метаданных и открытие явные.
+Это серверный plaintext, не E2EE; нет push/jobs/read receipts. Независимая приёмка,
+native/two-device и production gates открыты. См. docs/SCHEDULED_LETTERS_EVIDENCE.md.

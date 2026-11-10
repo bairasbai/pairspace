@@ -111,3 +111,9 @@ Device visual acceptance remains open; no backend features added.
   и отдельное авторизованное открытие тела; миграция `006_letters.sql`.
 - `apps/mobile/LETTERS.md`: приватный RAM-черновик, RU/EN и явные сетевые действия.
 - `docs/LETTERS_EVIDENCE.md`: проверки и ограничения; независимая приёмка отдельно.
+
+## 2026-11-10 — scheduled synthetic-письма
+- `packages/domain/letters/schedule.ts`: строгий offset ISO + IANA контракт без угадывания DST.
+- `services/api/migrations/007_scheduled_letters.sql`: nullable-поля, старые письма немедленные.
+- `services/api/LETTERS.md`: серверный release gate и неизменяемое расписание.
+- `docs/SCHEDULED_LETTERS_EVIDENCE.md`: результаты, frozen source и ограничения проверки.

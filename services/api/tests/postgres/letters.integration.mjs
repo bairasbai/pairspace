@@ -3,14 +3,16 @@ import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { lettersFixture } from './letters-fixture.mjs';
 
-const metadata = ['clientId', 'coupleId', 'createdAt', 'id', 'membershipEpoch', 'recipientId', 'senderId'];
+const metadata = ['availability', 'clientId', 'coupleId', 'createdAt', 'id', 'membershipEpoch', 'recipientId', 'releaseAt', 'releaseTimezone', 'senderId'];
 test('real PostgreSQL letters: explicit send, private metadata list/open, cross-pair isolation and immutable retry', async () => {
   const { f, pairA, pairB, usersA, send, list, open, connections } = await lettersFixture();
   try {
     const id = randomUUID(); const body = "Synthetic <script>alert('x')</script> '); DROP TABLE letters;--\r\ne\u0301";
     const first = await send(0, id, body); assert.equal(first.status, 201);
     const sent = (await first.json()).value;
-    assert.equal(sent.replay, false); assert.equal(sent.letter.body, body.replace('\r\n', '\n').normalize('NFC'));
+    assert.equal(sent.replay, false);
+    assert.equal(sent.letter.releaseAt, null); assert.equal(sent.letter.releaseTimezone, null); assert.equal(sent.letter.availability, 'available');
+    assert.equal(sent.letter.body, body.replace('\r\n', '\n').normalize('NFC'));
     assert.equal(sent.letter.senderId, usersA[0]); assert.equal(sent.letter.recipientId, usersA[1]);
     const letterId = sent.letter.id;
     assert.deepEqual((await (await list(0)).json()).value.letters, []);
