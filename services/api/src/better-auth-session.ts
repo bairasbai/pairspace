@@ -42,18 +42,24 @@ export function createBetterAuthSessionVerifier(db: Database, options: BetterAut
 /** Call after the domain-user lock (if mapped), before mapping/couple locks. */
 export async function recheckBetterAuthSession(tx: SqlExecutor, session: VerifiedBetterAuthSession,
   providerLock: 'share' | 'exclusive' = 'share'): Promise<boolean> {
+  return await lockedBetterAuthSessionTime(tx, session, providerLock) !== null;
+}
+
+/** Fresh authoritative time for a valid locked session; use after all contended locks. */
+export async function lockedBetterAuthSessionTime(tx: SqlExecutor, session: VerifiedBetterAuthSession,
+  providerLock: 'share' | 'exclusive' = 'share'): Promise<number | null> {
   // Fixed Better Auth default names, in a trusted shared schema/search_path.
   const authUser = await tx.query<{ id: string }>(
     `SELECT id FROM "user" WHERE id=$1 FOR ${providerLock === 'exclusive' ? 'UPDATE' : 'SHARE'}`, [session.authUserId]);
-  if (authUser.rows.length !== 1 || authUser.rows[0].id !== session.authUserId) return false;
+  if (authUser.rows.length !== 1 || authUser.rows[0].id !== session.authUserId) return null;
   const sessions = await tx.query<{ created_at: string; expires_at: string }>(`
     SELECT "createdAt"::text AS created_at, "expiresAt"::text AS expires_at FROM "session"
     WHERE id=$1 AND "userId"=$2 FOR SHARE`, [session.sessionId, session.authUserId]);
-  if (sessions.rows.length !== 1) return false;
+  if (sessions.rows.length !== 1) return null;
   const row = sessions.rows[0];
   const clock = await tx.query<{ now: string }>('SELECT clock_timestamp()::text AS now');
   const now = Date.parse(clock.rows[0]?.now);
   if (!Number.isFinite(now)) throw new Error('invalid_server_clock');
   return now >= Date.parse(row.created_at) && now < Date.parse(row.expires_at)
-    && now < session.tokenExpiresAt * 1000;
+    && now < session.tokenExpiresAt * 1000 ? now : null;
 }

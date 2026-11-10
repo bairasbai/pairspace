@@ -1,0 +1,98 @@
+Verified 14 package-local runtime symlinks
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test:postgres
+> node --test --test-concurrency=1 --test-timeout=30000 tests/postgres/*.integration.mjs
+
+✔ official client → real loopback composed app → auth → PRODUCT chat → revoke denial on real PG (562.099865ms)
+✔ composed HTTP perimeter rejects CSRF origins, missing origin, oversized and invalid requests (82.577504ms)
+✔ composed HTTP redacts auth/database failures and product outbox transaction remains atomic (271.59526ms)
+✔ stalled HTTP upload is bounded and does not prevent a later healthy request (1073.361871ms)
+✔ explicitly disabled email/password configuration cannot create accounts (91.761564ms)
+✔ expired metadata and same-command replay reveal no secret, and only a new command replaces atomically (338.364908ms)
+✖ invitation expiry and replacement TTL use the database clock after contended couple and invitation locks (590.97137ms)
+✔ real PostgreSQL constraints reserve one open slot even when expired and reject invalid or duplicate invitation data (247.280629ms)
+✔ distinct official sessions serialize same and different invitation commands on the domain user (676.927044ms)
+✔ concurrent targeted revocations acknowledge exactly one mutation and never touch a replacement (311.849695ms)
+✔ issue versus revoke follows observed lock order: revoke-first permits replacement and issue-first conflicts (580.153081ms)
+✔ official sign-out committed before invitation authority locks denies read, issue and revoke without mutation (588.427729ms)
+✔ issuance and revocation holding authoritative session lock finish before waiting official sign-out (423.131298ms)
+✔ authoritative session expiry during invitation lock waits denies metadata, issuance and revocation (1792.472833ms)
+✔ couple closure and membership revocation committed during a lock wait cannot mint into stale waiting state (175.663387ms)
+✔ invitation routes are independently default-off and never provision a profile or waiting space (582.428934ms)
+✔ official auth to profile to waiting to issue/replay/revoke stores a hash only and never grants chat authority (355.694322ms)
+✔ lost committed issuance acknowledgement never recovers the secret; metadata, targeted revoke and a fresh command recover safely (225.96566ms)
+✔ two waiting pairs cannot read or revoke each other, spoof caller IDs, or reuse malformed requests to write (411.227065ms)
+✔ active, closed, malformed and deleted-owner spaces fail closed without minting or revoking invitations (326.259745ms)
+✔ failed replacement INSERT rolls back expired-row revocation and exposes no SQL details (269.513719ms)
+(node:275) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-invite-issuance-product/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-invite-issuance-product/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ mobile session controller cookie transport → composed HTTP → real PostgreSQL; replay, revoke and isolation (954.580982ms)
+✔ explicit mobile profile action creates server identity once without fixture mapping or pair creation (435.461752ms)
+✔ explicit mobile waiting-space action reserves one own space but never authorizes chat or invites (492.031484ms)
+✔ PRODUCT handler and use cases persist chat/idempotency/history/close/outbox with Better Auth only (322.931969ms)
+✔ completed official revoke blocks PRODUCT send/history/close with previously verified principal (282.034419ms)
+✔ PRODUCT transaction holds authoritative provider session lock while official revocation waits (321.280839ms)
+✔ PRODUCT row expiry, user deletion, identity remap and mixed authority fail closed (229.070295ms)
+✔ PRODUCT outbox failure rolls back message and sequence under Better Auth authority (252.967537ms)
+✔ profile endpoint defaults disabled; explicit synthetic opt-in creates exactly one own profile with no pair access (528.470632ms)
+✔ profile HTTP rejects identity selectors, unknown fields, malformed input, origins and unauthenticated clients without writes (204.324277ms)
+✔ simultaneous profile requests from distinct sessions serialize on provider user and retry with domain-first lock order (291.433177ms)
+✔ lost real HTTP acknowledgement after COMMIT is safely retried without orphan or duplicate profile (166.250382ms)
+✔ revocation completed while profile waits for provider-user lock denies all domain writes (196.158742ms)
+✔ profile-first session lock makes official revocation wait; revoked retry cannot create another profile (229.085844ms)
+✔ deleted domain profiles remain unavailable and never get resurrected or reassigned across accounts (212.975843ms)
+✔ observed mapping removal or unsupported reassignment fails closed without overwriting any identity (326.372449ms)
+✔ mapping-insert failure rolls back the new domain row and a later retry creates one complete profile (180.866518ms)
+✔ authoritative expiry is checked again after a real mapping-row lock wait (1287.418727ms)
+✔ context discovers only server-owned unmapped/no-pair/ready states and refreshes pair/epoch (488.861934ms)
+✔ context HTTP rejects forged selectors, missing cookie, bearer credentials, origins and non-GET writes (178.539634ms)
+✔ context denies revoked/expired/provider-deleted and domain-deleted identities and redacts SQL failure (233.752179ms)
+✔ official revocation between provider verification and context transaction fails closed on real PG (171.574072ms)
+✔ context transaction holds provider session lock while official revocation waits (184.800386ms)
+✔ context detects an unsupported mapping remap between discovery and authoritative lock (194.305477ms)
+✔ context snapshots recheck authoritative expiry after mapping and waiting-couple row lock waits (2562.079553ms)
+✔ distinct sessions simultaneously creating a waiting space serialize on the domain user, not session identity (374.806153ms)
+✔ a real lost HTTP acknowledgement after COMMIT retries idempotently with no orphan or duplicate waiting space (197.841714ms)
+✔ official revocation completed while creation waits for its domain-user lock prevents both inserts (192.979158ms)
+✔ creation holds authoritative session lock before official revocation; revoked retry cannot create again (188.494739ms)
+✔ waiting creation and idempotent retry recheck authoritative expiry after real mapping/couple lock waits (2585.804776ms)
+✔ observed mapping removal or reassignment fails closed without creating a space for either identity (406.255734ms)
+✔ domain deletion and waiting membership revocation during lock waits do not resurrect or replace state (413.319626ms)
+✔ waiting creation is explicit, independently gated and never provisions a missing profile (649.096448ms)
+✔ two accounts create isolated own waiting spaces and context snapshots without chat authority (354.186655ms)
+✔ waiting HTTP rejects caller IDs, malformed bodies, wrong methods/origins and unauthenticated requests without writes (200.072772ms)
+✔ an active pair or closed live membership cannot be bypassed by creating another space (215.679671ms)
+✔ malformed waiting membership fails closed, and deleted profiles are never resurrected (290.942757ms)
+✔ failed member insert rolls back its waiting couple and retry creates exactly one complete space (203.589731ms)
+ℹ tests 59
+ℹ suites 0
+ℹ pass 58
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 31496.199124
+
+✖ failing tests:
+
+test at tests/postgres/invitation-expiry.integration.mjs:35:1
+✖ invitation expiry and replacement TTL use the database clock after contended couple and invitation locks (590.97137ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+
+  false !== true
+
+      at TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-invite-issuance-product/services/api/tests/postgres/invitation-expiry.integration.mjs:58:14)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

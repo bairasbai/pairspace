@@ -143,3 +143,49 @@ it('gates waiting-space creation independently, default disabled, explicit boole
   }
   expect(provider.handler).not.toHaveBeenCalled();
 });
+
+it('gates invitations independently on loopback and enforces Origin, methods and DELETE JSON', async () => {
+  vi.stubEnv('ENABLE_SYNTHETIC_PAIR_INVITATIONS', 'true');
+  const path = '/v1/spaces/waiting/invite';
+  for (const flag of [undefined, false]) {
+    const app = createApiApplication({ ...config(), enableSyntheticPairInvitations: flag });
+    expect((await app.handle(request(path))).status).toBe(404);
+  }
+  for (const invalid of [true, null, 'true', 1]) {
+    expect(() => createApiApplication({ ...config(), enableSyntheticPairInvitations: invalid } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  }
+  for (const baseURL of ['http://127.0.0.1:3123', 'http://[::1]:3123', 'https://localhost']) {
+    const app = createApiApplication({ ...config(), baseURL, trustedOrigins: [baseURL], enableSyntheticPairInvitations: true });
+    const send = (path: string, method = 'GET', body?: string, headers: Record<string, string> = {}) => app.handle(new Request(baseURL + path, {
+      method, body, headers: { origin: baseURL, cookie: 'synthetic', 'content-type': 'application/json', ...headers },
+    }));
+    expect((await send(path)).status).toBe(401);
+    expect((await send('/v1/profile', 'POST', '{}')).status).toBe(404);
+    expect((await send('/v1/spaces/waiting', 'POST', '{}')).status).toBe(404);
+    const method = await send(path, 'PUT', '{}'); expect(method.status).toBe(405); expect(method.headers.get('allow')).toBe('GET, POST, DELETE');
+    expect((await send(path, 'GET', undefined, { origin: 'https://other.invalid' })).status).toBe(403);
+    expect((await send(path, 'DELETE', '{}', { 'content-type': 'text/plain' })).status).toBe(415);
+    expect((await send(path, 'DELETE', '{}')).status).toBe(400);
+    expect((await send(path, 'GET', undefined, { 'content-length': 'invalid' })).status).toBe(400);
+    expect((await send(path, 'GET', undefined, { 'transfer-encoding': 'chunked' })).status).toBe(400);
+  }
+  expect(provider.handler).not.toHaveBeenCalled();
+});
+
+it('bounds streamed DELETE bytes and read deadlines before verification and normalizes invitation failures', async () => {
+  const baseURL = 'http://127.0.0.1:3123', path = '/v1/spaces/waiting/invite';
+  const app = createApiApplication({ ...config(), baseURL, trustedOrigins: [baseURL], enableSyntheticPairInvitations: true });
+  const stream = (body: ReadableStream<Uint8Array>) => new Request(baseURL + path, {
+    method: 'DELETE', headers: { origin: baseURL, 'content-type': 'application/json', cookie: 'synthetic' }, body, duplex: 'half',
+  } as RequestInit);
+  const oversized = new ReadableStream<Uint8Array>({ start(controller) { controller.enqueue(new Uint8Array(17)); controller.close(); } });
+  expect((await app.handle(stream(oversized))).status).toBe(413);
+  expect((await app.handle(stream(new ReadableStream<Uint8Array>()))).status).toBe(408);
+  expect(provider.getSession).not.toHaveBeenCalled();
+  const larger = createApiApplication({ ...config(), baseURL, trustedOrigins: [baseURL], enableSyntheticPairInvitations: true,
+    limits: { ...config().limits, bodyBytes: 128 } });
+  provider.getSession.mockRejectedValueOnce(new Error('private cookie'));
+  const response = await larger.handle(new Request(baseURL + path, { method: 'DELETE',
+    headers: { origin: baseURL, 'content-type': 'application/json', cookie: 'synthetic' }, body: '{"inviteId":"00000000-0000-4000-8000-000000000020"}' }));
+  expect(response.status).toBe(503); expect(await response.json()).toEqual({ ok: false, error: 'temporarily_unavailable' });
+});
