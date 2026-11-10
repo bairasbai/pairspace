@@ -9,7 +9,7 @@ type Props = { selected: Tab; onSelect: (tab: Tab) => void; onHeart: () => void;
 export function Navigation({ selected, onSelect, onHeart, text }: Props) {
   const tab = (id: Tab) => (
     <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: selected === id }}
-      onPress={() => onSelect(id)} style={styles.tab}>
+      onPress={() => onSelect(id)} style={[styles.tab, selected === id && styles.activeTab]}>
       <Text style={[styles.label, selected === id && styles.selected]}>{text[id]}</Text>
     </Pressable>
   );
@@ -22,6 +22,7 @@ export function Navigation({ selected, onSelect, onHeart, text }: Props) {
 const styles = StyleSheet.create({
   bar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.surface, alignItems: 'stretch' },
   tab: { flex: 1, minHeight: 72, alignItems: 'center', justifyContent: 'center', padding: 4 },
+  activeTab: { borderTopWidth: 3, borderTopColor: colors.accent, backgroundColor: colors.paperDeep },
   label: { fontSize: 12, textAlign: 'center', color: colors.muted },
   selected: { color: colors.accent, fontWeight: '700' },
 });

@@ -60,3 +60,7 @@ See `docs/SUBSCRIPTION_DOMAIN.md`; no purchases, provider integration or UI wiri
 Все функции Tan Ata включены в дорожную карту; астрология/нумерология — План P2.
 [docs/PRODUCT_BACKLOG.md](docs/PRODUCT_BACKLOG.md): критерии переноса и новые идеи,
 с разделением утверждённого объёма, предложений и текущей готовности.
+
+## Kimi styling alignment
+See [KIMI_DESIGN_ALIGNMENT](docs/KIMI_DESIGN_ALIGNMENT.md): bounded mobile palette/typography/navigation styling.
+Device visual acceptance remains open; no backend features added.

@@ -118,3 +118,7 @@ Acceptance awaits independent review; no publication or deployment in this chang
 Новые идеи вне Tan Ata и распределение Free/Plus остаются отдельными решениями.
 Изменены только документы поверх опубликованного 5b92c833b4d80a5f372a67e0675ff70969340ea6;
 текущая готовность не повышена. Независимая приёмка этой новой правки ожидается.
+
+## Kimi styling alignment
+See [KIMI_DESIGN_ALIGNMENT](docs/KIMI_DESIGN_ALIGNMENT.md): bounded mobile palette/typography/navigation styling.
+Device visual acceptance remains open; no backend features added.

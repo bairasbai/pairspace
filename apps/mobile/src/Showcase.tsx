@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Locale } from './copy';
 import { showcaseCopy } from './showcaseCopy';
-import { colors } from './theme';
+import { colors, radii, spacing, typography } from './theme';
 
 export type Section = 'today' | 'together' | 'letters' | 'calendar' | 'memories';
 type Props = { section: Section; locale: Locale; onOpen: (section: Section) => void };
@@ -70,22 +70,22 @@ export function Showcase({ section, locale, onOpen }: Props) {
   </View>;
 }
 const styles = StyleSheet.create({
-  container: { gap: 16 },
+  container: { gap: spacing.md },
   demo: { color: colors.muted, fontSize: 12, lineHeight: 18 },
   subtitle: { color: colors.muted, fontSize: 17, lineHeight: 25 },
-  hero: { backgroundColor: '#F1D5BF', borderRadius: 24, padding: 24, gap: 12, alignItems: 'center' },
-  countdown: { color: colors.ink, fontSize: 44, fontWeight: '600' },
-  note: { backgroundColor: '#FFF8ED', borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: 20, gap: 12 },
+  hero: { backgroundColor: colors.blush, borderRadius: radii.hero, padding: spacing.lg, gap: 12, alignItems: 'center' },
+  countdown: { fontFamily: typography.display.fontFamily, color: colors.ink, fontSize: 44, fontWeight: '600' },
+  note: { backgroundColor: colors.letter, borderColor: colors.border, borderWidth: 1, borderRadius: 20, padding: 20, gap: 12 },
   noteText: { fontSize: 18, lineHeight: 28, fontStyle: 'italic', color: colors.ink },
   body: { color: colors.muted, fontSize: 15, lineHeight: 23 },
-  cardTitle: { fontSize: 20, lineHeight: 28, color: colors.ink, fontWeight: '600' },
-  heading: { fontSize: 24, color: colors.ink, fontWeight: '600' },
+  cardTitle: { ...typography.card, color: colors.ink, fontWeight: '600' },
+  heading: { ...typography.card, color: colors.ink, fontWeight: '600' },
   link: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 20, padding: 20, gap: 8, minHeight: 64 },
   arrow: { color: colors.accent, fontSize: 24, alignSelf: 'flex-end' },
-  planned: { padding: 20, borderRadius: 20, backgroundColor: '#F5E7D9', gap: 8 },
+  planned: { padding: 20, borderRadius: 20, backgroundColor: colors.paperDeep, gap: 8 },
   tag: { color: colors.muted, fontSize: 12, fontWeight: '600' },
   segments: { flexDirection: 'row', gap: 8 },
-  segment: { flex: 1, minHeight: 48, padding: 12, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5E7D9' },
+  segment: { flex: 1, minHeight: 48, padding: 12, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.paperDeep },
   active: { backgroundColor: colors.accent },
   activeText: { color: colors.surface, fontSize: 16, fontWeight: '600' },
   segmentText: { color: colors.ink, fontSize: 16 },

@@ -4,7 +4,7 @@ import { showcaseCopy } from './showcaseCopy';
 import { Alert, BackHandler, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Copy, Locale } from './copy';
 import type { Tab } from './Navigation';
-import { colors } from './theme';
+import { colors, spacing, typography } from './theme';
 
 type Props = { tab: Tab; text: Copy; locale: Locale; setLocale: (locale: Locale) => void; draft: string; setDraft: (value: string) => void };
 export function PreviewScreen({ tab, text, locale, setLocale, draft, setDraft }: Props) {
@@ -55,8 +55,8 @@ export function PreviewScreen({ tab, text, locale, setLocale, draft, setDraft }:
   </ScrollView>;
 }
 const styles = StyleSheet.create({
-  body: { padding: 20, gap: 20, flexGrow: 1 },
-  title: { fontSize: 30, color: colors.ink, fontWeight: '700' },
+  body: { padding: spacing.lg, gap: spacing.lg, flexGrow: 1 },
+  title: { ...typography.display, color: colors.ink, fontWeight: '600' },
   card: { backgroundColor: colors.surface, borderRadius: 20, padding: 20, gap: 16 },
   paragraph: { color: colors.muted, fontSize: 16, lineHeight: 24 },
   label: { color: colors.ink, fontSize: 17, fontWeight: '600' },

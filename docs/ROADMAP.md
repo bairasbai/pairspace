@@ -89,3 +89,7 @@ Exit gate: добровольный минимальный ввод без ск�
 функций, тесты двух пар/отзыва/удаления и дат/поясов, развлекательная маркировка без
 научных, диагностических или рекомендательных обещаний. См. PRODUCT_BACKLOG.md.
 Текущий preview остаётся демо; эта правка не реализует функции.
+
+## Kimi styling alignment
+See [KIMI_DESIGN_ALIGNMENT](KIMI_DESIGN_ALIGNMENT.md): bounded mobile palette/typography/navigation styling.
+Device visual acceptance remains open; no backend features added.
