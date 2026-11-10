@@ -1,0 +1,4 @@
+d3ea8c6509f981f18f45e5fab41f31bb4250df4aa0625709265238598c09050d  apps/mobile/src/auth/letters.ts
+8684c3ba052956863331267a202c46a2222adc06bb6a41a0d7636445a8b2356b  apps/mobile/src/auth/controller.ts
+e68ef7734c9799b682ae8d69eab8bf4ee4d05ad99f4f1f6578be94048cd607de  services/api/src/letters.ts
+257bd01305296373387caf56e8b176f8c34561142d105e48d43421efc8849cfb  services/api/src/letters-http.ts

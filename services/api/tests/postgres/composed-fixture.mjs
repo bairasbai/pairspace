@@ -7,7 +7,7 @@ import { createApiApplication } from '../../src/api-application.ts';
 import { createFixture } from './fixture.mjs';
 import { withDeadline } from './async-bounds.mjs';
 
-export async function createComposedFixture({ emailPasswordEnabled = true, enableSyntheticProfileProvisioning = false, enableSyntheticWaitingSpaceCreation = false, enableSyntheticPairInvitations = false, enableSyntheticPairAcceptance = false, enableSyntheticCareSignals = false } = {}) {
+export async function createComposedFixture({ emailPasswordEnabled = true, enableSyntheticProfileProvisioning = false, enableSyntheticWaitingSpaceCreation = false, enableSyntheticPairInvitations = false, enableSyntheticPairAcceptance = false, enableSyntheticCareSignals = false, enableSyntheticLetters = false } = {}) {
   const fixture = await createFixture();
   let handler = async (_req, res) => { res.writeHead(503); res.end(); };
   const server = createServer((req, res) => { void handler(req, res).catch(() => { res.destroy(); }); });
@@ -18,7 +18,7 @@ export async function createComposedFixture({ emailPasswordEnabled = true, enabl
     }), 3000, 'HTTP listen');
     const baseURL = `http://127.0.0.1:${server.address().port}`;
     const app = createApiApplication({ pool: fixture.domainPool, baseURL,
-      secret: randomBytes(48).toString('base64url'), trustedOrigins: [baseURL], emailPasswordEnabled, enableSyntheticProfileProvisioning, enableSyntheticWaitingSpaceCreation, enableSyntheticPairInvitations, enableSyntheticPairAcceptance, enableSyntheticCareSignals,
+      secret: randomBytes(48).toString('base64url'), trustedOrigins: [baseURL], emailPasswordEnabled, enableSyntheticProfileProvisioning, enableSyntheticWaitingSpaceCreation, enableSyntheticPairInvitations, enableSyntheticPairAcceptance, enableSyntheticCareSignals, enableSyntheticLetters,
       limits: { bodyBytes: 65536, bodyReadMs: 1000, statementMs: 7000, lockMs: 5000 } });
     handler = toNodeHandler(app.handle);
     return { ...fixture, baseURL,

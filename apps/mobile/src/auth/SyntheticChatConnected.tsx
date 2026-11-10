@@ -1,3 +1,4 @@
+import { LettersPanel } from './LettersPanel';
 import { useEffect, useSyncExternalStore } from 'react';
 import { ScrollView } from 'react-native';
 import { CarePanel } from './CarePanel';
@@ -7,12 +8,17 @@ import type { Locale } from '../copy';
 export type SessionController = ReturnType<typeof createSessionController>;
 export function SyntheticChatConnected({ controller, locale, ownsController = true, showCareSend = true }: { controller: SessionController; locale: Locale; ownsController?: boolean; showCareSend?: boolean }) {
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const letters = controller.letters;
+  const lettersView = useSyncExternalStore(letters.subscribe, letters.getSnapshot);
   const care = controller.care;
   const careView = useSyncExternalStore(care.subscribe, care.getSnapshot);
   const invitations = controller.invitations;
   const inviteView = useSyncExternalStore(invitations.subscribe, invitations.getSnapshot);
   useEffect(() => ownsController ? () => controller.dispose() : undefined, [controller, ownsController]);
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16 }}>
+    <LettersPanel locale={locale} view={lettersView} onDraft={letters.setDraft}
+      onSend={() => { void letters.send(); }} onList={() => { void letters.list(); }}
+      onOpen={id => { void letters.open(id); }} onClose={letters.close} />
     <CarePanel showSend={showCareSend} locale={locale} view={careView} onSend={() => { void care.send(); }} onRead={() => { void care.read(); }} />
     <SyntheticChatPanel {...view} locale={locale}
     invitations={{ view: inviteView,

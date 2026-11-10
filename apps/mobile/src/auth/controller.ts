@@ -1,3 +1,4 @@
+import { createLettersController } from './letters';
 import { createCareController } from './care';
 import { mergeHistory, type HistoryView } from '../chat/history';
 import { createQueue, enqueue, retry } from '../chat/queue';
@@ -41,7 +42,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
   const invalidate = () => {
     generation++; historyBusy = false; abort.abort(); abort = new AbortController();
-    verifiedContext = null; invitationController.reset(); careController.reset();
+    verifiedContext = null; invitationController.reset(); careController.reset(); lettersController.reset();
     session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending = null; draftRevision++;
     publish({ ...empty, phase: 'busy' });
     return generation;
@@ -63,6 +64,11 @@ export function createSessionController(config: SyntheticConfig, client: Session
     getCookie: () => client.getCookie(), block, refresh,
   }, boundedRequest, commandId);
   const care = careController.actions;
+  const lettersController = createLettersController(contextConfig, {
+    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
+    getCookie: () => client.getCookie(), block, refresh,
+  }, boundedRequest, commandId);
+  const letters = lettersController.actions;
   const transport = createChatTransport({
     baseUrl: contextConfig.baseURL, allowHttpLoopbackForTests: true, cookieOrigin: contextConfig.baseURL,
     getCredentialGeneration: () => generation,
@@ -110,7 +116,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
       if (value.state !== 'ready') {
         block('context_' + value.state);
         authIdentity = expected;
-        verifiedContext = value; invitationController.sync(); careController.sync();
+        verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync();
         if (value.state === 'no_active_pair') waitingUserId = value.userId;
         return null;
       }
@@ -124,7 +130,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
         session = { scope, token: '', credentialGeneration: generation, credentialKind: 'cookie' };
         publish({ ...empty, phase: 'signed_in' });
       }
-      verifiedContext = value; invitationController.sync(); careController.sync();
+      verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync();
       return { credential: { ...session, token: cookie }, changed };
     } catch {
       if (current === generation && sequence === discoverySequence) {
@@ -200,6 +206,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   return {
     invitations,
     care,
+    letters,
     loadOlder,
     getSnapshot: () => view,
     subscribe(notify: () => void) { listeners.add(notify); return () => { listeners.delete(notify); }; },

@@ -13,7 +13,10 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
   const inviteView: InviteView = { mode: 'unavailable', busy: null, error: null, invitation: null,
     issuedToken: null, tokenInput: '', preview: null, consent: false, recovery: 'none' };
   const careView = { available: false, busy: false, status: 'idle' as const, incoming: null, checked: false, error: false };
+  const lettersView = { available: false, busy: false, status: 'idle' as const, draft: '', letters: [], opened: null, checked: false, error: false };
   const controller: SessionController = {
+    letters: { getSnapshot: () => lettersView, subscribe: () => () => {}, setDraft: jest.fn(), close: jest.fn(),
+      send: jest.fn(async () => {}), list: jest.fn(async () => {}), open: jest.fn(async () => {}) },
     care: { getSnapshot: () => careView, subscribe: () => () => {}, send: jest.fn(async () => {}), read: jest.fn(async () => {}) },
     invitations: { getSnapshot: () => inviteView, subscribe: () => () => {},
       readMetadata: jest.fn(async () => {}), issue: jest.fn(async () => {}), revoke: jest.fn(async () => {}),

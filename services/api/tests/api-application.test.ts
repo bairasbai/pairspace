@@ -242,3 +242,14 @@ it('mounts care signals only with an explicit boolean loopback opt-in', async ()
   const response = await app.handle(new Request(origin + path, { headers: { origin } }));
   expect(response.status).toBe(401);
 });
+
+it('mounts letters collection and open only with explicit boolean loopback opt-in', async () => {
+  const paths = ['/v1/couples/00000000-0000-4000-8000-000000000001/letters',
+    '/v1/couples/00000000-0000-4000-8000-000000000001/letters/00000000-0000-4000-8000-000000000002'];
+  for (const path of paths) expect((await createApiApplication(config()).handle(request(path))).status).toBe(404);
+  expect(() => createApiApplication({ ...config(), enableSyntheticLetters: true })).toThrow('invalid_api_configuration');
+  expect(() => createApiApplication({ ...config(), enableSyntheticLetters: 'true' } as unknown as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin = 'http://127.0.0.1:1234';
+  const app = createApiApplication({ ...config(), baseURL: origin, trustedOrigins: [origin], enableSyntheticLetters: true });
+  for (const path of paths) expect((await app.handle(new Request(origin + path + '?membership_epoch=1', { headers: { origin } }))).status).toBe(401);
+});

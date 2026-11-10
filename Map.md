@@ -105,3 +105,9 @@ Device visual acceptance remains open; no backend features added.
 - `apps/mobile/src/auth/useControllerOwner.ts`: App владеет controller между вкладками.
 - `apps/mobile/__tests__/central-heart.test.tsx`: интеграция с настоящим controller.
 - [CENTRAL_HEART_EVIDENCE](docs/CENTRAL_HEART_EVIDENCE.md): проверки и открытые gates.
+
+## 2026-11-10 — немедленные synthetic-письма
+- `services/api/LETTERS.md`: send-now, неизменяемая команда, входящие метаданные
+  и отдельное авторизованное открытие тела; миграция `006_letters.sql`.
+- `apps/mobile/LETTERS.md`: приватный RAM-черновик, RU/EN и явные сетевые действия.
+- `docs/LETTERS_EVIDENCE.md`: проверки и ограничения; независимая приёмка отдельно.

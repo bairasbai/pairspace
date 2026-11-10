@@ -141,3 +141,13 @@ are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
   logout/unmount и offline default; [доказательства](CENTRAL_HEART_EVIDENCE.md).
 - Открыто: независимая приёмка frozen SHA, native iOS/Android и два устройства,
   production-сервер, push и долговечное восстановление. JS export не native build.
+
+## Ограниченный шаг: немедленные synthetic-письма
+- RAM-черновик автора → явная send-now команда → входящие метаданные партнёра
+  → отдельное открытие тела. Подтверждение сервера не является read receipt.
+- Последние 30 входящих; без пагинации и полного архива. Неизменяемый повтор
+  после неизвестного ACK, строгая изоляция пары/epoch и очистка клиентской области.
+- Отдельные будущие gates: запечатывание/расписание с серверным временем,
+  долговечные черновики, ответы, чтения по согласию, правки/удаление и retention.
+- Независимая приёмка SHA, native iOS/Android, два устройства и production
+  security/deployment gates остаются открыты; [доказательства](LETTERS_EVIDENCE.md).
