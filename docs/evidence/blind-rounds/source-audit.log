@@ -1,0 +1,4 @@
+Changed handwritten files >600 lines: []
+Source hashes unchanged after final tests: PASS
+Full local-base working-tree diff check: PASS
+No dependencies or coverage exclusions added.

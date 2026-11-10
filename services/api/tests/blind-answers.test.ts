@@ -13,7 +13,7 @@ const catalog = { questionId: 'small-joy', catalogVersion: 1 };
 const command = { ...scope, ...catalog, commandId: id(801) };
 const db = () => adapter(pg);
 let roundId: string;
-beforeAll(async () => { pg = await createFixture(); await pg.exec(await readFile(new URL('../migrations/010_blind_answers.sql', import.meta.url), 'utf8')); });
+beforeAll(async () => { pg = await createFixture(); for (const file of ['010_blind_answers.sql', '011_repeatable_blind_rounds.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8')); });
 afterAll(async () => { await pg.close(); });
 it('normalizes bounded answers and rejects invalid scalar input', () => {
   expect(normalizeAnswer(' Synthetic e\u0301\n answer ')).toEqual({ ok: true, text: 'Synthetic é answer' });

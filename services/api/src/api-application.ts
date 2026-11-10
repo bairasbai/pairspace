@@ -38,7 +38,7 @@ export type ApiApplicationConfig = Readonly<{
   enableSyntheticPairLeave?: boolean;
   /** Synthetic shared tasks; independent loopback-only opt-in. */
   enableSyntheticSharedTasks?: boolean;
-  /** Single synthetic blind-answer round; independent loopback-only opt-in. */
+  /** Repeatable synthetic blind-answer rounds; independent loopback-only opt-in. */
   enableSyntheticBlindAnswers?: boolean;
   limits: BodyLimits & TransactionLimits;
 }>;
@@ -128,7 +128,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isCare = /^\/v1\/couples\/[^/]+\/care-signals$/.test(path) && care !== null;
         const isLetters = /^\/v1\/couples\/[^/]+\/letters(?:\/[^/]+)?$/.test(path) && letters !== null;
         const isTasks = /^\/v1\/couples\/[^/]+\/tasks(?:\/[^/]+)?$/.test(path) && tasks !== null;
-        const isBlind = /^\/v1\/couples\/[^/]+\/blind-round(?:\/[^/]+\/answer)?$/.test(path) && blind !== null;
+        const isBlind = /^\/v1\/couples\/[^/]+\/(?:blind-round(?:\/[^/]+\/answer)?|blind-rounds(?:\/[^/]+)?)$/.test(path) && blind !== null;
         const isContext = path === '/v1/session/context';
         const isProfile = path === '/v1/profile' && profile !== null;
         const isWaiting = path === '/v1/spaces/waiting' && waiting !== null;

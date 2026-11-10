@@ -134,8 +134,11 @@ Device visual acceptance remains open; no backend features added.
 - `docs/SHARED_TASKS_EVIDENCE.md`: проверки и открытые gates.
 
 ## Слепые ответы: bounded synthetic-срез
-`packages/domain/blind`, `services/api/src/blind*`, migration 010 и
-`apps/mobile/src/auth/blind*`: один явный раунд для текущей пары/epoch.
+`packages/domain/blind`, `services/api/src/blind*`, migrations 010–011 и
+`apps/mobile/src/auth/blind*`: явная цепочка раундов текущей пары/epoch.
 Backend удерживает чужой ответ до двух immutable submissions; клиент хранит
 черновик только в RAM. [Контракт](services/api/BLIND_ANSWERS.md),
-[доказательства](docs/BLIND_ANSWERS_EVIDENCE.md). Не все 11 режимов и не production.
+[первый срез](docs/BLIND_ANSWERS_EVIDENCE.md),
+[повторяемые раунды](docs/BLIND_ROUNDS_EVIDENCE.md). Не все 11 режимов и не production.
+Следующий раунд требует двух ответов и явной команды; последние десять metadata,
+выбор и чтение тела отдельно. Legacy open/read остаются привязаны к первому раунду.

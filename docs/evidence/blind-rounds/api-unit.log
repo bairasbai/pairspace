@@ -1,0 +1,40 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test
+> vitest run --coverage --no-fsModuleCache
+
+
+ RUN  v5.1.0 /workspace/scratch/bb7b759a56b3/pairspace-rounds
+      Coverage enabled with v8
+
+
+ Test Files  32 passed (32)
+      Tests  224 passed (224)
+   Start at  17:13:25
+   Duration  104.60s (tests 98%, import 1%, transform 1%, worker 1%)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    99.3 |     98.8 |     100 |   99.91 |
+ services/api/src  |   99.26 |    98.74 |     100 |    99.9 |
+  auth.ts          |    97.5 |    98.27 |     100 |   96.77 | 52
+  ...swers-http.ts |     100 |    97.33 |     100 |     100 | 39,44
+  blind-answers.ts |   99.11 |    99.32 |     100 |     100 | 75
+  ...gnals-http.ts |     100 |       96 |     100 |     100 | 31,35
+  http.ts          |     100 |    97.91 |     100 |     100 | 65
+  letters-http.ts  |     100 |    96.36 |     100 |     100 | 32,36
+  pair-close.ts    |      90 |    83.87 |     100 |     100 | 16-19,26,29,38
+  pair-leave.ts    |    92.3 |    94.11 |     100 |     100 | 35,39,55
+  ...-provision.ts |   98.57 |    98.38 |     100 |     100 | 77
+  ...tasks-http.ts |     100 |    96.49 |     100 |     100 | 32,37
+  shared-tasks.ts  |    98.7 |     97.5 |     100 |     100 | 45,65
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 99.3% ( 1572/1583 )
+Branches     : 98.8% ( 1820/1842 )
+Functions    : 100% ( 234/234 )
+Lines        : 99.91% ( 1134/1135 )
+================================================================================

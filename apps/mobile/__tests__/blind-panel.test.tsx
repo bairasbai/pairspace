@@ -27,3 +27,16 @@ it('unavailable panel renders no answer controls', () => {
   const noop=jest.fn(); render(<BlindPanel locale="ru" view={emptyBlind} onDraft={noop} onConsent={noop} onOpen={noop} onRead={noop} onSubmit={noop} onRetry={noop} />);
   expect(screen.queryByText(blindCopy.ru.title)).toBeNull();
 });
+it.each(['ru','en'] as const)('renders explicit history, selection, and confirmed next controls in %s',locale=>{
+  const onList=jest.fn(),onSelect=jest.fn(),onNext=jest.fn(),noop=jest.fn();
+  const revealed={...round,ownAnswer:'Joy',partnerAnswer:'Walk',revealed:true};
+  render(<BlindPanel locale={locale} view={{...emptyBlind,available:true,round:revealed,selectedRoundId:round.id,currentRoundId:round.id,
+    rounds:[{id:round.id,questionId:round.questionId,catalogVersion:1}]}}
+    onDraft={noop} onConsent={noop} onOpen={noop} onRead={noop} onSubmit={noop} onRetry={noop}
+    onList={onList} onSelect={onSelect} onNext={onNext}/>);
+  fireEvent.press(screen.getByText(blindCopy[locale].history)); expect(onList).toHaveBeenCalledTimes(1);
+  fireEvent.press(screen.getByText(new RegExp(round.id))); expect(onSelect).toHaveBeenCalledWith(round.id);
+  const nextButtons=screen.getAllByText(new RegExp('^'+blindCopy[locale].next));
+  expect(nextButtons).toHaveLength(3);fireEvent.press(nextButtons[1]);
+  expect(onNext).toHaveBeenCalledWith('shared-plan',1,true);
+});

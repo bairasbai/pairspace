@@ -163,3 +163,12 @@ reveal or replay old answers. Exact retries cannot edit a submitted answer.
 The server can read stored plaintext; no E2EE claim. No answer logging, analytics,
 URL parameters, push payloads or AI access. Synthetic records only until production
 privacy, retention, recovery and independent security gates are separately closed.
+
+Repeatable rounds preserve this boundary. Metadata listing contains only IDs and
+public question/version, never bodies or per-participant submission state. Selected
+reads and old command replay reauthorize the original round against the current
+active pair/epoch. Next requires an exact confirmed predecessor and question; SQL
+serializes chain insertion and forbids a successor until both exact authors exist.
+Old replay never changes the current tip. Client selection/request generations
+prevent a late answer from one round appearing under another question; pending
+commands remain scoped to their original round and verified session.

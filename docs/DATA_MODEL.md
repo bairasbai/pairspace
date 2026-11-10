@@ -193,8 +193,8 @@ operation,expected_version,title?,applied_version)` имеет PK `(actor_user_i
 Индекс `(couple_id,membership_epoch,created_at DESC,id DESC)` поддерживает окно
 последних 50, одинаковое для обоих участников. Это не архив, retention или purge.
 
-## Слепые ответы (010), synthetic
-Один неизменяемый round на `(couple_id,membership_epoch)` с snapshot двух участников
+## Слепые ответы (010–011), synthetic
+Неизменяемая цепочка раундов на `(couple_id,membership_epoch)` со snapshot двух участников
 и точной парой question_id/catalog_version. Каталог встроенный, не содержит личных данных.
 Ответ принадлежит конкретному round и его участнику; максимум один immutable submission
 на человека. Receipt связывает actor/command с scope, round, question/version и ответом.
@@ -204,13 +204,22 @@ operation,expected_version,title?,applied_version)` имеет PK `(actor_user_i
 после ожидания. Snapshot должен совпасть с текущими двумя участниками active пары.
 До двух submissions projection читает только собственное тело и наличие строк;
 запрос чужого тела выполняется только после проверки двух участников. В API отсутствуют
-чужие body/length/submitted/status до reveal. В списках нет ответов: отдельного списка нет.
+чужие body/length/submitted/status до reveal. Список содержит только последние десять metadata, без тел и статуса отправки.
 Закрытие пары/смена epoch/отзыв сессии блокирует read и replay, даже ранее раскрытых ответов.
 Нормализованный ограниченный plaintext может читать сервер; это не E2EE. Данные не
 попадают в логи/URLs/outbox/ошибки. Сроки retention и удаление здесь не определяются.
 
 Исключение к общей рекомендации `couple_id` в каждом private child table:
-в этом synthetic-срезе blind_answers и blind_commands ссылаются на единственный
+в этом synthetic-срезе blind_answers и blind_commands ссылаются на конкретный
 immutable blind_rounds.id. Scope выводится только из родителя; insert-trigger
 проверяет actor по двум snapshot-участникам. Без авторизации родительского scope
 доступа к дочерним телам нет. Это явное ограниченное исключение, не общий шаблон.
+
+Миграция 011 добавляет nullable predecessor_round_id без изменения прежних записей.
+Уникальные initial/successor ограничения и SQL insert-trigger под блокировкой пары
+запрещают ветвление, пропуск и новый раунд до двух ответов текущего. Новый раунд
+не обновляет существующий; каталог допускает три нейтральных RU/EN вопроса v1.
+Legacy open/read остаются привязаны к первому small-joy v1. Явная next-команда
+подтверждает predecessor и question/version; replay возвращает исходный target,
+а не текущий раунд. История сортируется по цепочке, тела читаются отдельно.
+Окно последних десяти не устанавливает retention и не открывает доступ бывшим участникам.

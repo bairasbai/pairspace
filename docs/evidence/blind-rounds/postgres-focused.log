@@ -1,0 +1,40 @@
+Verified 14 package-local runtime symlinks
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+✔ blind PostgreSQL: real SQL projection does not read another body before mutual submission (809.432463ms)
+✔ blind PostgreSQL: leave serializes against closure without one-sided release (690.011169ms)
+✔ blind PostgreSQL: submit serializes against closure without one-sided release (681.828745ms)
+✔ blind PostgreSQL: read serializes against closure without one-sided release (619.445321ms)
+✔ blind PostgreSQL: expired session after pair lock wait denies open/read/submit and exact replay (1806.551879ms)
+✔ blind PostgreSQL: immutable rows and participant guard; answer and receipt commit atomically (674.189702ms)
+✔ blind PostgreSQL: revoked provider session during user-lock wait prevents the second submission (643.905208ms)
+✔ blind rounds PostgreSQL: raw SQL enforces current snapshot, complete predecessor and one concurrent successor (909.9375ms)
+✔ blind rounds PostgreSQL: metadata does not query bodies and selected projection remains author-only until reveal (690.026882ms)
+✔ blind rounds PostgreSQL: revoke during lock wait denies next/history/selected including replay (684.875111ms)
+✔ blind rounds PostgreSQL: close during lock wait denies next/history/selected including replay (660.348838ms)
+✔ blind rounds PostgreSQL: explicit advance, immutable old replay, answer binding and legacy first round (898.083992ms)
+✔ blind rounds PostgreSQL: concurrent next commands create exactly one successor (558.656585ms)
+✔ blind rounds PostgreSQL: history bounded to latest ten metadata rows and isolation on every new route (1058.203591ms)
+✔ blind rounds PostgreSQL: forward migration preserves first round, answers and receipts (124.483851ms)
+✔ blind rounds PostgreSQL: next strict consent/version/header validation and receipt rollback are atomic (640.098229ms)
+✔ blind PostgreSQL: one-sided answers never reveal body, length or submission status; mutual reveal is symmetric (701.500687ms)
+✔ blind PostgreSQL: concurrent opens and submissions converge; immutable command replay binds answer and round (663.557888ms)
+✔ blind PostgreSQL: malicious round IDs, second pair, old epoch, closed and new pair cannot expose answers (695.235949ms)
+✔ blind PostgreSQL: explicit consent and bounded normalized text; strict HTTP inputs leave answers untouched (539.140718ms)
+(node:250) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-rounds/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-rounds/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ blind rounds real PostgreSQL: mobile explicit history/selection, lost next ACK and round-bound answers (1141.366926ms)
+(node:265) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-rounds/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-rounds/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ blind real PostgreSQL: mobile controllers → HTTP → DB, consent, lost ACK retry and symmetric reveal (1397.955995ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20668.505011

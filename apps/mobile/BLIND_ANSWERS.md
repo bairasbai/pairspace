@@ -1,27 +1,37 @@
-# Blind answers: synthetic connected slice
+# Repeatable blind answers: synthetic connected slice
 
-Explicit connected entry exposes one built-in bilingual question and one round per active
-pair membership epoch. Opening is idempotent and cannot start another round after completion.
-This is an early slice limit, not the final product policy.
+Opening via the legacy endpoint always returns the first round; it never advances.
+The separate explicit “Refresh round list” action retrieves only the latest ten round IDs
+and question/version metadata, plus the server's current ID. This is not a complete
+history. Selecting a listed round explicitly fetches its body. Ordinary “Refresh round”
+refreshes the selected body. To find a partner's new round, refresh the list and select
+“Current round”. No navigation, login, render, timer, or background event starts requests.
 
-No round requests happen on navigation, login, render, timers, or background events.
-Open and refresh require explicit taps. No submission-status indicator is exposed.
-Before both participants submit, only the viewer's own submitted answer can be shown.
-Partner text is accepted only with a mutual-reveal response and a valid own answer.
+The three bilingual catalog questions have pinned IDs and catalog versions. After both
+answers reveal, only the known current round offers buttons explicitly confirming a new
+round with the full chosen question. There is no daily/automatic progression. Historical
+rounds are read-only. After a next ACK/replay, refresh the list before further submission
+or progression: the returned target does not prove that it remains server-current.
 
-The draft exists only in RAM. Changing it clears consent. An explicit consent switch and
-submit button explain mutual disclosure and that submitted answers cannot be edited or
-deleted in this slice. No keyboard-submit shortcut exists. Once submission starts, its
-answer and command ID are immutable; retries reuse the same payload and prior consent.
-The answer draft cannot be edited while that command has an unknown outcome. Refresh can
-recover a committed answer but does not silently abandon an unresolved command.
+Before mutual reveal only the viewer's own submitted answer can be shown. Metadata never
+includes body text or submission status. Partner text is accepted only with mutual reveal
+and a valid own answer. Known immutable answers and reveals cannot be replaced/retracted.
 
-Current session identity, generation, pair, epoch and cookie are checked before each request,
-after headers and after response-body reading. Reset/leave/logout scrubs private state.
-The client rejects foreign scopes, malformed/private metadata, changed round identity,
-changed immutable own answers, and retracted mutual reveals. No text is stored in URLs,
-logs, analytics or device persistence. Submitted text is server-readable, not E2EE.
+Drafts exist only in RAM. Selection clears drafts and consent; editing also clears consent.
+An explicit consent switch and submit button explain mutual disclosure and that submitted
+answers cannot be edited/deleted in this slice. No keyboard-submit shortcut exists.
+Once a command starts its ID, question/version and answer/predecessor stay immutable.
+Unknown outcomes retain commands per round. Selection invalidates request generation, so
+late answers or next ACKs cannot replace the selected round. Returning to the predecessor
+restores its unresolved next retry; only a retry completed while still selected can show
+its target. Retry uses exactly the same command and payload. Refresh does not silently
+abandon unresolved commands. Known bodies are pruned outside the displayed/pending scope.
 
-RU/EN connected UI leaves default offline/Kimi behavior unchanged. Tests cover controller,
-strict response validation, consent/retry, lifecycle races and connected component actions.
-iOS/Android JavaScript export is not native build or real-device acceptance.
+Session identity, generation, pair, epoch and cookie are verified before requests, after
+headers and after body reads. Reset/leave/logout clears drafts, known bodies and commands.
+No answer text is persisted in URLs, logs, analytics or device storage. The server can read
+submitted text; this is not E2EE. Default offline/Kimi behavior remains unchanged.
+
+Tests cover controller, strict response validation, rendered RU/EN actions, immutable
+retry and lifecycle/selection races. iOS/Android JavaScript exports are not native builds
+or real-device acceptance. Independent review is still required.

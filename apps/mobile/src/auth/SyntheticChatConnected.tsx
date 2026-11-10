@@ -27,6 +27,8 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16 }}>
     <LeavePanel locale={locale} view={leaveView} onBegin={leave.begin} onCancel={leave.cancel} onConfirm={() => { void leave.confirm(); }} />
     <BlindPanel locale={locale} view={blindView} onDraft={blind.setDraft} onConsent={blind.setConsent}
+      onList={() => { void blind.listRounds(); }} onSelect={id => { void blind.selectRound(id); }}
+      onNext={(id, version, confirm) => { void blind.next(id, version, confirm); }}
       onOpen={() => { void blind.open(); }} onRead={() => { void blind.read(); }}
       onSubmit={() => { void blind.submit(); }} onRetry={() => { void blind.retry(); }} />
     <TasksPanel locale={locale} view={tasksView} onDraft={tasks.setDraft} onCancel={tasks.cancel}
