@@ -3,9 +3,9 @@ import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { colors } from './theme';
 import { useReducedMotion } from './useReducedMotion';
 
-type Props = { label: string; hint: string; onPress: () => void };
+type Props = { label: string; hint: string; onPress: () => void; disabled?: boolean; busy?: boolean };
 
-export function HeartButton({ label, hint, onPress }: Props) {
+export function HeartButton({ label, hint, onPress, disabled = false, busy = false }: Props) {
   const reduced = useReducedMotion();
   const [scale] = useState(() => new Animated.Value(1));
   useEffect(() => {
@@ -22,6 +22,7 @@ export function HeartButton({ label, hint, onPress }: Props) {
   }, [reduced, scale]);
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityHint={hint}
+      disabled={disabled || busy} accessibilityState={{ disabled: disabled || busy, busy }}
       onPress={onPress} style={styles.button}>
       <Animated.View style={[styles.circle, { transform: [{ scale }] }]}>
         <Text accessible={false} style={styles.heart}>♥</Text>

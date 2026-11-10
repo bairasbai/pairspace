@@ -10,7 +10,7 @@ const response = (status: number, body: unknown) => Response.json(body, { status
     ...(status === 405 ? { Allow: 'GET, POST' } : {}) } });
 const error = (status: number, code: string) => response(status, { ok: false, error: code });
 
-async function readJson(request: Request): Promise<unknown> {
+export async function readJson(request: Request): Promise<unknown> {
   if (!request.body) throw new Error('invalid_body');
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];

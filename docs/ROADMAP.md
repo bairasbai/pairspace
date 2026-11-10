@@ -124,3 +124,12 @@ are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
 - [x] Unit/renderer сценарии lifecycle, конфликтов и гонок; real PostgreSQL >50 rows.
 - [ ] Независимая проверка точного финального SHA и физические iOS/Android сценарии.
 - Без production rollout, бесконечного архива, удаления, realtime или receipts.
+
+## 2026-11-10 — отдельный synthetic сигнал заботы
+- [x] Реализовано фиксированное «Думаю о тебе» между двумя активными участниками.
+- Явная отправка и явное чтение входящего сигнала, replay после unknown ACK.
+- SQL-сессия/пара/epoch проверяются заново; 60с продуктовый cooldown сериализован.
+- 24ч окно видимости не удаляет dedup journal и не устанавливает retention policy.
+- Не закрыты: независимая приёмка SHA, реальные iOS/Android и два устройства,
+  restart persistence, политика удаления, abuse defence, production rollout.
+- Доказательства: [CARE_SIGNAL_EVIDENCE](CARE_SIGNAL_EVIDENCE.md).

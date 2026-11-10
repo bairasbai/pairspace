@@ -231,3 +231,14 @@ it('gates preview/accept independently with boolean loopback opt-in and uniform 
   }
   expect(provider.handler).not.toHaveBeenCalled();
 });
+
+it('mounts care signals only with an explicit boolean loopback opt-in', async () => {
+  const path = '/v1/couples/00000000-0000-4000-8000-000000000001/care-signals?membership_epoch=1';
+  expect((await createApiApplication(config()).handle(request(path))).status).toBe(404);
+  expect(() => createApiApplication({ ...config(), enableSyntheticCareSignals: true })).toThrow('invalid_api_configuration');
+  expect(() => createApiApplication({ ...config(), enableSyntheticCareSignals: 'true' } as unknown as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin = 'http://127.0.0.1:1234';
+  const app = createApiApplication({ ...config(), baseURL: origin, trustedOrigins: [origin], enableSyntheticCareSignals: true });
+  const response = await app.handle(new Request(origin + path, { headers: { origin } }));
+  expect(response.status).toBe(401);
+});

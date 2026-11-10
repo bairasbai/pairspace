@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { observeTask, barrierOrCompletion, withDeadline, settleBounded } from './async-bounds.mjs';
 
 const never = () => new Promise(() => {});
@@ -26,4 +27,11 @@ test('shell sanitation removes all inherited PG settings before utility executio
 test('outer GNU timeout terminates stuck subprocess with nonzero status', () => {
   const result = spawnSync('timeout', ['--signal=TERM', '--kill-after=1s', '0.05s', 'bash', '-c', 'sleep 30'], { encoding: 'utf8', timeout: 2000 });
   assert.equal(result.status, 124);
+});
+
+
+test('full PostgreSQL suite retains a fixed 90-second outer limit and ten-second kill grace', () => {
+  const script = readFileSync(new URL('../../scripts/run-postgres.sh', import.meta.url), 'utf8');
+  assert.match(script, /exec timeout --signal=TERM --kill-after=10s 90s bash scripts\/run-postgres-inner\.sh/);
+  assert.match(script, /source scripts\/sanitize-pg-env\.sh/);
 });

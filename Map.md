@@ -92,3 +92,10 @@ Device visual acceptance remains open; no backend features added.
 - apps/mobile/CHAT_HISTORY.md: RU/EN путь, лимит 200, гонки и ограничения проверки.
 - services/api/tests/postgres/mobile-chat-history.integration.mjs: >50 сообщений,
   разреженные seq, две пары, права и настоящий PostgreSQL.
+
+## 2026-11-10 — отдельный сигнал заботы (synthetic)
+- `services/api/CARE_SIGNALS.md`: контракт фиксированного «Думаю о тебе»,
+  свежая SQL-авторизация, идемпотентность, cooldown и окно явного чтения.
+- `apps/mobile/CARE_SIGNALS.md`: opt-in connected UI, повтор после неизвестного ACK,
+  RU/EN и очистка области; исходный offline preview не подключён к сети.
+- `docs/CARE_SIGNAL_EVIDENCE.md`: выполненные проверки и оставшиеся gates.
