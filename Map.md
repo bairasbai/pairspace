@@ -156,3 +156,9 @@ create/list для текущей пары/epoch; клиент `apps/mobile/src/
 Migration `013_annual_shared_dates.sql` расширяет immutable запись и receipt,
 сохраняя старые once-команды. RU/EN выбор и ручное обновление не создают reminders.
 [Доказательства](docs/ANNUAL_DATES_EVIDENCE.md).
+
+## Локальная воспроизводимая проверка
+- scripts/verification/: fixed-profile fail-closed runner, source identity, process budgets,
+  coverage-summary verification и adversarial tests; без GitHub Actions/deploy/install.
+- docs/VERIFICATION_RUNNER.md: команды, scope, artifact contract и ограничения.
+- docs/evidence/VERIFICATION_GATE.md: baseline и протокол независимой приёмки.

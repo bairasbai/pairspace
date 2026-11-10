@@ -207,3 +207,9 @@ calendar ещё не реализованы. Независимая провер
 Никаких reminders, push, countdown, edit/delete или background notifications.
 Независимая приёмка frozen SHA и native/device/production gates остаются открыты.
 [Доказательства](ANNUAL_DATES_EVIDENCE.md).
+
+## Инженерный checkpoint: воспроизводимая локальная приёмка
+Реализован fixed-profile fail-closed runner (docs/VERIFICATION_RUNNER.md).
+Exit gate: чистый frozen source, полный machine-readable report, coverage >=90
+по четырём метрикам, отсутствие обязательных FAIL/NOT_RUN, независимый reviewer.
+Локальный PASS не закрывает native/E2E/production/security exit gates продукта.

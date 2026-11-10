@@ -28,3 +28,13 @@ Typecheck/build, iOS/Android и весь будущий функционал э�
 SHA и base SHA; список diff; команды/версии; результаты; сценарии и ожидаемые эффекты;
 блокирующие/неблокирующие находки; непроверенное; итог «принято в указанном объёме» или «не принято».
 После изменений повторить затронутые проверки. Документы можно принять отдельно от продукта.
+
+## Локальный автоматизированный checkpoint
+Исторический раздел «Текущее состояние» выше описывает ccbe5df, не текущий scope.
+Теперь `npm run verify` запускает фиксированные required этапы API/mobile/domain,
+реальный PG и safety, runner coverage и JS export. `npm run verify:plan` показывает
+план. `npm run verify:runner` ограничен самим runner и не выдаёт full acceptance.
+Все четыре coverage metrics >=90 проверяются tool thresholds и свежим JSON summary.
+Report фиксирует точный SHA/tree/file hashes, исходную чистоту и отсутствие изменений.
+Подробности: docs/VERIFICATION_RUNNER.md; baseline: docs/evidence/VERIFICATION_GATE.md.
+Root Next явно NOT_RUN; native/E2E/production и независимая приёмка остаются отдельными.
