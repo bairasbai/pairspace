@@ -240,16 +240,16 @@ it('isolates history, drafts and request scope between accounts and relogins', a
   expect(input.url).toBe(`${config.baseURL}/v1/couples/${uuid(12)}/chat/messages?membership_epoch=2&limit=50`);
   expect(input.headers.get('cookie')).toContain('synthetic-cookie-b');
 });
-it.each(['refresh', 'send'] as const)('blocks getCookie rejection during %s until explicit logout and fresh login', async operation => {
+it.each(['refresh', 'send'] as const)('preserves private draft on transient getCookie failure during %s and rechecks before retry', async operation => {
   const { controller, client, request, login } = setup();
   await login();
   controller.setDraft('private draft');
   client.getCookie.mockRejectedValueOnce(new Error('cookie secret'));
   await controller[operation]();
   expect(request).toHaveBeenCalledTimes(1);
-  expect(controller.getSnapshot()).toEqual({ phase: 'blocked', error: 'transport_error', draft: '', messages: [] });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', error: 'transport_error', draft: 'private draft', messages: [message] });
   await controller.refresh();
-  expect(request).toHaveBeenCalledTimes(1);
+  expect(request).toHaveBeenCalledTimes(2);
   await controller.signOut();
   await login();
   expect(controller.getSnapshot().error).toBeNull();
@@ -379,7 +379,7 @@ it('clears an unchanged draft only after ACK and then refreshes server history',
   controller.setDraft('hello');
   request.mockResolvedValueOnce(ack('hello')).mockResolvedValueOnce(page([{ ...message, body: 'hello' }]));
   await controller.send();
-  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error: null, draft: '', messages: [{ ...message, body: 'hello' }] });
+  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error: null, draft: '', messages: [{ ...message, body: 'hello' }], outgoing: { body: 'hello', status: 'sent' } });
 });
 it.each([400, 429, 503, 'lost-ack'] as const)('retries %s using the same command and body without duplicating a committed message', async failure => {
   const { controller, request, commandId, login } = setup();
@@ -398,18 +398,23 @@ it.each([400, 429, 503, 'lost-ack'] as const)('retries %s using the same command
   expect(await first.json()).toEqual(await retried.json());
   expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', draft: '', error: null });
 });
-it('generates a fresh command when a failed draft is replaced', async () => {
+it('resolves the original command before sending an edited draft with a fresh ID', async () => {
   const { controller, request, commandId, login } = setup();
   await login();
   controller.setDraft('old draft');
   request.mockResolvedValueOnce(envelope({}, 503));
   await controller.send();
   controller.setDraft('new draft');
+  request.mockResolvedValueOnce(ack('old draft'));
+  await controller.send();
+  expect(commandId).toHaveBeenCalledTimes(1);
+  expect(request.mock.calls[2][0].headers.get('idempotency-key')).toBe(uuid(3));
+  expect(controller.getSnapshot().draft).toBe('new draft');
   commandId.mockReturnValueOnce(uuid(33));
-  request.mockResolvedValueOnce(ack('new draft', uuid(33)));
+  request.mockResolvedValueOnce(envelope({ ok: true, value: { message: { ...message,
+    id: uuid(44), seq: 2, body: 'new draft', clientId: uuid(33) }, replay: false } }));
   await controller.send();
   expect(commandId).toHaveBeenCalledTimes(2);
-  expect(request.mock.calls[2][0].headers.get('idempotency-key')).toBe(uuid(33));
   expect(controller.getSnapshot().draft).toBe('');
 });
 it('remembers the original lost-ACK command after another failed draft and edit back', async () => {
@@ -426,12 +431,12 @@ it('remembers the original lost-ACK command after another failed draft and edit 
   request.mockResolvedValueOnce(ack('draft A')).mockResolvedValueOnce(page([{ ...message, body: 'draft A' }]));
   await controller.send();
   const inputs = request.mock.calls.slice(1, 4).map(([input]) => input);
-  expect(inputs.map(input => input.headers.get('idempotency-key'))).toEqual([uuid(3), uuid(33), uuid(3)]);
+  expect(inputs.map(input => input.headers.get('idempotency-key'))).toEqual([uuid(3), uuid(3), uuid(3)]);
   const bodies = await Promise.all(inputs.map(input => input.json()));
-  expect(bodies.map(body => body.body)).toEqual(['draft A', 'draft B', 'draft A']);
+  expect(bodies.map(body => body.body)).toEqual(['draft A', 'draft A', 'draft A']);
   expect(bodies[2]).toEqual(bodies[0]);
-  expect(commandId).toHaveBeenCalledTimes(2);
-  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', error: null, draft: '', messages: [{ body: 'draft A' }] });
+  expect(commandId).toHaveBeenCalledTimes(1);
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', error: null, draft: 'draft A', messages: [{ body: 'draft A' }] });
 });
 it('an old send completion cannot release the new session sending lock', async () => {
   const old = deferred<Response>();
@@ -464,7 +469,7 @@ it.each([[400, 'rejected'], [429, 'rate_limited'], [503, 'transport_error']] as 
   controller.setDraft('hello');
   request.mockResolvedValueOnce(envelope({ private: 'server detail' }, status));
   await controller.send();
-  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error, draft: 'hello', messages: [message] });
+  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error, draft: 'hello', messages: [message], outgoing: { body: 'hello', status: 'retry' } });
   expect(request).toHaveBeenCalledTimes(2);
 });
 it('reports invalid history responses without replacing the last verified history', async () => {

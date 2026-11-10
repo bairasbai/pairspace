@@ -168,8 +168,12 @@ it('does not redisplay a late token when the panel is dismissed and reopened', a
   render(<SyntheticChatConnected controller={f.controller} locale="en" />);
   expect(screen.queryByTestId('issued-invitation-token') === null).toBe(true);
   expect(f.controller.invitations.getSnapshot().issuedToken === null).toBe(true);
-  expect(control(t.issue)).toBeDisabled();
-  expect(f.controller.invitations.getSnapshot().recovery).toBe('issue_uncertain');
+  expect(f.controller.getSnapshot().phase).toBe('signed_out');
+  expect(screen.queryByLabelText(t.issue)).toBeNull();
+  expect(f.controller.invitations.getSnapshot().recovery).toBe('none');
+  await f.login();
+  expect(control(t.issue)).not.toBeDisabled();
+  expect(f.controller.invitations.getSnapshot().issuedToken).toBeNull();
 });
 
 it('clears an issued token when authoritative membership scope changes', async () => {

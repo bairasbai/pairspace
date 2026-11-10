@@ -11,6 +11,7 @@ import type { AuthIdentity, SessionClient } from './official-client';
 export type AuthView = Readonly<{
   phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
   error: string | null; draft: string; messages: readonly ChatMessage[];
+  outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent' }>;
 }>;
 const empty: AuthView = { phase: 'signed_out', error: null, draft: '', messages: [] };
 /** Ephemeral UI state; never persists credentials, drafts or message bodies. */
@@ -30,18 +31,22 @@ export function createSessionController(config: SyntheticConfig, client: Session
   let abort = new AbortController();
   let authTail = Promise.resolve();
   let sending = false;
-  const pending = new Map<string, string>();
+  let draftRevision = 0;
+  let pending: { readonly body: string; readonly revision: number; id: string | null } | null = null;
   const listeners = new Set<() => void>();
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
   const invalidate = () => {
     generation++; abort.abort(); abort = new AbortController();
     verifiedContext = null; invitationController.reset();
-    session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending.clear();
+    session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending = null; draftRevision++;
     publish({ ...empty, phase: 'busy' });
     return generation;
   };
   const serialize = (action: () => Promise<void>) => {
-    authTail = authTail.then(action).catch(() => publish({ ...empty, phase: 'blocked', error: 'auth_failed' }));
+    const current = generation;
+    authTail = authTail.then(action).catch(() => {
+      if (current === generation) block('auth_failed');
+    });
     return authTail;
   };
   const invitationController = createInvitationController(contextConfig, {
@@ -87,7 +92,11 @@ export function createSessionController(config: SyntheticConfig, client: Session
         block(result.error); return null;
       }
       if (sequence !== discoverySequence) return null;
-      if (!result.ok) { block(result.error); return null; }
+      if (!result.ok) {
+        if (result.error === 'transport_error' && session) publish({ ...view, error: result.error });
+        else block(result.error);
+        return null;
+      }
       const value = result.value;
       if (value.state !== 'ready') {
         block('context_' + value.state);
@@ -109,7 +118,10 @@ export function createSessionController(config: SyntheticConfig, client: Session
       verifiedContext = value; invitationController.sync();
       return { credential: { ...session, token: cookie }, changed };
     } catch {
-      if (current === generation && sequence === discoverySequence) block('transport_error');
+      if (current === generation && sequence === discoverySequence) {
+        if (session) publish({ ...view, error: 'transport_error' });
+        else block('transport_error');
+      }
       return null;
     }
   }
@@ -142,11 +154,15 @@ export function createSessionController(config: SyntheticConfig, client: Session
     invitations,
     getSnapshot: () => view,
     subscribe(notify: () => void) { listeners.add(notify); return () => { listeners.delete(notify); }; },
-    setDraft(draft: string) { if (view.phase === 'signed_in') publish({ ...view, draft }); },
+    setDraft(draft: string) {
+      if (view.phase === 'signed_in') { draftRevision++; publish({ ...view, draft }); }
+    },
+    dispose() { invalidate(); publish(empty); },
     signIn(email: string, password: string) {
       if (view.phase !== 'signed_out') return authTail;
       const current = invalidate();
       return serialize(async () => {
+        if (current !== generation) return;
         if (!await client.signOut()) throw new Error('cleanup_failed');
         if (current !== generation) return;
         const identity = await client.signIn(email, password);
@@ -161,6 +177,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
     signOut() {
       const current = invalidate();
       return serialize(async () => {
+        if (current !== generation) return;
         if (!await client.signOut()) throw new Error('logout_failed');
         if (current === generation) publish(empty);
       });
@@ -229,15 +246,23 @@ export function createSessionController(config: SyntheticConfig, client: Session
     async send() {
       if (sending || view.phase !== 'signed_in' || !queue) return;
       sending = true;
-      const current = generation; const body = view.draft;
+      const current = generation;
+      // One unresolved command at a time. Edits remain a separate draft, never a replay payload.
+      const command = pending ?? { body: view.draft, revision: draftRevision, id: null };
+      pending = command;
+      publish({ ...view, error: null, outgoing: { body: command.body, status: 'sending' } });
       try {
         const discovered = await discover();
         if (!discovered || discovered.changed || current !== generation || !queue) return;
         const credential = discovered.credential;
-        const id = pending.get(body) ?? commandId();
-        const added = enqueue(queue, credential.scope, id, body);
-        if (!added.ok) { denied(added.error); return; }
-        pending.set(body, id);
+        command.id ??= commandId();
+        const id = command.id;
+        const added = enqueue(queue, credential.scope, id, command.body);
+        if (!added.ok) {
+          pending = null;
+          publish({ ...view, outgoing: undefined, error: added.error });
+          return;
+        }
         queue = added.state;
         if (queue.messages.find(message => message.clientId === id)?.status === 'failed') {
           const retried = retry(queue, credential.scope, id);
@@ -246,12 +271,18 @@ export function createSessionController(config: SyntheticConfig, client: Session
         const result = await transport.send(id, credential);
         if (current !== generation) return;
         if (result.ok) {
-          pending.delete(body);
-          publish({ ...view, draft: view.draft === body ? '' : view.draft });
+          pending = null;
+          publish({ ...view, error: null, draft: draftRevision === command.revision ? '' : view.draft,
+            outgoing: { body: command.body, status: 'sent' } });
           await refresh();
         } else denied(result.error);
       } catch { if (current === generation) publish({ ...view, error: 'transport_error' }); }
-      finally { if (current === generation) sending = false; }
+      finally {
+        if (current === generation) {
+          sending = false;
+          if (pending) publish({ ...view, outgoing: { body: pending.body, status: 'retry' } });
+        }
+      }
     },
     refresh,
   };

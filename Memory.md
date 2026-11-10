@@ -130,3 +130,11 @@ Kimi/default network-off сохранены. Внешней доставки, cl
 приёмки нет. Токен владельца не выделяется для копирования системным меню.
 Контракт и ограничения: apps/mobile/PAIR_INVITATIONS.md; результаты: evidence/invitations/.
 Не считать выполнением production onboarding или независимой приёмкой.
+
+## 2026-11-10 — синтетический chat recovery, приёмка ожидается
+Compose → transient failure → explicit retry хранит одну неизменяемую команду отдельно
+от редактируемого черновика. Lost ACK повторяется с прежним ID/body; A→B→A не стирается.
+Transient discovery сохраняет RAM только для ранее проверенной session; auth/scope
+смена/logout/unmount очищают private state. ACK означает принятие сервером, не чтение.
+Реальный disposable PostgreSQL fixture проверяет одну message/outbox при replay.
+Контракт: apps/mobile/CHAT_RECOVERY.md. Без persistence/autoretry/production/native build.

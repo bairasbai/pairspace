@@ -8,7 +8,7 @@ export function SyntheticChatConnected({ controller, locale }: { controller: Ses
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const invitations = controller.invitations;
   const inviteView = useSyncExternalStore(invitations.subscribe, invitations.getSnapshot);
-  useEffect(() => () => invitations.cancel(), [invitations]);
+  useEffect(() => () => controller.dispose(), [controller]);
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16 }}>
     <SyntheticChatPanel {...view} locale={locale}
     invitations={{ view: inviteView,

@@ -101,3 +101,12 @@ Device visual acceptance remains open; no backend features added.
 См. [контракт](../apps/mobile/PAIR_INVITATIONS.md). Независимая приёмка ожидается.
 Следующие отдельные gates: native iOS/Android и два устройства, lifecycle/background,
 production доставка, abuse/rate limits, конфигурация и deployment/security review.
+
+## Ограниченный шаг: synthetic chat recovery
+- [x] RAM-only immutable command, явный retry без нового ID после неизвестного ACK.
+- [x] Редактируемый draft отдельно; transient discovery/history не стирают его.
+- [x] RU/EN sending/retry/sent; server ACK не является delivery/read receipt.
+- [x] Disposable PostgreSQL lost-response replay: одна message/outbox запись.
+- [ ] Независимая приёмка точного SHA этого шага.
+- [ ] Native iOS/Android и два устройства, durable restart recovery, production gate.
+Контракт и ограничения: [CHAT_RECOVERY](../apps/mobile/CHAT_RECOVERY.md).

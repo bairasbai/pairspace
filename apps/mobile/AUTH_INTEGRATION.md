@@ -20,7 +20,7 @@ Auth mutations are serialized. Login first uses official signOut to clean up a p
 
 Logout or cancellation increments the local generation immediately, aborts current chat networking and removes the queue, draft and displayed history. Official logout waits behind any in-flight auth mutation, so a late sign-in cannot restore the visible session. Failed cleanup blocks re-login until the user retries logout; it is not represented as successful server revocation. Busy/blocked UI remains explicit.
 
-Chat replies must match the current generation. Latest history request wins for data/errors, but authoritative 401/403 denial from any request in the current generation blocks the session and clears visible private data. Late results from another generation cannot restore messages or drafts. A send cannot overlap another send; failed/unacknowledged commands retain their idempotency ID by body even if the draft is edited and restored, until confirmed success or session change. Queue capacity is 500 commands. Nothing is persisted offline.
+Chat replies must match the current generation. Latest history request wins for data/errors, but authoritative 401/403 denial from any request in the current generation blocks the session and clears visible private data. Late results from another generation cannot restore messages or drafts. A send cannot overlap another send; one failed/unacknowledged command retains its immutable ID/body independently of composer edits until confirmed success or session change. Composer revision tracking protects A→B→A edits; see CHAT_RECOVERY.md. Queue capacity is 500 commands. Nothing is persisted offline.
 
 ## Verification and limitations
 

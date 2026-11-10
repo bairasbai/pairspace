@@ -156,13 +156,13 @@ it.each(['refresh', 'send'] as const)('rediscovers before %s and blocks revoked 
   expect(chat).toHaveBeenCalledTimes(1);
   expect(commandId).not.toHaveBeenCalled();
 });
-it.each(['refresh', 'send'] as const)('clears access on discovery network failure during %s instead of using cached membership', async operation => {
+it.each(['refresh', 'send'] as const)('preserves drafts on discovery network failure during %s but never sends using cached membership', async operation => {
   const { controller, discovery, chat, login } = setup();
   await login();
   controller.setDraft('private draft');
   discovery.mockRejectedValueOnce(new Error('server unavailable'));
   await controller[operation]();
-  expect(controller.getSnapshot()).toEqual({ phase: 'blocked', error: 'transport_error', draft: '', messages: [] });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', error: 'transport_error', draft: 'private draft', messages: [row()] });
   expect(chat).toHaveBeenCalledTimes(1);
 });
 it.each([

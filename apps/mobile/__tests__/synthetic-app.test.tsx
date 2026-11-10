@@ -18,6 +18,7 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
       setToken: jest.fn(), preview: jest.fn(async () => {}), setConsent: jest.fn(),
       accept: jest.fn(async () => {}), cancel: jest.fn(),
     },
+    dispose: jest.fn(),
     getSnapshot: () => view,
     subscribe: callback => { listeners.add(callback); return () => { listeners.delete(callback); }; },
     setDraft: jest.fn(), signIn: jest.fn(async () => {}), signOut: jest.fn(async () => {}),

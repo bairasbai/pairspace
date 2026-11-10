@@ -71,3 +71,11 @@ Device visual acceptance remains open; no backend features added.
 Контракт: [PAIR_INVITATIONS](apps/mobile/PAIR_INVITATIONS.md).
 Реальный loopback/PG harness: `services/api/tests/postgres/mobile-invitations.integration.mjs`.
 Доказательства: `apps/mobile/evidence/invitations/`; независимая приёмка ожидается.
+
+## Восстановление синтетической отправки
+`apps/mobile/src/auth/controller.ts`: immutable command, revision черновика,
+явный retry и очистка при logout/unmount/смене scope; RU/EN панель показывает ACK.
+Контракт: [CHAT_RECOVERY](apps/mobile/CHAT_RECOVERY.md).
+Тесты: `auth-chat-recovery.test.ts`, `connected-chat-recovery.test.tsx`,
+`services/api/tests/postgres/mobile-chat-recovery.integration.mjs`.
+Доказательства: `apps/mobile/evidence/chat-recovery/`; native-приёмка не выполнена.

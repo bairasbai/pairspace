@@ -6,6 +6,7 @@ import { InvitationPanel, type InvitationPanelProps } from './InvitationPanel';
 export type SyntheticChatPanelProps = {
   locale: 'ru' | 'en';
   phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
+  outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent' }>;
   error: string | null;
   draft: string;
   messages: readonly { id: string; body: string; senderId: string }[];
@@ -50,6 +51,11 @@ const copy = {
     draft: 'Тестовое сообщение',
     send: 'Отправить тестовое сообщение',
     refresh: 'Обновить историю',
+    sending: 'Отправляется…',
+    retry: 'Подтверждение не получено. Повторите то же сообщение без дубля.',
+    sent: 'Отправлено на сервер. Доставка и прочтение не подтверждены.',
+    retrySend: 'Повторить то же сообщение',
+    network: 'Связь временно недоступна. Черновик сохранён до выхода из экрана.',
   },
   en: {
     title: 'Test chat',
@@ -81,6 +87,11 @@ const copy = {
     draft: 'Test message',
     send: 'Send test message',
     refresh: 'Refresh history',
+    sending: 'Sending…',
+    retry: 'No confirmation received. Retry the same message without a duplicate.',
+    sent: 'Sent to the server. Delivery and reading are not confirmed.',
+    retrySend: 'Retry the same message',
+    network: 'Connection temporarily unavailable. Draft kept until you leave this screen.',
   },
 };
 
@@ -133,7 +144,7 @@ function Login({ locale, phase, email, onEmail, onSignIn, onSignOut }: LoginProp
 
 /** Controlled synthetic-only UI. The parent owns requests, session and message state. */
 export function SyntheticChatPanel({
-  locale, phase, error, draft, messages, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
+  locale, phase, error, draft, messages, outgoing, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
 }: SyntheticChatPanelProps) {
   const t = copy[locale];
   const [email, setEmail] = useState('');
@@ -148,7 +159,7 @@ export function SyntheticChatPanel({
     <Text style={styles.body}>{t.notice}</Text>
     <Text accessibilityLiveRegion="polite" style={styles.status}>{error === 'context_waiting_partner' ? t.waiting : invitationVisible ? t.signed_in : t[phase]}</Text>
     {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive"
-      style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error === 'profile_retry_required' ? t.profileRetry : error === 'context_waiting_partner' ? t.waitingNotice : error === 'waiting_retry_required' ? t.waitingRetry : error}</Text> : null}
+      style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error === 'profile_retry_required' ? t.profileRetry : error === 'context_waiting_partner' ? t.waitingNotice : error === 'waiting_retry_required' ? t.waitingRetry : error === 'transport_error' ? t.network : error}</Text> : null}
     {phase === 'blocked' && (error === 'context_unmapped' || error === 'profile_retry_required')
       && <Action label={error === 'context_unmapped' ? t.createProfile : t.retryProfile} onPress={onCreateProfile} />}
     {phase === 'blocked' && (error === 'context_no_active_pair' || error === 'waiting_retry_required')
@@ -173,7 +184,12 @@ export function SyntheticChatPanel({
         <Text style={styles.label}>{t.draft}</Text>
         <TextInput accessibilityLabel={t.draft} value={draft} onChangeText={onDraft}
           multiline textAlignVertical="top" style={[styles.input, styles.composer]} />
-        <Action label={t.send} disabled={draft.trim().length === 0} onPress={onSend} />
+        {outgoing && <View>
+          <Text selectable>{outgoing.body}</Text>
+          <Text accessibilityLiveRegion="polite">{t[outgoing.status]}</Text>
+        </View>}
+        <Action label={outgoing?.status === 'retry' ? t.retrySend : t.send}
+          disabled={outgoing?.status === 'sending' || (outgoing?.status !== 'retry' && draft.trim().length === 0)} onPress={onSend} />
       </View>
       <Action label={t.signOut} onPress={onSignOut} />
     </>}
