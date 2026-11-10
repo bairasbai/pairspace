@@ -57,3 +57,6 @@ See `docs/SUBSCRIPTION_DOMAIN.md`; no purchases, provider integration or UI wiri
 ## Инвентаризация Tan Ata
 [docs/TAN_ATA_MAP.md](docs/TAN_ATA_MAP.md): полный перечень обнаруженных сценариев,
 11 точных режимов разговоров, источники и разделение локальной работы, демо и плана.
+Все функции Tan Ata включены в дорожную карту; астрология/нумерология — План P2.
+[docs/PRODUCT_BACKLOG.md](docs/PRODUCT_BACKLOG.md): критерии переноса и новые идеи,
+с разделением утверждённого объёма, предложений и текущей готовности.
