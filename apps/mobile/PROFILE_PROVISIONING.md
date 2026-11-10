@@ -18,7 +18,7 @@ The server inserts users and better_auth_identities in one transaction, protecte
 
 Before the mutation, the controller reads context using the exact captured official cookie and requires its sessionId to match the verified sign-in identity. The same cookie snapshot is then used for POST. A different account/session that replaced stored cookies cannot silently receive the mutation. If the preflight discovers a profile already exists, no additional POST is needed.
 
-After a valid acknowledgement, the client discards its fields as authorization inputs and rediscovers authoritative context. Normally that becomes no_active_pair: a profile exists, but chat access still requires an active pair. This does not complete signup or pairing.
+After a valid acknowledgement, the client discards its fields as authorization inputs and rediscovers authoritative context. Normally that becomes no_active_pair: a profile exists, but chat access still requires an active pair. A later explicit waiting-space step is documented in WAITING_SPACE.md. This does not complete signup or pairing.
 
 Provisioning runs outside the serialized auth mutation queue. Logout/cancel increments generation, aborts current networking and clears visible state immediately; any late profile/context response is ignored. Cancellation cannot undo a database transaction that already committed. A later login/discovery or explicit retry observes the actual state. Duplicate clicks while busy do not start extra mutations.
 

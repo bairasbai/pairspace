@@ -113,3 +113,33 @@ it('requires explicit synthetic profile enablement and loopback baseURL with no 
   }
   expect(provider.handler).not.toHaveBeenCalled();
 });
+
+
+it('gates waiting-space creation independently, default disabled, explicit boolean and loopback only', async () => {
+  vi.stubEnv('ENABLE_SYNTHETIC_WAITING_SPACE_CREATION', 'true');
+  const path = '/v1/spaces/waiting';
+  for (const flag of [undefined, false]) {
+    const app = createApiApplication({ ...config(), enableSyntheticWaitingSpaceCreation: flag });
+    expect((await app.handle(request(path, 'POST', { origin: baseURL, 'content-type': 'application/json' }, '{}'))).status).toBe(404);
+  }
+  for (const invalid of [true, null, 'true', 1]) {
+    expect(() => createApiApplication({ ...config(), enableSyntheticWaitingSpaceCreation: invalid } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  }
+  for (const baseURL of ['http://127.0.0.1:3123', 'http://[::1]:3123', 'https://localhost']) {
+    const app = createApiApplication({ ...config(), baseURL, trustedOrigins: [baseURL], enableSyntheticWaitingSpaceCreation: true });
+    const send = (method = 'POST', body?: string, headers: Record<string, string> = {}) => app.handle(new Request(baseURL + path, {
+      method, body, headers: { origin: baseURL, cookie: 'synthetic', 'content-type': 'application/json', ...headers },
+    }));
+    expect((await send('POST', '{}')).status).toBe(401);
+    expect(provider.getSession).toHaveBeenCalledWith({ headers: expect.any(Headers) });
+    const get = await send('GET'); expect(get.status).toBe(405); expect(get.headers.get('allow')).toBe('POST');
+    expect((await send('DELETE')).status).toBe(405);
+    expect((await send('POST', '{}', { origin: 'https://attacker.invalid' })).status).toBe(403);
+    expect((await send('POST', '{}', { 'content-type': 'text/plain' })).status).toBe(415);
+    expect((await send('POST', 'x'.repeat(17))).status).toBe(413);
+    expect((await send('POST', '{"userId":1}')).status).toBe(400);
+    expect((await app.handle(new Request(baseURL + '/v1/profile', { method: 'POST',
+      headers: { origin: baseURL, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(404);
+  }
+  expect(provider.handler).not.toHaveBeenCalled();
+});

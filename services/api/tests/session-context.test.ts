@@ -13,14 +13,14 @@ const provider = () => ({ user: { id: 'provider-user', email: 'private@example.t
   session: { id: sessionId, userId: 'provider-user', expiresAt: expires, token: 'never-return-this' } });
 const request = (query = '', headers: Record<string, string> = { origin, cookie: 'synthetic-cookie' }) =>
   new Request(`${origin}/v1/session/context${query}`, { headers });
-type Rows = Partial<Record<'initial' | 'user' | 'provider' | 'session' | 'clock' | 'mapping' | 'membership' | 'current' | 'couple', unknown[]>>;
+type Rows = Partial<Record<'initial' | 'user' | 'provider' | 'session' | 'clock' | 'mapping' | 'membership' | 'current' | 'couple' | 'members', unknown[]>>;
 function fixture(overrides: Rows = {}) {
   const rows = {
     initial: [{ user_id: userId }], user: [{ deleted_at: null }], provider: [{ id: 'provider-user' }],
     session: [{ created_at: new Date(+now - 10000).toISOString(), expires_at: expires.toISOString() }],
     clock: [{ now: now.toISOString() }], mapping: [{ user_id: userId }],
     membership: [{ couple_id: coupleId }], current: [{ couple_id: coupleId }],
-    couple: [{ status: 'active', membership_epoch: 3 }], ...overrides,
+    couple: [{ status: 'active', membership_epoch: 3 }], members: [{ active_count: 1, own_count: 1 }], ...overrides,
   };
   let memberReads = 0;
   const query = vi.fn(async (sql: string, params?: unknown[]) => {
@@ -28,7 +28,7 @@ function fixture(overrides: Rows = {}) {
     return { rows: sql.includes('FROM users') ? rows.user : sql.includes('FROM "user"') ? rows.provider
       : sql.includes('FROM "session"') ? rows.session : sql.includes('clock_timestamp') ? rows.clock
         : sql.includes('FROM better_auth_identities') ? (sql.includes('FOR SHARE') ? rows.mapping : rows.initial)
-          : sql.includes('FROM couple_members') ? (memberReads++ === 0 ? rows.membership : rows.current) : rows.couple };
+          : sql.includes('count(*)') ? rows.members : sql.includes('FROM couple_members') ? (memberReads++ === 0 ? rows.membership : rows.current) : rows.couple };
   });
   const tx: SqlExecutor = { query: async <T>(sql: string, params?: unknown[]) => ({ rows: (await query(sql, params)).rows as T[] }) };
   const transaction = vi.fn();
@@ -57,6 +57,9 @@ it('returns only the server-selected ready context after one transaction in chat
     "SELECT couple_id FROM couple_members WHERE user_id=$1 AND status='active'",
     'SELECT status, membership_epoch FROM couples WHERE id=$1 FOR SHARE',
     "SELECT couple_id FROM couple_members WHERE user_id=$1 AND status='active'",
+    'SELECT id FROM "user" WHERE id=$1 FOR SHARE',
+    'SELECT "createdAt"::text AS created_at, "expiresAt"::text AS expires_at FROM "session" WHERE id=$1 AND "userId"=$2 FOR SHARE',
+    'SELECT clock_timestamp()::text AS now',
   ]);
   expect(f.query.mock.calls[0][1]).toEqual(['provider-user']);
   expect(f.query.mock.calls[7][1]).toEqual([coupleId]);
@@ -72,9 +75,9 @@ it('allows valid unmapped sessions without creating users, pairs, mappings or ex
   expect(sql).toContain('FROM "session"');
 });
 
-it('distinguishes no membership, waiting/closed pair and membership revoked while acquiring pair lock', async () => {
+it('distinguishes no membership, closed pair and membership revoked while acquiring pair lock', async () => {
   for (const overrides of [{ membership: [] }, { couple: [{ status: 'closed', membership_epoch: 4 }] },
-    { couple: [{ status: 'waiting_partner', membership_epoch: 1 }] }, { current: [] }]) {
+    { current: [] }]) {
     const f = fixture(overrides);
     const result = await f.handler(request());
     expect(result.status).toBe(200);
@@ -171,5 +174,32 @@ it('redacts provider and transaction failures without returning partial context'
     const result = await f.handler(request());
     expect(result.status).toBe(503);
     expect(await result.json()).toEqual({ ok: false, error: 'temporarily_unavailable' });
+  }
+});
+
+
+it('returns waiting_partner only for the current own single active slot1', async () => {
+  const f = fixture({ couple: [{ status: 'waiting_partner', membership_epoch: 1 }] });
+  expect(await (await f.handler(request())).json()).toEqual({ ok: true,
+    value: { state: 'waiting_partner', sessionId, userId, coupleId, membershipEpoch: 1 } });
+  for (const members of [[{ active_count: 0, own_count: 0 }], [{ active_count: 1, own_count: 0 }],
+    [{ active_count: 2, own_count: 1 }], []]) {
+    f.rows.members = members;
+    expect((await f.handler(request())).status).toBe(503);
+  }
+});
+
+it('does not return any context after mapping/couple waits cross authoritative expiry', async () => {
+  for (const mapped of [false, true]) {
+    const f = fixture(mapped ? {} : { initial: [], mapping: [] });
+    const original = f.query.getMockImplementation()!;
+    f.query.mockImplementation(async (sql, params) => {
+      const result = await original(sql, params);
+      if (mapped ? sql.includes('FROM couples') : sql.includes('FROM better_auth_identities') && sql.includes('FOR SHARE')) {
+        f.rows.clock = [{ now: expires.toISOString() }];
+      }
+      return result;
+    });
+    expect((await f.handler(request())).status).toBe(401);
   }
 });

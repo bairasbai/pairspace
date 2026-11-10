@@ -3,7 +3,7 @@ import { validateSyntheticConfig, type SyntheticConfig } from './config';
 export type SessionContext =
   | Readonly<{ state: 'unmapped'; sessionId: string }>
   | Readonly<{ state: 'no_active_pair'; sessionId: string; userId: string }>
-  | Readonly<{ state: 'ready'; sessionId: string; userId: string; coupleId: string; membershipEpoch: number }>;
+  | Readonly<{ state: 'ready' | 'waiting_partner'; sessionId: string; userId: string; coupleId: string; membershipEpoch: number }>;
 type ContextResult = { ok: true; value: SessionContext }
   | { ok: false; error: 'auth_required' | 'access_required' | 'invalid_context' | 'transport_error' };
 const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -30,9 +30,9 @@ export async function readSessionContext(config: SyntheticConfig, sessionId: str
     if (value.state === 'unmapped') return { ok: true, value: { state: 'unmapped', sessionId } };
     if (!uuid(value.userId)) return { ok: false, error: 'invalid_context' };
     if (value.state === 'no_active_pair') return { ok: true, value: { state: 'no_active_pair', sessionId, userId: value.userId } };
-    if (value.state !== 'ready' || !uuid(value.coupleId) || !Number.isSafeInteger(value.membershipEpoch)
+    if ((value.state !== 'ready' && value.state !== 'waiting_partner') || !uuid(value.coupleId) || !Number.isSafeInteger(value.membershipEpoch)
       || Number(value.membershipEpoch) < 1) return { ok: false, error: 'invalid_context' };
-    return { ok: true, value: { state: 'ready', sessionId, userId: value.userId,
+    return { ok: true, value: { state: value.state, sessionId, userId: value.userId,
       coupleId: value.coupleId, membershipEpoch: Number(value.membershipEpoch) } };
   } catch { return { ok: false, error: 'transport_error' }; }
 }

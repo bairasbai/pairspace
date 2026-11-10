@@ -4,6 +4,7 @@ import type { QueueState } from '../chat/types';
 import { validateSyntheticConfig, type SyntheticConfig } from './config';
 import { readSessionContext } from './context';
 import { provisionProfile } from './profile';
+import { requestWaitingSpace } from './waiting';
 import type { AuthIdentity, SessionClient } from './official-client';
 
 export type AuthView = Readonly<{
@@ -21,6 +22,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   let refreshSequence = 0;
   let discoverySequence = 0;
   let authIdentity: AuthIdentity | null = null;
+  let waitingUserId: string | null = null;
   let session: TransportSession | null = null;
   let queue: QueueState | null = null;
   let abort = new AbortController();
@@ -31,7 +33,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
   const invalidate = () => {
     generation++; abort.abort(); abort = new AbortController();
-    session = null; authIdentity = null; queue = null; sending = false; pending.clear();
+    session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending.clear();
     publish({ ...empty, phase: 'busy' });
     return generation;
   };
@@ -77,7 +79,8 @@ export function createSessionController(config: SyntheticConfig, client: Session
       const value = result.value;
       if (value.state !== 'ready') {
         block('context_' + value.state);
-        if (value.state === 'unmapped') authIdentity = expected;
+        authIdentity = expected;
+        if (value.state === 'no_active_pair') waitingUserId = value.userId;
         return null;
       }
       const changed = session !== null && (session.scope.userId !== value.userId
@@ -174,6 +177,37 @@ export function createSessionController(config: SyntheticConfig, client: Session
       } catch {
         if (current !== generation || authIdentity !== expected) return;
         block('profile_retry_required'); authIdentity = expected;
+      }
+    },
+    async createWaitingSpace() {
+      if (view.phase !== 'blocked' || !['context_no_active_pair', 'waiting_retry_required'].includes(view.error ?? '')
+        || !authIdentity || !waitingUserId) return;
+      const expected = authIdentity; const expectedUserId = waitingUserId;
+      const current = invalidate(); authIdentity = expected; waitingUserId = expectedUserId;
+      try {
+        const cookie = await client.getCookie();
+        if (current !== generation || authIdentity !== expected) return;
+        const binding = await readSessionContext(contextConfig, expected.sessionId, cookie, boundedRequest);
+        if (current !== generation || authIdentity !== expected) return;
+        if (!binding.ok) {
+          const error = binding.error === 'access_required' ? 'access_required'
+            : binding.error === 'auth_required' || binding.error === 'invalid_context' ? 'auth_required' : 'waiting_retry_required';
+          block(error);
+          if (error === 'waiting_retry_required') { authIdentity = expected; waitingUserId = expectedUserId; }
+          return;
+        }
+        if (binding.value.state !== 'unmapped' && binding.value.userId !== expectedUserId) {
+          block('auth_required'); return;
+        }
+        if (binding.value.state !== 'no_active_pair') { await refresh(); return; }
+        const result = await requestWaitingSpace(contextConfig, expected.sessionId, cookie, boundedRequest);
+        if (current !== generation || authIdentity !== expected) return;
+        if (result.ok) { await refresh(); return; }
+        block(result.error);
+        if (result.error === 'waiting_retry_required') { authIdentity = expected; waitingUserId = expectedUserId; }
+      } catch {
+        if (current !== generation || authIdentity !== expected) return;
+        block('waiting_retry_required'); authIdentity = expected; waitingUserId = expectedUserId;
       }
     },
     async send() {

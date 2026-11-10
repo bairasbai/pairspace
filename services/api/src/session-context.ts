@@ -1,13 +1,14 @@
 import type { Database, SqlExecutor } from './contracts.ts';
 import { createBetterAuthSessionVerifier, recheckBetterAuthSession,
   type BetterAuthAuthorityOptions, type VerifiedBetterAuthSession } from './better-auth-session.ts';
+import { isOwnWaitingSpace } from './waiting-space-state.ts';
 import { isEpoch, isUuid } from './validation.ts';
 
 /** Discovery snapshots only. Chat independently rechecks identity, pair and epoch. */
 export type SessionContext = Readonly<
   { state: 'unmapped'; sessionId: string }
   | { state: 'no_active_pair'; sessionId: string; userId: string }
-  | { state: 'ready'; sessionId: string; userId: string; coupleId: string; membershipEpoch: number }
+  | { state: 'ready' | 'waiting_partner'; sessionId: string; userId: string; coupleId: string; membershipEpoch: number }
 >;
 const response = (status: number, body: unknown) => Response.json(body, { status,
   headers: { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
@@ -37,8 +38,9 @@ async function activePair(tx: SqlExecutor, userId: string, sessionId: string): P
   const couple = couples.rows[0];
   if (couples.rows.length !== 1 || !['active', 'closed', 'waiting_partner'].includes(couple.status)
     || !isEpoch(couple.membership_epoch)) throw new Error('invalid_context_data');
-  if (couple.status !== 'active') return absent;
-  return { state: 'ready', sessionId, userId, coupleId: candidate, membershipEpoch: couple.membership_epoch };
+  if (couple.status === 'closed') return absent;
+  if (couple.status === 'waiting_partner' && !await isOwnWaitingSpace(tx, candidate, userId)) throw new Error('invalid_context_data');
+  return { state: couple.status === 'active' ? 'ready' : 'waiting_partner', sessionId, userId, coupleId: candidate, membershipEpoch: couple.membership_epoch };
 }
 
 async function discover(tx: SqlExecutor, session: VerifiedBetterAuthSession): Promise<SessionContext | null> {
@@ -54,8 +56,10 @@ async function discover(tx: SqlExecutor, session: VerifiedBetterAuthSession): Pr
   const current = optionalId((await mapping(true)).rows, 'user_id');
   // Mapping mutations are unsupported. Never silently switch domain users after taking locks.
   if (current !== candidate) return null;
-  if (!current) return { state: 'unmapped', sessionId: session.sessionId };
-  return activePair(tx, current, session.sessionId);
+  const value: SessionContext = current ? await activePair(tx, current, session.sessionId)
+    : { state: 'unmapped', sessionId: session.sessionId };
+  // Mapping/couple lock waits may cross expiry. Recheck before returning any snapshot.
+  return await recheckBetterAuthSession(tx, session) ? value : null;
 }
 
 /** Strict read-only route: identities and pairs are selected solely by verified provider identity. */

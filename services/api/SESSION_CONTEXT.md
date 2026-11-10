@@ -10,6 +10,7 @@ Successful responses contain only `ok: true` and one `value` variant:
 
 - `{state: 'unmapped', sessionId}`: verified provider session with no domain mapping.
 - `{state: 'no_active_pair', sessionId, userId}`: live mapped domain user without a current active pair.
+- `{state: 'waiting_partner', sessionId, userId, coupleId, membershipEpoch}`: own waiting space with exactly one active member, the caller in slot 1; never chat authorization.
 - `{state: 'ready', sessionId, userId, coupleId, membershipEpoch}`: current active pair selected from server membership.
 
 `sessionId` is the nonsecret verified Better Auth session ID, not its token. Mobile can match it against official getSession output before using the response. No token, provider user ID, email or profile fields are returned. `userId` and `coupleId` are domain UUIDs. Responses have `Cache-Control: no-store` and `X-Content-Type-Options: nosniff`.
@@ -26,13 +27,14 @@ The composed factory uses the same existing Better Auth instance and exact calle
 2. If mapped, lock the live domain user `FOR SHARE`.
 3. Lock the provider user and matching provider session `FOR SHARE`, then sample PostgreSQL clock_timestamp() and recheck ownership/creation/expiry.
 4. Read and lock the mapping again. A mapping added, removed or changed since discovery is rejected, never silently followed.
-5. Discover the active membership candidate, lock that couple `FOR SHARE`, and reread memberships in a fresh READ COMMITTED statement. Validate cardinality, UUID, allowed pair status and integer epoch before returning ready.
+5. Discover the active membership candidate, lock that couple `FOR SHARE`, and reread memberships in a fresh READ COMMITTED statement. Validate cardinality, UUID, allowed pair status and integer epoch. A waiting pair must have exactly one active member: this caller in slot 1.
+6. Recheck authoritative provider session time after mapping/couple waits before returning any successful snapshot.
 
 Lock order matches chat: domain user → provider user/session → mapping → couple. Provider revocation waits when context already holds the session lock. Revocation completed after official verification but before the authoritative transaction returns 401. The shared verifier retains the existing conservative second-rounded expiry, possibly rejecting up to 999ms early.
 
-If membership disappears while waiting for the couple lock, return no_active_pair. If it moves to another pair during that wait, return opaque 503 and let a later request rediscover rather than adding a new lock-order path. Waiting/closed pairs return no_active_pair. Absence of mapping or membership is a safe snapshot, not a claim that insertion is blocked. Mapping mutations and general membership lifecycle operations remain unsupported runtime features; tests mutate synthetic fixtures only.
+If membership disappears while waiting for the couple lock, return no_active_pair. If it moves to another pair during that wait, return opaque 503 and let a later request rediscover rather than adding a new lock-order path. Closed pairs return no_active_pair. A valid own waiting pair returns waiting_partner; malformed waiting membership fails closed with opaque 503. Absence of mapping or membership is a safe snapshot, not a claim that insertion is blocked. Mapping mutations and general membership lifecycle operations remain unsupported runtime features; tests mutate synthetic fixtures only.
 
-This context route adds no migrations, listeners, provisioning, pair creation, client identity fixtures, persistent credentials or production access. A separate default-disabled synthetic profile action is documented in [PROFILE_PROVISION.md](PROFILE_PROVISION.md). Existing API and mobile deployment/native-device limitations still apply.
+This context route adds no migrations, listeners, provisioning, pair creation, client identity fixtures, persistent credentials or production access. Separate default-disabled synthetic actions are documented in [PROFILE_PROVISION.md](PROFILE_PROVISION.md) and [WAITING_SPACE.md](WAITING_SPACE.md). Waiting-space changes and current gate counts are recorded in the latter; the counts below describe the original context milestone. Existing API and mobile deployment/native-device limitations still apply.
 
 ## Checks
 

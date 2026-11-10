@@ -10,6 +10,7 @@ export function SyntheticChatConnected({ controller, locale }: { controller: Ses
     <SyntheticChatPanel {...view} locale={locale}
     onDraft={controller.setDraft} onSignIn={(email, password) => { void controller.signIn(email, password); }}
     onSignOut={() => { void controller.signOut(); }} onSend={() => { void controller.send(); }}
+    onCreateWaitingSpace={() => { void controller.createWaitingSpace(); }}
     onCreateProfile={() => { void controller.createProfile(); }}
     onRefresh={() => { void controller.refresh(); }} />
   </ScrollView>;

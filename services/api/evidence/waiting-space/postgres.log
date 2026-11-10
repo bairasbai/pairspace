@@ -1,0 +1,67 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 verify:postgres
+> bash scripts/run-postgres.sh
+
+Verified 14 package-local runtime symlinks
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test:postgres
+> node --test --test-concurrency=1 --test-timeout=30000 tests/postgres/*.integration.mjs
+
+✔ official client → real loopback composed app → auth → PRODUCT chat → revoke denial on real PG (603.072137ms)
+✔ composed HTTP perimeter rejects CSRF origins, missing origin, oversized and invalid requests (90.884044ms)
+✔ composed HTTP redacts auth/database failures and product outbox transaction remains atomic (281.081004ms)
+✔ stalled HTTP upload is bounded and does not prevent a later healthy request (1069.846522ms)
+✔ explicitly disabled email/password configuration cannot create accounts (70.415661ms)
+(node:382) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-waiting-space-product/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-waiting-space-product/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ mobile session controller cookie transport → composed HTTP → real PostgreSQL; replay, revoke and isolation (928.597132ms)
+✔ explicit mobile profile action creates server identity once without fixture mapping or pair creation (406.900098ms)
+✔ explicit mobile waiting-space action reserves one own space but never authorizes chat or invites (519.976034ms)
+✔ PRODUCT handler and use cases persist chat/idempotency/history/close/outbox with Better Auth only (301.982478ms)
+✔ completed official revoke blocks PRODUCT send/history/close with previously verified principal (323.589869ms)
+✔ PRODUCT transaction holds authoritative provider session lock while official revocation waits (338.921562ms)
+✔ PRODUCT row expiry, user deletion, identity remap and mixed authority fail closed (196.256413ms)
+✔ PRODUCT outbox failure rolls back message and sequence under Better Auth authority (225.404453ms)
+✔ profile endpoint defaults disabled; explicit synthetic opt-in creates exactly one own profile with no pair access (515.705422ms)
+✔ profile HTTP rejects identity selectors, unknown fields, malformed input, origins and unauthenticated clients without writes (197.470823ms)
+✔ simultaneous profile requests from distinct sessions serialize on provider user and retry with domain-first lock order (290.847696ms)
+✔ lost real HTTP acknowledgement after COMMIT is safely retried without orphan or duplicate profile (191.167927ms)
+✔ revocation completed while profile waits for provider-user lock denies all domain writes (218.032399ms)
+✔ profile-first session lock makes official revocation wait; revoked retry cannot create another profile (226.597382ms)
+✔ deleted domain profiles remain unavailable and never get resurrected or reassigned across accounts (203.940654ms)
+✔ observed mapping removal or unsupported reassignment fails closed without overwriting any identity (360.070453ms)
+✔ mapping-insert failure rolls back the new domain row and a later retry creates one complete profile (188.378434ms)
+✔ authoritative expiry is checked again after a real mapping-row lock wait (1284.33198ms)
+✔ context discovers only server-owned unmapped/no-pair/ready states and refreshes pair/epoch (557.369455ms)
+✔ context HTTP rejects forged selectors, missing cookie, bearer credentials, origins and non-GET writes (169.78028ms)
+✔ context denies revoked/expired/provider-deleted and domain-deleted identities and redacts SQL failure (221.410655ms)
+✔ official revocation between provider verification and context transaction fails closed on real PG (170.139697ms)
+✔ context transaction holds provider session lock while official revocation waits (168.816953ms)
+✔ context detects an unsupported mapping remap between discovery and authoritative lock (184.882328ms)
+✔ context snapshots recheck authoritative expiry after mapping and waiting-couple row lock waits (2583.973198ms)
+✔ distinct sessions simultaneously creating a waiting space serialize on the domain user, not session identity (378.764983ms)
+✔ a real lost HTTP acknowledgement after COMMIT retries idempotently with no orphan or duplicate waiting space (205.071522ms)
+✔ official revocation completed while creation waits for its domain-user lock prevents both inserts (207.31155ms)
+✔ creation holds authoritative session lock before official revocation; revoked retry cannot create again (190.648531ms)
+✔ waiting creation and idempotent retry recheck authoritative expiry after real mapping/couple lock waits (2673.241928ms)
+✔ observed mapping removal or reassignment fails closed without creating a space for either identity (442.194593ms)
+✔ domain deletion and waiting membership revocation during lock waits do not resurrect or replace state (572.740016ms)
+✔ waiting creation is explicit, independently gated and never provisions a missing profile (747.149518ms)
+✔ two accounts create isolated own waiting spaces and context snapshots without chat authority (423.30755ms)
+✔ waiting HTTP rejects caller IDs, malformed bodies, wrong methods/origins and unauthenticated requests without writes (221.154306ms)
+✔ an active pair or closed live membership cannot be bypassed by creating another space (212.472105ms)
+✔ malformed waiting membership fails closed, and deleted profiles are never resurrected (342.239908ms)
+✔ failed member insert rolls back its waiting couple and retry creates exactly one complete space (198.598489ms)
+ℹ tests 43
+ℹ suites 0
+ℹ pass 43
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 23069.405332

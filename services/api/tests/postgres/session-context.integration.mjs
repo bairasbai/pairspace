@@ -6,6 +6,7 @@ import { toNodeHandler } from 'better-auth/node';
 import { createSessionContextHandler } from '../../src/session-context.ts';
 import { createComposedFixture, client } from './composed-fixture.mjs';
 import { createFixture } from './fixture.mjs';
+import { database, waitForQueryLock } from './profile-fixture.mjs';
 import { observeTask, barrierOrCompletion, settleBounded, withDeadline } from './async-bounds.mjs';
 
 const password = 'Synthetic-only-password-712!';
@@ -208,4 +209,37 @@ test('context detects an unsupported mapping remap between discovery and authori
     assert.equal((await server.request(a.cookie)).status, 401);
     assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM couples')).rows[0].n, 0);
   } finally { try { await server?.close(); } finally { await f.close(); } }
+});
+
+
+test('context snapshots recheck authoritative expiry after mapping and waiting-couple row lock waits', async () => {
+  for (const target of ['mapping', 'couple']) {
+    const f = await createFixture(); let server; let pending; let blocker;
+    try {
+      const a = await account(f); const userId = randomUUID(); const coupleId = randomUUID();
+      await f.domainPool.query('INSERT INTO users(id) VALUES($1)', [userId]);
+      await f.domainPool.query('INSERT INTO better_auth_identities VALUES($1,$2)', [a.user.id, userId]);
+      await f.domainPool.query("INSERT INTO couples(id,status) VALUES($1,'waiting_partner')", [coupleId]);
+      await f.domainPool.query("INSERT INTO couple_members VALUES($1,$2,1,'active')", [coupleId, userId]);
+      server = await harness(f, database(f), async headers => {
+        const session = await f.resolve(headers.get('cookie')); assert.ok(session);
+        await f.authPool.query(`UPDATE "session" SET "expiresAt"=clock_timestamp()+interval '1 second' WHERE id=$1`, [session.session.id]);
+        return session;
+      });
+      blocker = await f.domainPool.connect(); await blocker.query('BEGIN');
+      if (target === 'mapping') await blocker.query('SELECT user_id FROM better_auth_identities WHERE auth_user_id=$1 FOR UPDATE', [a.user.id]);
+      else await blocker.query('SELECT id FROM couples WHERE id=$1 FOR UPDATE', [coupleId]);
+      pending = observeTask(server.request(a.cookie));
+      await waitForQueryLock(f, target === 'mapping' ? '%FROM better_auth_identities%FOR SHARE%' : '%FROM couples%FOR SHARE%');
+      await new Promise(resolve => setTimeout(resolve, 1100));
+      await blocker.query('COMMIT'); blocker.release(); blocker = undefined;
+      const result = await pending; assert.equal(result.status, 401);
+      assert.deepEqual(await result.json(), { ok: false, error: 'unauthenticated' });
+      assert.deepEqual((await f.domainPool.query('SELECT status,membership_epoch FROM couples')).rows,
+        [{ status: 'waiting_partner', membership_epoch: 1 }]);
+    } finally {
+      if (blocker) { try { await blocker.query('ROLLBACK'); } finally { blocker.release(); } }
+      try { await settleBounded([pending]); } finally { try { await server?.close(); } finally { await f.close(); } }
+    }
+  }
 });

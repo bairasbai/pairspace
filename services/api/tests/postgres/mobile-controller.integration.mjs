@@ -142,3 +142,64 @@ test('explicit mobile profile action creates server identity once without fixtur
     await controller.signOut();
   } finally { await f.close(); }
 });
+
+test('explicit mobile waiting-space action reserves one own space but never authorizes chat or invites', async () => {
+  const f = await createComposedFixture({
+    enableSyntheticProfileProvisioning: true, enableSyntheticWaitingSpaceCreation: true,
+  });
+  const password = 'Synthetic-waiting-password-712!';
+  try {
+    const c = client(f.baseURL); const email = 'mobile-waiting@example.test';
+    const signup = await c.auth.signUp.email({ email, password, name: 'Synthetic' });
+    assert.equal(signup.error, null);
+    const sessionClient = {
+      async signIn(email, password) {
+        const result = await c.auth.signIn.email({ email, password });
+        if (result.error) return null;
+        const verified = await c.auth.getSession({ query: { disableCookieCache: true } });
+        return { userId: verified.data.user.id, sessionId: verified.data.session.id };
+      },
+      async signOut() { return !(await c.auth.signOut()).error; },
+      getCookie: c.getCookie,
+    };
+    let waitingPosts = 0;
+    const controller = createSessionController({ mode: 'synthetic-loopback', baseURL: f.baseURL }, sessionClient,
+      async request => {
+        const waiting = new URL(request.url).pathname === '/v1/spaces/waiting';
+        if (waiting) { waitingPosts++; assert.deepEqual(await request.clone().json(), {}); }
+        const response = await fetch(request);
+        if (waiting && waitingPosts === 1) {
+          assert.equal(response.status, 201);
+          throw new Error('synthetic lost acknowledgement after waiting-space COMMIT');
+        }
+        return response;
+      }, randomUUID);
+    await controller.signIn(email, password);
+    assert.equal(controller.getSnapshot().error, 'context_unmapped');
+    await controller.createProfile();
+    assert.equal(controller.getSnapshot().error, 'context_no_active_pair');
+    assert.equal(waitingPosts, 0, 'profile creation must not create a space');
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM couples')).rows[0].n, 0);
+    await controller.createWaitingSpace();
+    assert.equal(controller.getSnapshot().error, 'waiting_retry_required');
+    await controller.createWaitingSpace();
+    assert.equal(controller.getSnapshot().error, 'context_waiting_partner');
+    assert.equal(waitingPosts, 1, 'retry discovers committed waiting space without duplicate POST');
+    const spaces = await f.domainPool.query('SELECT id,status,membership_epoch FROM couples');
+    assert.equal(spaces.rows.length, 1); assert.equal(spaces.rows[0].status, 'waiting_partner');
+    const members = await f.domainPool.query('SELECT slot,status FROM couple_members');
+    assert.deepEqual(members.rows, [{ slot: 1, status: 'active' }]);
+    controller.setDraft('must not be sent while waiting');
+    await controller.send(); await controller.createWaitingSpace(); await controller.createProfile();
+    assert.equal(controller.getSnapshot().draft, '');
+    assert.equal(waitingPosts, 1);
+    assert.equal((await c.send(spaces.rows[0].id, randomUUID())).status, 403);
+    assert.equal((await c.history(spaces.rows[0].id)).status, 403);
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM chat_messages')).rows[0].n, 0);
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM outbox_events')).rows[0].n, 0);
+    await controller.signOut(); await controller.signIn(email, password);
+    assert.equal(controller.getSnapshot().error, 'context_waiting_partner');
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM couples')).rows[0].n, 1);
+    await controller.signOut();
+  } finally { await f.close(); }
+});

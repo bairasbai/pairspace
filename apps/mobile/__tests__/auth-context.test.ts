@@ -10,6 +10,7 @@ it.each([
   { state: 'unmapped', sessionId: 'verified-session' },
   { state: 'no_active_pair', sessionId: 'verified-session', userId },
   ready,
+  { ...ready, state: 'waiting_partner' },
 ])('accepts explicit session-bound context %j without treating provider ID as domain UUID', async value => {
   expect(await read({ ok: true, value })).toEqual({ ok: true, value });
 });

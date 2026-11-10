@@ -13,7 +13,7 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
     getSnapshot: () => view,
     subscribe: callback => { listeners.add(callback); return () => { listeners.delete(callback); }; },
     setDraft: jest.fn(), signIn: jest.fn(async () => {}), signOut: jest.fn(async () => {}),
-    createProfile: jest.fn(async () => {}), send: jest.fn(async () => {}), refresh: jest.fn(async () => {}),
+    createWaitingSpace: jest.fn(async () => {}), createProfile: jest.fn(async () => {}), send: jest.fn(async () => {}), refresh: jest.fn(async () => {}),
   };
   render(<PairspaceApp syntheticController={controller} />);
   await act(async () => {});
@@ -37,5 +37,8 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
   await act(async () => { view = { ...view, phase: 'blocked', error: 'context_unmapped' }; listeners.forEach(callback => callback()); });
   fireEvent.press(screen.getByRole('button', { name: 'Создать тестовый профиль' }));
   expect(controller.createProfile).toHaveBeenCalledTimes(1);
+  await act(async () => { view = { ...view, phase: 'blocked', error: 'context_no_active_pair' }; listeners.forEach(callback => callback()); });
+  fireEvent.press(screen.getByRole('button', { name: 'Создать пространство ожидания' }));
+  expect(controller.createWaitingSpace).toHaveBeenCalledTimes(1);
   jest.restoreAllMocks();
 });

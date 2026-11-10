@@ -11,6 +11,7 @@ GET /v1/session/context accepts the existing official session cookie and exact t
 - {state:"unmapped",sessionId}: valid provider session with no domain mapping.
 - {state:"no_active_pair",sessionId,userId}: own mapped, nondeleted domain user has no current active pair.
 - {state:"ready",sessionId,userId,coupleId,membershipEpoch}: own active context.
+- {state:"waiting_partner",sessionId,userId,coupleId,membershipEpoch}: own valid waiting space; no chat access. See WAITING_SPACE.md.
 
 sessionId is the nonsecret verified provider session ID, not a token. The client compares it with the verified sign-in session before accepting domain context. No profile details, partner IDs, account email, cookie or token is returned. Invalid/revoked sessions return 401; wrong origin is rejected by the existing perimeter. Unexpected failures are opaque.
 

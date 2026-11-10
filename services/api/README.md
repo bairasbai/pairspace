@@ -3,7 +3,7 @@
 This package contains real PostgreSQL-compatible SQL and application use cases. It is not a
 running API or authenticated service. No production connection, secrets, real users or deployment.
 
-Current composed-runtime milestones: [API_COMPOSITION.md](API_COMPOSITION.md), [SESSION_CONTEXT.md](SESSION_CONTEXT.md), and [PROFILE_PROVISION.md](PROFILE_PROVISION.md). Explicit synthetic profile creation is disabled by default and restricted to loopback configuration. The baseline checks and missing-adapter statements below describe the original SQL-core milestone, not the latest composition.
+Current composed-runtime milestones: [API_COMPOSITION.md](API_COMPOSITION.md), [SESSION_CONTEXT.md](SESSION_CONTEXT.md), [PROFILE_PROVISION.md](PROFILE_PROVISION.md), and [WAITING_SPACE.md](WAITING_SPACE.md). Explicit synthetic profile and waiting-space creation are independently disabled by default and restricted to loopback configuration. The baseline checks and missing-adapter statements below describe the original SQL-core milestone, not the latest composition.
 
 ## Implemented
 - `sendMessage`: normalize text, check trusted principal's current active membership, allocate server

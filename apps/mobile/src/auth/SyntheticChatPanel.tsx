@@ -14,6 +14,7 @@ export type SyntheticChatPanelProps = {
   onSend: () => void;
   onRefresh: () => void;
   onCreateProfile: () => void;
+  onCreateWaitingSpace: () => void;
 };
 
 const copy = {
@@ -23,7 +24,12 @@ const copy = {
     createProfile: 'Создать тестовый профиль',
     profileRetry: 'Ответ не получен. Профиль мог быть создан. Повторная проверка не создаст дубликат.',
     retryProfile: 'Повторить создание профиля',
-    noPair: 'У тестового профиля нет активной пары. Создание пары здесь недоступно.',
+    noPair: 'У тестового профиля нет пространства. Вы можете явно создать пространство ожидания партнёра.',
+    createWaiting: 'Создать пространство ожидания',
+    retryWaiting: 'Повторить создание пространства',
+    waiting: 'Ожидание партнёра',
+    waitingNotice: 'Ваше тестовое пространство создано. Чат и приглашения пока недоступны.',
+    waitingRetry: 'Ответ не получен. Пространство могло быть создано. Повторная проверка не создаст дубликат.',
     mode: 'Синтетический тестовый режим',
     notice: 'Только тестовые аккаунты и сообщения. Не вводите личные данные или пароли от других сервисов.',
     signed_out: 'Войдите с тестовым аккаунтом.',
@@ -49,7 +55,12 @@ const copy = {
     createProfile: 'Create test profile',
     profileRetry: 'No response was received. The profile may already exist. Retrying will not create a duplicate.',
     retryProfile: 'Retry profile creation',
-    noPair: 'This test profile has no active pair. Pair creation is not available here.',
+    noPair: 'This test profile has no space. You can explicitly create a space waiting for a partner.',
+    createWaiting: 'Create waiting space',
+    retryWaiting: 'Retry space creation',
+    waiting: 'Waiting for a partner',
+    waitingNotice: 'Your test space exists. Chat and invitations are not available yet.',
+    waitingRetry: 'No response was received. The space may already exist. Retrying will not create a duplicate.',
     mode: 'Synthetic test mode',
     notice: 'Use test accounts and messages only. Do not enter personal data or passwords from other services.',
     signed_out: 'Sign in with a test account.',
@@ -120,7 +131,7 @@ function Login({ locale, phase, email, onEmail, onSignIn, onSignOut }: LoginProp
 
 /** Controlled synthetic-only UI. The parent owns requests, session and message state. */
 export function SyntheticChatPanel({
-  locale, phase, error, draft, messages, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile,
+  locale, phase, error, draft, messages, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace,
 }: SyntheticChatPanelProps) {
   const t = copy[locale];
   const [email, setEmail] = useState('');
@@ -129,13 +140,18 @@ export function SyntheticChatPanel({
     <Text style={styles.mode}>{t.mode}</Text>
     <Text accessibilityRole="header" style={styles.title}>{t.title}</Text>
     <Text style={styles.body}>{t.notice}</Text>
-    <Text accessibilityLiveRegion="polite" style={styles.status}>{t[phase]}</Text>
+    <Text accessibilityLiveRegion="polite" style={styles.status}>{error === 'context_waiting_partner' ? t.waiting : t[phase]}</Text>
     {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive"
-      style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error === 'profile_retry_required' ? t.profileRetry : error}</Text> : null}
+      style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error === 'profile_retry_required' ? t.profileRetry : error === 'context_waiting_partner' ? t.waitingNotice : error === 'waiting_retry_required' ? t.waitingRetry : error}</Text> : null}
     {phase === 'blocked' && (error === 'context_unmapped' || error === 'profile_retry_required')
       && <Action label={error === 'context_unmapped' ? t.createProfile : t.retryProfile} onPress={onCreateProfile} />}
+    {phase === 'blocked' && (error === 'context_no_active_pair' || error === 'waiting_retry_required')
+      && <Action label={error === 'context_no_active_pair' ? t.createWaiting : t.retryWaiting} onPress={onCreateWaitingSpace} />}
     {/* Remounting on each phase change clears the password before the next paint. */}
-    {phase !== 'signed_in' ? <Login key={phase} locale={locale} phase={phase}
+    {phase === 'blocked' && error === 'context_waiting_partner' ? <View style={styles.card}>
+      <Action label={t.refresh} onPress={onRefresh} />
+      <Action label={t.signOut} onPress={onSignOut} />
+    </View> : phase !== 'signed_in' ? <Login key={phase} locale={locale} phase={phase}
       email={email} onEmail={setEmail} onSignIn={onSignIn} onSignOut={onSignOut} /> : <>
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.heading}>{t.history}</Text>

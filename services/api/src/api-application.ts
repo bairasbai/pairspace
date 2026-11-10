@@ -5,6 +5,7 @@ import { createBetterAuthAuthority } from './better-auth-authority.ts';
 import { createChatHandler } from './http.ts';
 import { createSessionContextHandler } from './session-context.ts';
 import { createProfileProvisionHandler } from './profile-provision.ts';
+import { createWaitingSpaceHandler } from './waiting-space.ts';
 import { createPostgresDatabase, type TransactionLimits } from './postgres-database.ts';
 import { limitRequestBody, RequestLimitError, type BodyLimits } from './request-limits.ts';
 
@@ -16,6 +17,8 @@ export type ApiApplicationConfig = Readonly<{
   emailPasswordEnabled: boolean;
   /** Test-only opt-in. Allowed only with an explicit loopback baseURL. */
   enableSyntheticProfileProvisioning?: boolean;
+  /** Independent test-only opt-in, default disabled, loopback only. */
+  enableSyntheticWaitingSpaceCreation?: boolean;
   limits: BodyLimits & TransactionLimits;
 }>;
 export type ApiApplication = Readonly<{ handle(request: Request): Promise<Response> }>;
@@ -41,6 +44,7 @@ function validate(config: ApiApplicationConfig): void {
     || typeof config.secret !== 'string' || config.secret.length < 32 || config.secret.length > 512
     || /\p{Cc}/u.test(config.secret) || typeof config.emailPasswordEnabled !== 'boolean'
     || (config.enableSyntheticProfileProvisioning !== undefined && typeof config.enableSyntheticProfileProvisioning !== 'boolean')
+    || (config.enableSyntheticWaitingSpaceCreation !== undefined && typeof config.enableSyntheticWaitingSpaceCreation !== 'boolean')
     || !Array.isArray(config.trustedOrigins) || !config.trustedOrigins.length
     || !config.trustedOrigins.every(validOrigin) || !config.trustedOrigins.includes(config.baseURL)
     || !config.limits || !integer(config.limits.bodyBytes, 65536) || !integer(config.limits.bodyReadMs, 30000)
@@ -48,7 +52,7 @@ function validate(config: ApiApplicationConfig): void {
     throw new Error('invalid_api_configuration');
   }
   const base = new URL(config.baseURL);
-  if ((base.protocol === 'http:' || config.enableSyntheticProfileProvisioning === true)
+  if ((base.protocol === 'http:' || config.enableSyntheticProfileProvisioning === true || config.enableSyntheticWaitingSpaceCreation === true)
     && !['127.0.0.1', '[::1]', 'localhost'].includes(base.hostname)) {
     throw new Error('invalid_api_configuration');
   }
@@ -74,6 +78,8 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
   const context = createSessionContextHandler(database, authOptions);
   const profile = config.enableSyntheticProfileProvisioning === true
     ? createProfileProvisionHandler(database, authOptions) : null;
+  const waiting = config.enableSyntheticWaitingSpaceCreation === true
+    ? createWaitingSpaceHandler(database, authOptions) : null;
   const chat = createChatHandler(bindSessionAuthority(database, authority));
   return {
     async handle(request) {
@@ -83,18 +89,20 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isChat = /^\/v1\/couples\/[^/]+\/chat\/messages$/.test(path);
         const isContext = path === '/v1/session/context';
         const isProfile = path === '/v1/profile' && profile !== null;
-        if (!isAuth && !isChat && !isContext && !isProfile) return failure(404, 'not_found');
-        if (!isContext && !isProfile && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
+        const isWaiting = path === '/v1/spaces/waiting' && waiting !== null;
+        const mutation = isProfile ? profile : isWaiting ? waiting : null;
+        if (!isAuth && !isChat && !isContext && !mutation) return failure(404, 'not_found');
+        if (!isContext && !mutation && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');
         if (!origin || !origins.has(origin)) return failure(403, 'forbidden');
         if (isContext) return context(request);
-        if (isProfile && request.method !== 'POST') return profile!(request);
+        if (mutation && request.method !== 'POST') return mutation(request);
         if (request.method === 'POST'
           && request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
           return failure(415, 'unsupported_media_type');
         }
         const bounded = await limitRequestBody(request, limits);
-        const response = await (isProfile ? profile!(bounded) : isAuth ? auth.handler(bounded) : chat(bounded));
+        const response = await (mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : chat(bounded));
         if (response.status >= 500) return failure(503, 'temporarily_unavailable');
         const headers = new Headers(response.headers);
         headers.set('cache-control', 'no-store'); headers.set('x-content-type-options', 'nosniff');
