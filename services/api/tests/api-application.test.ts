@@ -280,3 +280,13 @@ it('shared tasks are independently loopback-only and default disabled with bound
   expect((await app.handle(new Request(origin + path + '/00000000-0000-4000-8000-000000000002', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
   expect((await app.handle(new Request(origin + path, { headers: { origin: 'https://attacker.invalid' } }))).status).toBe(403);
 });
+
+it('blind answers are independently loopback-only and default disabled', async () => {
+  const path = '/v1/couples/00000000-0000-4000-8000-000000000001/blind-round';
+  for (const flag of [undefined, false]) expect((await createApiApplication({ ...config(), enableSyntheticBlindAnswers: flag }).handle(request(path))).status).toBe(404);
+  for (const flag of [true, 'true', null]) expect(() => createApiApplication({ ...config(), enableSyntheticBlindAnswers: flag } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin = 'http://127.0.0.1:1234';
+  const app = createApiApplication({ ...config(), baseURL: origin, trustedOrigins: [origin], enableSyntheticBlindAnswers: true });
+  for (const suffix of ['', '/00000000-0000-4000-8000-000000000002/answer']) expect((await app.handle(new Request(origin + path + suffix, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { headers: { origin: 'https://attacker.invalid' } }))).status).toBe(403);
+});

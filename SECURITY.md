@@ -152,3 +152,14 @@ read receipt или E2EE; сервер всё ещё технически чит
 сессию после ожиданий. На клиенте приватный RAM-контент очищается при подтверждении,
 provider login сохраняется; unknown ACK не считается закрытием. Уже полученные
 копии на другом/отключённом устройстве немедленно стереть невозможно.
+
+## Synthetic blind-answer boundary
+A blind round snapshots its two active members and membership epoch. Every read,
+open and immutable submit revalidates membership and provider session after locks.
+Before both submit, the API exposes the caller's answer only; no partner body,
+length, answered flag, receipt time or presence signal. Partner-body SQL is deferred
+until the authorized two-submission condition is proven. Closed/new pairs cannot
+reveal or replay old answers. Exact retries cannot edit a submitted answer.
+The server can read stored plaintext; no E2EE claim. No answer logging, analytics,
+URL parameters, push payloads or AI access. Synthetic records only until production
+privacy, retention, recovery and independent security gates are separately closed.

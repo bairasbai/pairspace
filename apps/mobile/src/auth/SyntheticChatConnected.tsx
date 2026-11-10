@@ -1,3 +1,4 @@
+import { BlindPanel } from './BlindPanel';
 import { TasksPanel } from './TasksPanel';
 import { LeavePanel } from './LeavePanel';
 import { LettersPanel } from './LettersPanel';
@@ -10,6 +11,8 @@ import type { Locale } from '../copy';
 export type SessionController = ReturnType<typeof createSessionController>;
 export function SyntheticChatConnected({ controller, locale, ownsController = true, showCareSend = true }: { controller: SessionController; locale: Locale; ownsController?: boolean; showCareSend?: boolean }) {
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const blind = controller.blind;
+  const blindView = useSyncExternalStore(blind.subscribe, blind.getSnapshot);
   const leave = controller.leave;
   const leaveView = useSyncExternalStore(leave.subscribe, leave.getSnapshot);
   const tasks = controller.tasks;
@@ -23,6 +26,9 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   useEffect(() => ownsController ? () => controller.dispose() : undefined, [controller, ownsController]);
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16 }}>
     <LeavePanel locale={locale} view={leaveView} onBegin={leave.begin} onCancel={leave.cancel} onConfirm={() => { void leave.confirm(); }} />
+    <BlindPanel locale={locale} view={blindView} onDraft={blind.setDraft} onConsent={blind.setConsent}
+      onOpen={() => { void blind.open(); }} onRead={() => { void blind.read(); }}
+      onSubmit={() => { void blind.submit(); }} onRetry={() => { void blind.retry(); }} />
     <TasksPanel locale={locale} view={tasksView} onDraft={tasks.setDraft} onCancel={tasks.cancel}
       onCreate={() => { void tasks.create(); }} onRetry={() => { void tasks.retry(); }}
       onList={() => { void tasks.list(); }} onComplete={id => { void tasks.complete(id); }}

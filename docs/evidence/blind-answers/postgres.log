@@ -1,0 +1,408 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 verify:postgres
+> bash scripts/run-postgres.sh
+
+Verified 14 package-local runtime symlinks
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test:postgres
+> node --test --test-concurrency=1 --test-timeout=30000 tests/postgres/*.integration.mjs
+
+✔ invitation expiry after real couple and invitation lock waits prevents activation using fresh database time (1699.955695ms)
+✔ session expiry after real couple and invitation lock waits prevents activation using fresh database time (1485.708006ms)
+✔ acceptance rechecks owner deleted committed during observed lock wait and grants nothing (390.510644ms)
+✔ acceptance rechecks recipient deleted committed during observed lock wait and grants nothing (372.707597ms)
+✔ acceptance rechecks owner provider removed committed during observed lock wait and grants nothing (371.085746ms)
+✔ acceptance rechecks recipient signed out committed during observed lock wait and grants nothing (352.688042ms)
+✔ acceptance rechecks owner mapping replaced committed during observed lock wait and grants nothing (424.86274ms)
+✔ acceptance rechecks recipient mapping replaced committed during observed lock wait and grants nothing (359.822583ms)
+✔ acceptance rechecks owner membership revoked committed during observed lock wait and grants nothing (365.964182ms)
+✔ acceptance rechecks owner slot changed committed during observed lock wait and grants nothing (389.342942ms)
+✔ each acceptance write rolls back the entire transaction on PostgreSQL failure and returns only a redacted error (346.685874ms)
+✔ serialized acceptance: two recipients never grants a third membership or increments epoch twice (543.618574ms)
+✔ serialized acceptance: same recipient sessions never grants a third membership or increments epoch twice (391.115793ms)
+✔ serialized acceptance: same recipient different couples never grants a third membership or increments epoch twice (439.571313ms)
+✔ accept versus owner revoke follows observed PostgreSQL lock order in both directions (643.484473ms)
+✔ both lexical UUID orders lock both domain users before any provider, session, mapping or couple lock (543.931224ms)
+✔ opposing invitation choices share UUID lock order and terminate without deadlock or membership bypass (320.794867ms)
+✔ official signup → explicit profiles → waiting → preview → accept → epoch-2 contexts and real chat (795.348022ms)
+✔ acceptance is independently disabled and strict JSON-only HTTP rejects spoofing without consuming (614.143991ms)
+✔ self-join, an own waiting space or an active pair cannot grant another membership (460.896728ms)
+✔ lost accepted HTTP acknowledgement and expired consumed token replay are idempotent, but closed/deleted pairs never resurrect (553.770722ms)
+✔ issuer logout alone preserves a valid invitation; a recipient never needs the issuer login session (424.642341ms)
+✖ blind PostgreSQL: real SQL projection does not read another body before mutual submission (609.84268ms)
+✖ blind PostgreSQL: leave serializes against closure without one-sided release (492.050943ms)
+✖ blind PostgreSQL: submit serializes against closure without one-sided release (457.849602ms)
+✖ blind PostgreSQL: read serializes against closure without one-sided release (511.091023ms)
+✖ blind PostgreSQL: expired session after pair lock wait denies open/read/submit and exact replay (484.797148ms)
+✖ blind PostgreSQL: immutable rows and participant guard; answer and receipt commit atomically (488.881014ms)
+✖ blind PostgreSQL: one-sided answers never reveal body, length or submission status; mutual reveal is symmetric (647.166386ms)
+✖ blind PostgreSQL: concurrent opens and submissions converge; immutable command replay binds answer and round (514.518364ms)
+✖ blind PostgreSQL: malicious round IDs, second pair, old epoch, closed and new pair cannot expose answers (454.331899ms)
+✖ blind PostgreSQL: explicit consent and bounded normalized text; strict HTTP inputs leave answers untouched (499.40576ms)
+✔ real PostgreSQL: fixed care signal isolation, concurrent replay/cooldown, epoch and revoked authority (755.936188ms)
+✔ real PostgreSQL: member replacement and close serialize against authorized care write (571.035764ms)
+✔ real PostgreSQL: expiry while pair lock is held denies send and replay (1666.273808ms)
+✔ real PostgreSQL: a retained command cannot replay into a new pair (497.218303ms)
+✔ official client → real loopback composed app → auth → PRODUCT chat → revoke denial on real PG (725.449438ms)
+✔ composed HTTP perimeter rejects CSRF origins, missing origin, oversized and invalid requests (118.764735ms)
+✔ composed HTTP redacts auth/database failures and product outbox transaction remains atomic (352.4054ms)
+✔ stalled HTTP upload is bounded and does not prevent a later healthy request (1110.516249ms)
+✔ explicitly disabled email/password configuration cannot create accounts (120.103618ms)
+✔ expired metadata and same-command replay reveal no secret, and only a new command replaces atomically (437.460859ms)
+✔ invitation expiry and replacement TTL use the database clock after contended couple and invitation locks (1334.846453ms)
+✔ real PostgreSQL constraints reserve one open slot even when expired and reject invalid or duplicate invitation data (291.686836ms)
+✔ distinct official sessions serialize same and different invitation commands on the domain user (789.744535ms)
+✔ concurrent targeted revocations acknowledge exactly one mutation and never touch a replacement (401.092508ms)
+✔ issue versus revoke follows observed lock order: revoke-first permits replacement and issue-first conflicts (693.652455ms)
+✔ official sign-out committed before invitation authority locks denies read, issue and revoke without mutation (871.289173ms)
+✔ issuance and revocation holding authoritative session lock finish before waiting official sign-out (518.650772ms)
+✔ authoritative session expiry during invitation lock waits denies metadata, issuance and revocation (2098.264325ms)
+✔ couple closure and membership revocation committed during a lock wait cannot mint into stale waiting state (320.533222ms)
+✔ invitation routes are independently default-off and never provision a profile or waiting space (1033.815815ms)
+✔ official auth to profile to waiting to issue/replay/revoke stores a hash only and never grants chat authority (556.08243ms)
+✔ lost committed issuance acknowledgement never recovers the secret; metadata, targeted revoke and a fresh command recover safely (323.047522ms)
+✔ two waiting pairs cannot read or revoke each other, spoof caller IDs, or reuse malformed requests to write (615.589979ms)
+✔ active, closed, malformed and deleted-owner spaces fail closed without minting or revoking invitations (419.106886ms)
+✔ failed replacement INSERT rolls back expired-row revocation and exposes no SQL details (333.718352ms)
+✔ real PostgreSQL letters: member replacement and close serialize against send and prevent stale recipient replay (863.069179ms)
+✔ real PostgreSQL letters: expiration during pair lock wait rejects new send, replay, list and open (1886.15185ms)
+✔ real PostgreSQL letters: command cannot be replayed into a new pair; old letter IDs remain unavailable (669.734231ms)
+✔ real PostgreSQL letters: authorized open locks recipient until body read finishes (716.971412ms)
+✔ real PostgreSQL letters: explicit send, private metadata list/open, cross-pair isolation and immutable retry (1189.669139ms)
+✔ real PostgreSQL letters: strict invalid HTTP requests never create content (724.696545ms)
+✔ real PostgreSQL letters: concurrent identical and conflicting sends serialize; list bounded and ordered (1179.199825ms)
+✔ real PostgreSQL letters: migration constrains foreign members and rejects failed inserts atomically (926.115509ms)
+(node:574) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ blind real PostgreSQL: mobile controllers → HTTP → DB, consent, lost ACK retry and symmetric reveal (1387.240161ms)
+(node:589) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real PostgreSQL: mobile explicit care, lost ACK replay, two-pair isolation and epoch reset (1413.119358ms)
+(node:604) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real PostgreSQL: older mobile history binds context, pages gaps and resets honestly (800.607329ms)
+✔ real PostgreSQL: history isolates pairs and rejects missing, stale and former-member authority (636.747357ms)
+(node:622) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real PostgreSQL: lost chat ACK → edited composer → explicit immutable replay commits one message and outbox (721.378506ms)
+✔ real PostgreSQL: transient context and history failures preserve draft without implicit POST (496.79208ms)
+(node:640) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ mobile session controller cookie transport → composed HTTP → real PostgreSQL; replay, revoke and isolation (1077.216558ms)
+✔ explicit mobile profile action creates server identity once without fixture mapping or pair creation (535.762643ms)
+✔ explicit mobile waiting-space action reserves one own space but never authorizes chat or invites (526.35443ms)
+(node:661) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ actual mobile controllers: explicit profile → own waiting → invitation consent → two contexts at epoch 2 → chat (1312.714779ms)
+✔ mobile lost issue/revoke acknowledgements: metadata recovery and stale targeted revoke preserve a replacement (780.136092ms)
+✔ mobile lost accept acknowledgement retries exact approved token directly and recovers context without another preview (761.722047ms)
+✔ mobile logout invalidates pending real issue, preview and accepted responses without claiming committed SQL was undone (1118.192262ms)
+(node:686) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real PostgreSQL mobile letters: RAM privacy, unknown ACK immutable retry, later draft retained, partner list/open and scope reset (1162.640371ms)
+✔ real PostgreSQL mobile scheduled letters: immutable unknown ACK, sealed refresh, client clock spoof and unchanged release (61985.257138ms)
+(node:709) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real mobile pair leave: confirmation, content scrub, cookie retention and verified closed result (900.924088ms)
+✔ real mobile pair leave: confirmation, content scrub, cookie retention and lost ACK immutable replay (754.403093ms)
+(node:727) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real PostgreSQL: shared-task mobile immutable retry, newer replay, conflict and isolation (1246.739645ms)
+✔ pair leave PostgreSQL serialization: leave obtains locks first; competing operation cannot cross closure (646.921678ms)
+✔ pair leave PostgreSQL serialization: send obtains locks first; competing operation cannot cross closure (499.796572ms)
+✔ pair leave PostgreSQL serialization: read obtains locks first; competing operation cannot cross closure (541.600745ms)
+✔ pair leave: both partners concurrently close once with deterministic sorted domain locks (490.722622ms)
+✔ pair leave late expiry: new leave rechecks session after blocked pair lock (2605.699936ms)
+✔ pair leave late expiry: receipt replay rechecks session after blocked pair lock (2684.268883ms)
+✔ pair leave late expiry: legacy close rechecks session after blocked pair lock (2630.979275ms)
+✔ pair leave late expiry: chat send rechecks session after blocked pair lock (2659.727985ms)
+✔ pair leave late expiry: chat read rechecks session after blocked pair lock (2656.999411ms)
+✔ pair leave: scheduled letter remains unreadable even after its release instant following closure (534.26353ms)
+✔ pair leave versus invitation acceptance replay cannot resurrect either participant (602.451988ms)
+✔ pair leave: official logout committed while domain lock waits denies mutation under current auth (540.651743ms)
+✔ pair leave closure time follows the actual lock wait; delayed second-partner and replay receipts preserve the exact event timestamp (870.393374ms)
+✔ legacy pair closure followed by delayed acknowledgements uses the original event time for both receipts (724.493548ms)
+✔ pair leave: current authority, explicit immutable scope, isolation, archive preservation and blocked scheduled bodies (863.050265ms)
+✔ pair leave: lost committed acknowledgement and receipt replay cannot follow or mutate a new pair (583.647443ms)
+✔ pair leave: closed membership invariant is deferred and rejects revival; waiting pair cannot be left (672.269105ms)
+✔ pair leave: each failed write rolls back closure, memberships, event and receipt without exposing SQL (706.07567ms)
+✔ PRODUCT handler and use cases persist chat/idempotency/history/close/outbox with Better Auth only (453.692209ms)
+✔ completed official revoke blocks PRODUCT send/history/close with previously verified principal (422.180524ms)
+✔ PRODUCT transaction holds authoritative provider session lock while official revocation waits (443.610073ms)
+✔ PRODUCT row expiry, user deletion, identity remap and mixed authority fail closed (326.343221ms)
+✔ PRODUCT outbox failure rolls back message and sequence under Better Auth authority (343.504705ms)
+✔ profile endpoint defaults disabled; explicit synthetic opt-in creates exactly one own profile with no pair access (611.932649ms)
+✔ profile HTTP rejects identity selectors, unknown fields, malformed input, origins and unauthenticated clients without writes (280.557772ms)
+✔ simultaneous profile requests from distinct sessions serialize on provider user and retry with domain-first lock order (388.762913ms)
+✔ lost real HTTP acknowledgement after COMMIT is safely retried without orphan or duplicate profile (256.898221ms)
+✔ revocation completed while profile waits for provider-user lock denies all domain writes (339.448874ms)
+✔ profile-first session lock makes official revocation wait; revoked retry cannot create another profile (284.471428ms)
+✔ deleted domain profiles remain unavailable and never get resurrected or reassigned across accounts (296.956165ms)
+✔ observed mapping removal or unsupported reassignment fails closed without overwriting any identity (533.974455ms)
+✔ mapping-insert failure rolls back the new domain row and a later retry creates one complete profile (268.95349ms)
+✔ authoritative expiry is checked again after a real mapping-row lock wait (1383.901671ms)
+✔ real PostgreSQL scheduled letters: exact trusted boundary, SQL privacy, immutable schedule, current scopes (752.412075ms)
+✔ real PostgreSQL scheduled letters: strict window boundaries and fresh clock after membership lock (702.619153ms)
+✔ real PostgreSQL scheduled HTTP rejects malformed schedules, spoofed clock and DST gaps (704.259567ms)
+✔ real PostgreSQL schedules: explicit DST fold offsets distinguish instants; gap and false offset rejected (511.817651ms)
+✔ real PostgreSQL forward migration leaves pre-existing rows immediate and enforces paired schedule metadata (489.00943ms)
+✔ context discovers only server-owned unmapped/no-pair/ready states and refreshes pair/epoch (549.174709ms)
+✔ context HTTP rejects forged selectors, missing cookie, bearer credentials, origins and non-GET writes (250.894452ms)
+✔ context denies revoked/expired/provider-deleted and domain-deleted identities and redacts SQL failure (317.948367ms)
+✔ official revocation between provider verification and context transaction fails closed on real PG (258.932439ms)
+✔ context transaction holds provider session lock while official revocation waits (281.013468ms)
+✔ context detects an unsupported mapping remap between discovery and authoritative lock (236.328023ms)
+✔ context snapshots recheck authoritative expiry after mapping and waiting-couple row lock waits (2740.753542ms)
+✔ shared tasks PostgreSQL: leave first serializes with leave and denies closed resources (733.156438ms)
+✔ shared tasks PostgreSQL: create first serializes with leave and denies closed resources (592.973745ms)
+✔ shared tasks PostgreSQL: change first serializes with leave and denies closed resources (533.876773ms)
+✔ shared tasks PostgreSQL: list first serializes with leave and denies closed resources (643.204833ms)
+✔ shared tasks PostgreSQL: create, exact replay, change and list recheck expired session after pair lock wait (1834.297222ms)
+✔ shared tasks PostgreSQL: old command cannot cross to a new pair; old resource remains isolated (560.528234ms)
+✔ shared tasks PostgreSQL: database rejects one-member active pair; service rejects uncommitted inconsistent membership (498.129021ms)
+✔ shared tasks PostgreSQL: equal timestamp order is stable and backward clock does not regress updatedAt (511.71031ms)
+✔ shared tasks PostgreSQL: both partners create/list/complete/reopen; pair, session and resource isolation (794.033118ms)
+✔ shared tasks PostgreSQL: actual lost ACK retries preserve receipt and return current state after another operation (640.718707ms)
+✔ shared tasks PostgreSQL: concurrent create and optimistic transitions serialize without silent overwrite (633.210553ms)
+✔ shared tasks PostgreSQL: bounded latest fifty are deterministic and omit old epoch tasks (909.082152ms)
+✔ shared tasks PostgreSQL: strict body, title, route and idempotency validation does not persist rejected input (536.839019ms)
+✔ shared tasks PostgreSQL: migration constrains pair FK, titles, versions and immutable receipts; failed receipt is atomic (587.200917ms)
+✔ distinct sessions simultaneously creating a waiting space serialize on the domain user, not session identity (415.778733ms)
+✔ a real lost HTTP acknowledgement after COMMIT retries idempotently with no orphan or duplicate waiting space (230.814709ms)
+✔ official revocation completed while creation waits for its domain-user lock prevents both inserts (215.974019ms)
+✔ creation holds authoritative session lock before official revocation; revoked retry cannot create again (209.612047ms)
+✔ waiting creation and idempotent retry recheck authoritative expiry after real mapping/couple lock waits (2699.628539ms)
+✔ observed mapping removal or reassignment fails closed without creating a space for either identity (410.917506ms)
+✔ domain deletion and waiting membership revocation during lock waits do not resurrect or replace state (425.240125ms)
+✔ waiting creation is explicit, independently gated and never provisions a missing profile (704.692892ms)
+✔ two accounts create isolated own waiting spaces and context snapshots without chat authority (392.890471ms)
+✔ waiting HTTP rejects caller IDs, malformed bodies, wrong methods/origins and unauthenticated requests without writes (246.269515ms)
+✔ an active pair cannot be bypassed and invalid closed live membership is rejected by PostgreSQL (254.325567ms)
+✔ malformed waiting membership fails closed, and deleted profiles are never resurrected (321.609194ms)
+✔ failed member insert rolls back its waiting couple and retry creates exactly one complete space (209.580699ms)
+ℹ tests 155
+ℹ suites 0
+ℹ pass 145
+ℹ fail 10
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 188773.842457
+
+✖ failing tests:
+
+test at tests/postgres/blind-races.integration.mjs:12:1
+✖ blind PostgreSQL: real SQL projection does not read another body before mutual submission (609.84268ms)
+  error: relation "blind_rounds" does not exist
+      at /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/src/blind-answers.ts:58:16
+      at async Object.transaction (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/fixture.mjs:54:29)
+      at async TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind-races.integration.mjs:16:20)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    length: 112,
+    severity: 'ERROR',
+    code: '42P01',
+    detail: undefined,
+    hint: undefined,
+    position: '103',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_relation.c',
+    line: '1501',
+    routine: 'parserOpenTable'
+  }
+
+test at tests/postgres/blind-races.integration.mjs:42:3
+✖ blind PostgreSQL: leave serializes against closure without one-sided release (492.050943ms)
+  error: relation "blind_rounds" does not exist
+      at /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/src/blind-answers.ts:58:16
+      at async Object.transaction (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/fixture.mjs:54:29)
+      at async TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind-races.integration.mjs:46:22)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    length: 112,
+    severity: 'ERROR',
+    code: '42P01',
+    detail: undefined,
+    hint: undefined,
+    position: '103',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_relation.c',
+    line: '1501',
+    routine: 'parserOpenTable'
+  }
+
+test at tests/postgres/blind-races.integration.mjs:42:3
+✖ blind PostgreSQL: submit serializes against closure without one-sided release (457.849602ms)
+  error: relation "blind_rounds" does not exist
+      at /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/src/blind-answers.ts:58:16
+      at async Object.transaction (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/fixture.mjs:54:29)
+      at async TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind-races.integration.mjs:46:22)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    length: 112,
+    severity: 'ERROR',
+    code: '42P01',
+    detail: undefined,
+    hint: undefined,
+    position: '103',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_relation.c',
+    line: '1501',
+    routine: 'parserOpenTable'
+  }
+
+test at tests/postgres/blind-races.integration.mjs:42:3
+✖ blind PostgreSQL: read serializes against closure without one-sided release (511.091023ms)
+  error: relation "blind_rounds" does not exist
+      at /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/src/blind-answers.ts:58:16
+      at async Object.transaction (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/fixture.mjs:54:29)
+      at async TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind-races.integration.mjs:46:22)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    length: 112,
+    severity: 'ERROR',
+    code: '42P01',
+    detail: undefined,
+    hint: undefined,
+    position: '103',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_relation.c',
+    line: '1501',
+    routine: 'parserOpenTable'
+  }
+
+test at tests/postgres/blind-races.integration.mjs:72:1
+✖ blind PostgreSQL: expired session after pair lock wait denies open/read/submit and exact replay (484.797148ms)
+  error: relation "blind_rounds" does not exist
+      at /workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/node_modules/pg/lib/client.js:694:17
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/src/blind-answers.ts:58:16
+      at async Object.transaction (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/fixture.mjs:54:29)
+      at async TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind-races.integration.mjs:76:42)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    length: 112,
+    severity: 'ERROR',
+    code: '42P01',
+    detail: undefined,
+    hint: undefined,
+    position: '103',
+    internalPosition: undefined,
+    internalQuery: undefined,
+    where: undefined,
+    schema: undefined,
+    table: undefined,
+    column: undefined,
+    dataType: undefined,
+    constraint: undefined,
+    file: 'parse_relation.c',
+    line: '1501',
+    routine: 'parserOpenTable'
+  }
+
+test at tests/postgres/blind-races.integration.mjs:92:1
+✖ blind PostgreSQL: immutable rows and participant guard; answer and receipt commit atomically (488.881014ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'round')
+      at TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind-races.integration.mjs:95:50)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests/postgres/blind.integration.mjs:8:1
+✖ blind PostgreSQL: one-sided answers never reveal body, length or submission status; mutual reveal is symmetric (647.166386ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'round')
+      at TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind.integration.mjs:11:49)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at tests/postgres/blind.integration.mjs:32:1
+✖ blind PostgreSQL: concurrent opens and submissions converge; immutable command replay binds answer and round (514.518364ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+    assert.ok(opened.every(r => [200, 201].includes(r.status)))
+
+      at TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind.integration.mjs:37:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tests/postgres/blind.integration.mjs:53:1
+✖ blind PostgreSQL: malicious round IDs, second pair, old epoch, closed and new pair cannot expose answers (454.331899ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'round')
+      at TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind.integration.mjs:56:83)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests/postgres/blind.integration.mjs:79:1
+✖ blind PostgreSQL: explicit consent and bounded normalized text; strict HTTP inputs leave answers untouched (499.40576ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'round')
+      at TestContext.<anonymous> (file:///workspace/scratch/bb7b759a56b3/pairspace-blind-answers/services/api/tests/postgres/blind.integration.mjs:82:50)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)

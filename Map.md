@@ -132,3 +132,10 @@ Device visual acceptance remains open; no backend features added.
 - `apps/mobile/src/auth/tasks.ts`, `TasksPanel.tsx`: общий connected controller,
   RAM-черновик, неизменяемый retry, RU/EN и явное обновление при конфликте.
 - `docs/SHARED_TASKS_EVIDENCE.md`: проверки и открытые gates.
+
+## Слепые ответы: bounded synthetic-срез
+`packages/domain/blind`, `services/api/src/blind*`, migration 010 и
+`apps/mobile/src/auth/blind*`: один явный раунд для текущей пары/epoch.
+Backend удерживает чужой ответ до двух immutable submissions; клиент хранит
+черновик только в RAM. [Контракт](services/api/BLIND_ANSWERS.md),
+[доказательства](docs/BLIND_ANSWERS_EVIDENCE.md). Не все 11 режимов и не production.

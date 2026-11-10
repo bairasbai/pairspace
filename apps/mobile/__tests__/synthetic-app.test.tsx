@@ -1,3 +1,4 @@
+import { emptyBlind } from '../src/auth/blind-state';
 import { emptyTasks } from '../src/auth/tasks-state';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
@@ -17,6 +18,7 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
   const lettersView = { available: false, busy: false, status: 'idle' as const, draft: '', releaseAtInput: '', releaseTimezoneInput: '', letters: [], opened: null, checked: false, error: false };
   const leaveView = { available: false, status: 'idle' as const };
   const controller: SessionController = {
+    blind: { getSnapshot: () => emptyBlind, subscribe: () => () => {}, setDraft: jest.fn(), setConsent: jest.fn(), open: jest.fn(), read: jest.fn(), submit: jest.fn(), retry: jest.fn() },
     tasks: { getSnapshot: () => emptyTasks, subscribe: () => () => {}, setDraft: jest.fn(), cancel: jest.fn(),
       create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}),
       complete: jest.fn(async () => {}), reopen: jest.fn(async () => {}) },

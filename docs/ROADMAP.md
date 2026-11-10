@@ -177,3 +177,11 @@ are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
 - Не входят: assignee, due date, edit/delete, push, production и политика хранения.
 - Независимая проверка SHA, native iOS/Android, два устройства и E2EE остаются открыты.
 - Доказательства и статус: [SHARED_TASKS_EVIDENCE](SHARED_TASKS_EVIDENCE.md).
+
+### Слепые ответы: первый срез Этапа 4
+Реализуется один versioned нейтральный RU/EN вопрос и один round на pair/epoch.
+Явные open/read/submit; взаимное раскрытие только сервером после двух подтверждений.
+Нельзя создать следующий раунд после завершения: ограничение среза, не production policy.
+Права пропуска: можно не открывать/не отправлять ответ; никаких напоминаний/давления.
+Отмена раунда, правка ответа, новая серия, история и остальные десять режимов не входят.
+До независимой приёмки точного SHA: не принято. Native/device/production gates открыты.
