@@ -6,5 +6,5 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   { files: ['services/api/scripts/**/*.mjs', 'services/api/tests/postgres/**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', console: 'readonly', URL: 'readonly',
-      Request: 'readonly', Headers: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly' } } },
+      Request: 'readonly', Headers: 'readonly', fetch: 'readonly', setTimeout: 'readonly', clearTimeout: 'readonly' } } },
 );

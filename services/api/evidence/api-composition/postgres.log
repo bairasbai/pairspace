@@ -1,0 +1,30 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 verify:postgres
+> bash scripts/run-postgres.sh
+
+Verified 14 package-local runtime symlinks
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test:postgres
+> node --test --test-concurrency=1 --test-timeout=30000 tests/postgres/*.integration.mjs
+
+✔ official client → real loopback composed app → auth → PRODUCT chat → revoke denial on real PG (604.35236ms)
+✔ composed HTTP perimeter rejects CSRF origins, missing origin, oversized and invalid requests (71.318748ms)
+✔ composed HTTP redacts auth/database failures and product outbox transaction remains atomic (276.573938ms)
+✔ stalled HTTP upload is bounded and does not prevent a later healthy request (1074.441631ms)
+✔ explicitly disabled email/password configuration cannot create accounts (68.983854ms)
+✔ PRODUCT handler and use cases persist chat/idempotency/history/close/outbox with Better Auth only (342.48434ms)
+✔ completed official revoke blocks PRODUCT send/history/close with previously verified principal (299.491473ms)
+✔ PRODUCT transaction holds authoritative provider session lock while official revocation waits (339.597071ms)
+✔ PRODUCT row expiry, user deletion, identity remap and mixed authority fail closed (212.979349ms)
+✔ PRODUCT outbox failure rolls back message and sequence under Better Auth authority (235.765048ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4447.871895

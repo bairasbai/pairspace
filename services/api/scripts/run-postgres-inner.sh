@@ -44,4 +44,7 @@ if ! pg_ctl -D "$runtime/data" -l "$runtime/postgres.log" -o "-h 127.0.0.1 -p $P
 fi
 started=1
 node scripts/bootstrap-database.mjs
+# Synthetic hostile values prove explicit application config never falls back to auth environment secrets.
+export BETTER_AUTH_SECRETS='synthetic-invalid-env-that-must-not-be-read'
+export BETTER_AUTH_SECRET='synthetic-ignored-secret' AUTH_SECRET='synthetic-ignored-secret'
 npm run test:postgres

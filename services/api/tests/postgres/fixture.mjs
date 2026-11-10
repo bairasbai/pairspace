@@ -20,9 +20,10 @@ export async function createFixture() {
     const common = { ...configuration.connection, options: `-c search_path=${schema},public`, max: 4 };
     authPool = new Pool({ ...common, application_name: `ps-auth-${schema}` });
     domainPool = new Pool({ ...common, application_name: `ps-domain-${schema}` });
+    const explicitSecret = randomBytes(48).toString('base64url');
     const options = {
       database: authPool,
-      baseURL: 'http://localhost:3123', secret: randomBytes(48).toString('base64url'),
+      baseURL: 'http://localhost:3123', secret: explicitSecret, secrets: [{ version: 1, value: explicitSecret }],
       emailAndPassword: { enabled: true }, session: { cookieCache: { enabled: false } },
       logger: { level: 'error' },
     };
