@@ -1,0 +1,26 @@
+export const careCopy = {
+  ru: {
+    title: 'Думаю о тебе', hint: 'Сохранить тестовый знак заботы для партнёра',
+    notice: 'Тестовый знак заботы. Без push, геолокации, присутствия и отметок прочтения.',
+    idle: 'Нажмите сердце, чтобы отправить знак заботы.', sending: 'Отправляется…',
+    retry: 'Подтверждение не получено. Нажмите сердце для повтора того же знака без дубля.',
+    sent: 'Сохранено на сервере. Доставка и прочтение не подтверждены.',
+    unavailable: 'Тестовая функция заботы недоступна на этом сервере.',
+    cooldown: 'Новый знак можно отправлять не чаще раза в минуту. Попробуйте позже.',
+    read: 'Проверить знак от партнёра', incoming: 'Партнёр отправил «Думаю о тебе».',
+    none: 'Нет доступного знака от партнёра за последние 24 часа.',
+    error: 'Не удалось проверить ответ. Можно повторить запрос.',
+  },
+  en: {
+    title: 'Thinking of you', hint: 'Save a test care signal for your partner',
+    notice: 'Test care signal. No push, location, presence or read receipts.',
+    idle: 'Tap the heart to send a care signal.', sending: 'Sending…',
+    retry: 'No acknowledgement received. Tap the heart to retry the same signal without a duplicate.',
+    sent: 'Saved on the server. Delivery and reading are not confirmed.',
+    unavailable: 'The test care feature is unavailable on this server.',
+    cooldown: 'You can send a new signal once per minute. Try again later.',
+    read: 'Check for a partner signal', incoming: 'Your partner sent “Thinking of you”.',
+    none: 'No available partner signal from the last 24 hours.',
+    error: 'Could not verify the response. You can retry.',
+  },
+};

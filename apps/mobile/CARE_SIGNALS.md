@@ -14,15 +14,24 @@ Saved does not mean delivered or read. A separate explicit button retrieves the
 latest incoming signal. Login, refresh and background work never fetch care signals.
 The signal is fixed `thinking_of_you`, with no free-form text, location or presence.
 
-`App.tsx`, `Navigation.tsx` and default offline demo routing are unchanged. The
-original central navigation heart still opens its honest demo notice. The separate
-connected panel heart performs the test-server action; this is not a new production
-navigation flow. Native device design/accessibility acceptance remains outstanding.
+The global central navigation heart now invokes the existing care controller on
+all tabs, only when `PairspaceApp` receives an explicit synthetic controller.
+Connected chat hides its duplicate send heart and retains explicit incoming reading.
+The default App remains offline and shows the original demonstration alert.
+A connected-mode banner identifies test chat/heart and the remaining demo screens.
+
+The global heart is disabled without signed-in verified active-pair state or during
+a care request. RU/EN reasons cover signed-out, busy, waiting-partner and blocked.
+429 displays cooldown and allows a later explicit attempt, with no local timer or
+automatic retry; the server enforces the limit. Unknown ACK retains the exact command
+through tab and language changes. 404 means unavailable, never saved or delivered.
+Native device design/accessibility acceptance remains outstanding.
 
 The server's 60-second limit is a product cooldown, not proven abuse protection.
 The 24-hour incoming visibility window is not a deletion/retention policy. This
 client does not persist signals, credentials, outgoing commands or recipient state.
-Leaving the connected screen or signing out clears ephemeral state. Unknown-ACK
+Changing tabs preserves the shared controller. Logout, controller replacement and
+App unmount clear ephemeral state. Unknown-ACK
 retry survives only while the same controller/scope remains active, not app restart.
 
 ## Scope and replay safety
@@ -53,3 +62,14 @@ auth denial, logout and dispose clear pending and displayed state.
 - Full mobile coverage includes all production files. Logs are in
   `evidence/care-signals/`. Expo export is JavaScript bundling for iOS/Android,
   not a native build, simulator run, device acceptance or push-delivery test.
+
+## App ownership
+
+App owns one injected controller across tabs. A microtask-delayed ownership release
+is canceled by StrictMode same-controller effect re-setup, preserving preauthenticated
+sessions. Replacement cleanup captures only the old controller. Dispose does not
+sign the provider out. Controller logout/scope invalidation still reset immediately.
+Standalone SyntheticChatConnected retains prior synchronous cleanup by default,
+including its inherited StrictMode reset; App opts out of panel ownership.
+No extra runtime, auth lifecycle change, persistence or signal transport was added.
+See ../../docs/CENTRAL_HEART_EVIDENCE.md for checks and limitations.

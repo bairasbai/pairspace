@@ -99,3 +99,9 @@ Device visual acceptance remains open; no backend features added.
 - `apps/mobile/CARE_SIGNALS.md`: opt-in connected UI, повтор после неизвестного ACK,
   RU/EN и очистка области; исходный offline preview не подключён к сети.
 - `docs/CARE_SIGNAL_EVIDENCE.md`: выполненные проверки и оставшиеся gates.
+
+## 2026-11-10 — центральное сердце в synthetic-режиме
+- `apps/mobile/src/auth/ConnectedNavigation.tsx`: общая кнопка и RU/EN статусы care store.
+- `apps/mobile/src/auth/useControllerOwner.ts`: App владеет controller между вкладками.
+- `apps/mobile/__tests__/central-heart.test.tsx`: интеграция с настоящим controller.
+- [CENTRAL_HEART_EVIDENCE](docs/CENTRAL_HEART_EVIDENCE.md): проверки и открытые gates.

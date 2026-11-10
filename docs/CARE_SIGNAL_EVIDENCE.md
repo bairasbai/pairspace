@@ -61,3 +61,8 @@ allow initialization/CI variance; TERM and 10-second kill grace remain. Per-test
 SQL statement/lock, readiness and cleanup deadlines and destination guards are
 unchanged. A safety test pins the 90-second invocation; full safety and PostgreSQL
 suites are rerun after this harness-only change.
+
+## Subsequent navigation slice
+The historical UI boundary above is superseded by
+[CENTRAL_HEART_EVIDENCE](CENTRAL_HEART_EVIDENCE.md). Global navigation now uses
+the same care controller only with explicit synthetic injection. Default demo is unchanged.

@@ -4,9 +4,9 @@ import { HeartButton } from './HeartButton';
 import { colors } from './theme';
 
 export type Tab = 'today' | 'chat' | 'together' | 'us';
-type Props = { selected: Tab; onSelect: (tab: Tab) => void; onHeart: () => void; text: Copy };
+type Props = { selected: Tab; onSelect: (tab: Tab) => void; onHeart: () => void; text: Copy; heart?: { hint: string; disabled: boolean; busy: boolean } };
 
-export function Navigation({ selected, onSelect, onHeart, text }: Props) {
+export function Navigation({ selected, onSelect, onHeart, text, heart }: Props) {
   const tab = (id: Tab) => (
     <Pressable key={id} accessibilityRole="tab" accessibilityState={{ selected: selected === id }}
       onPress={() => onSelect(id)} style={[styles.tab, selected === id && styles.activeTab]}>
@@ -15,7 +15,7 @@ export function Navigation({ selected, onSelect, onHeart, text }: Props) {
   );
   return <View style={styles.bar}>
     {tab('today')}{tab('chat')}
-    <HeartButton label={text.heart} hint={text.heartHint} onPress={onHeart} />
+    <HeartButton label={text.heart} hint={heart?.hint ?? text.heartHint} disabled={heart?.disabled} busy={heart?.busy} onPress={onHeart} />
     {tab('together')}{tab('us')}
   </View>;
 }

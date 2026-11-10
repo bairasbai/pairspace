@@ -133,3 +133,11 @@ are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
 - Не закрыты: независимая приёмка SHA, реальные iOS/Android и два устройства,
   restart persistence, политика удаления, abuse defence, production rollout.
 - Доказательства: [CARE_SIGNAL_EVIDENCE](CARE_SIGNAL_EVIDENCE.md).
+
+## Центральное сердце — synthetic checkpoint 2026-11-10
+- Реализовано: общий care controller всех вкладок, одна центральная кнопка, RU/EN
+  причины недоступности, busy/retry/cooldown и подтверждение только сохранения сервером.
+- Проверено локально: App/navigation, смена controller/вкладки/языка, StrictMode,
+  logout/unmount и offline default; [доказательства](CENTRAL_HEART_EVIDENCE.md).
+- Открыто: независимая приёмка frozen SHA, native iOS/Android и два устройства,
+  production-сервер, push и долговечное восстановление. JS export не native build.

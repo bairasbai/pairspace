@@ -165,3 +165,11 @@ Refresh намеренно сбрасывает окно к последним 5
 Исходный offline App остаётся честным демо; native/device и production gates открыты.
 Локально проверено: API181/mobile989/realPG94 pass, coverage всех четырёх метрик ≥90%.
 Статус: независимая приёмка финального SHA отдельно.
+
+## 2026-11-10 — центральное сердце, explicit synthetic only
+App использует существующий care controller на всех вкладках только при явно
+переданном synthetic controller. Одно центральное пульсирующее сердце; подключённая
+панель сохраняет явное чтение входящего сигнала. Обычный App остаётся offline demo.
+Unknown-ACK повтор сохраняет ID между вкладками; logout, замена controller и unmount
+очищают состояние. Нативная приёмка не выполнена. Статус: независимая приёмка ожидается.
+Проверки: [CENTRAL_HEART_EVIDENCE](docs/CENTRAL_HEART_EVIDENCE.md).

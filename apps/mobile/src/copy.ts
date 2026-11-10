@@ -3,6 +3,7 @@ export type Locale = 'ru' | 'en';
 export const copy = {
   ru: {
     preview: 'Предварительная версия · без подключения к серверу',
+    connectedPreview: 'Тестовый сервер: чат и знак заботы · остальные экраны — демо · без push',
     today: 'Сегодня', chat: 'Чат', together: 'Вместе', us: 'Мы',
     title: 'Ваше место для двоих',
     welcome: 'Самое важное — быть рядом.',
@@ -23,6 +24,7 @@ export const copy = {
   },
   en: {
     preview: 'Preview · not connected to a server',
+    connectedPreview: 'Test server: chat and care signal · other screens are demos · no push',
     today: 'Today', chat: 'Chat', together: 'Together', us: 'Us',
     title: 'Your space for two', welcome: 'The little ways we stay close.',
     intro: 'Your next meeting, letters and shared plans will live here. Accounts and invitations are not connected yet.',
