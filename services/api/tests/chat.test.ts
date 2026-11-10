@@ -67,7 +67,7 @@ describe('SQL-backed message use cases', () => {
   it('takes the couple lock before a separate membership statement', async () => {
     const queries: string[] = [];
     const base = adapter(pg);
-    const db = { now: base.now, transaction: <T>(work: Parameters<typeof base.transaction<T>>[0]) => base.transaction(tx => work({
+    const db = { now: base.now, sessionAuthority: base.sessionAuthority, transaction: <T>(work: Parameters<typeof base.transaction<T>>[0]) => base.transaction(tx => work({
       query: <R>(sql: string, params?: unknown[]) => { queries.push(sql); return tx.query<R>(sql, params); },
     })) };
     for (const operation of [() => sendMessage(db, principal, command), () => readHistory(db, principal, history),

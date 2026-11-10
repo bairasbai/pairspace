@@ -1,5 +1,5 @@
 import { readHistory, sendMessage } from './chat.ts';
-import type { Database, Principal } from './contracts.ts';
+import type { AuthorizedDatabase, Principal } from './contracts.ts';
 import { isUuid } from './validation.ts';
 
 /** Must verify authenticity, expiry and revocation on every request. No default implementation. */
@@ -31,18 +31,17 @@ async function readJson(request: Request): Promise<unknown> {
 }
 
 /** In-process transport prototype. Not a listener, auth provider or production perimeter. */
-export function createChatHandler(db: Database, verify: SessionVerifier): (request: Request) => Promise<Response> {
+export function createChatHandler(db: AuthorizedDatabase): (request: Request) => Promise<Response> {
   return async request => {
     try {
       const url = new URL(request.url);
       const route = url.pathname.match(/^\/v1\/couples\/([^/]+)\/chat\/messages$/);
       if (!route) return error(404, 'not_found');
       if (request.method !== 'POST' && request.method !== 'GET') return error(405, 'method_not_allowed');
-      const authorization = request.headers.get('authorization');
-      const match = authorization?.match(/^Bearer ([A-Za-z0-9._~-]{1,2048})$/);
-      if (!match) return error(401, 'unauthenticated');
-      const principal = await verify(match[1]);
-      if (!principal || !isUuid(principal.userId)) return error(401, 'unauthenticated');
+      const principal = await db.sessionAuthority.authenticate(request);
+      if (!principal || principal.source !== db.sessionAuthority.source || !isUuid(principal.userId)) {
+        return error(401, 'unauthenticated');
+      }
       let input: unknown;
       if (request.method === 'POST') {
         if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {

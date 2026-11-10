@@ -1,4 +1,7 @@
-# Signed-token verification prototype, not a login system
+# Explicit auth selection and retained JWT prototype
+
+The API core now has a mandatory typed session-authority boundary and a Better Auth-backed implementation. See AUTHORITY_INTEGRATION.md for selection, transactional semantics, real PostgreSQL evidence and limits. No runtime server or mobile login was enabled. The section below documents the retained, explicitly selected synthetic-JWT prototype only.
+
 
 This slice uses `jose` 6.2.17 (MIT, official npm package) for cryptographic JWT verification.
 It does not issue tokens, generate runtime keys, call an identity provider, fetch JWKS, create

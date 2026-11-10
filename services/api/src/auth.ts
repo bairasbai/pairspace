@@ -73,7 +73,7 @@ export function createSessionVerifier(db: Database, config: SessionVerifierConfi
           AND s.created_at <= $4::timestamptz AND u.deleted_at IS NULL
       `, [sid, issuer, sub, currentDate.toISOString(), iat]);
       if (rows.length !== 1 || !isUuid(rows[0].userId)) return null;
-      return { userId: rows[0].userId, sessionId: sid, tokenExpiresAt: exp };
+      return { source: 'synthetic-jwt', userId: rows[0].userId, sessionId: sid, tokenExpiresAt: exp };
     });
   };
 }

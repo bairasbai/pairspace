@@ -2,7 +2,7 @@ import { afterEach, beforeAll, beforeEach, expect, it } from 'vitest';
 import { generateKeyPair, SignJWT } from 'jose';
 import type { PGlite } from '@electric-sql/pglite';
 import { createSessionVerifier } from '../src/auth.ts';
-import { createChatHandler } from '../src/http.ts';
+import { createSyntheticChatHandler as createChatHandler } from './fixtures.ts';
 import { createChatTransport } from '../../../apps/mobile/src/chat/transport';
 import { createQueue, enqueue } from '../../../apps/mobile/src/chat/queue';
 import { adapter, c1, c2, command, createFixture, fixtureNow, identityPrincipal, u1, u2, u3, u4 } from './fixtures.ts';

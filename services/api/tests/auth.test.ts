@@ -27,8 +27,8 @@ const claims = (changes: Record<string, unknown> = {}): JWTPayload => ({
 const token = (changes: Record<string, unknown> = {}, header: JWTHeaderParameters = { alg: 'ES256' },
   key: webcrypto.CryptoKey | Uint8Array = signingKey) => new SignJWT(claims(changes))
   .setProtectedHeader({ typ: 'at+jwt', ...header }).sign(key);
-const principal = { userId: u1, sessionId, tokenExpiresAt: expiresAt };
-const verify = (db = adapter(pg), options = config) => createSessionVerifier(db, options);
+const principal = { source: 'synthetic-jwt', userId: u1, sessionId, tokenExpiresAt: expiresAt };
+const verify = (db: Database = adapter(pg), options = config) => createSessionVerifier(db, options);
 
 beforeAll(async () => {
   ({ privateKey: signingKey, publicKey: verificationKey } = await generateKeyPair('ES256'));

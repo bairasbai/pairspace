@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
-import { createChatHandler } from '../src/http.ts';
+import { createSyntheticChatHandler as createChatHandler } from './fixtures.ts';
 import { closeCouple } from '../src/chat.ts';
 import { adapter, identityPrincipal, c1, c2, command, createFixture, failOn, history, id, principal, u2, u3, u4 } from './fixtures.ts';
 let pg: PGlite;

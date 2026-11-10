@@ -3,7 +3,7 @@ import type { PGlite } from '@electric-sql/pglite';
 import { createChatTransport } from '../../../apps/mobile/src/chat/transport';
 import { createQueue, enqueue, login, pause, resume } from '../../../apps/mobile/src/chat/queue';
 import { closeCouple, sendMessage } from '../src/chat.ts';
-import { createChatHandler } from '../src/http.ts';
+import { createSyntheticChatHandler as createChatHandler } from './fixtures.ts';
 import { adapter, identityPrincipal, c1, c2, command, createFixture, id, principal, u2, u3, u4 } from './fixtures.ts';
 let pg: PGlite;
 beforeEach(async () => { pg = await createFixture(); });

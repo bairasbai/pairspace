@@ -1,0 +1,8 @@
+{
+  "license": "MIT",
+  "repository": {
+    "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+    "type": "git",
+    "directory": "types/pg"
+  }
+}

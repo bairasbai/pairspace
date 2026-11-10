@@ -1,4 +1,4 @@
-import type { ApiError, Database, Message, Principal, Result, SqlExecutor } from './contracts.ts';
+import type { ApiError, AuthorizedDatabase, Message, Principal, Result, SqlExecutor } from './contracts.ts';
 import { activeSession, validPrincipal } from './session.ts';
 import { isEpoch, isUuid, parseHistory, parseSend } from './validation.ts';
 
@@ -23,7 +23,7 @@ async function authorize(tx: SqlExecutor, principal: Principal, coupleId: string
   return null;
 }
 
-export async function sendMessage(db: Database, principal: Principal, input: unknown): Promise<Result<{ message: Message; replay: boolean }>> {
+export async function sendMessage(db: AuthorizedDatabase, principal: Principal, input: unknown): Promise<Result<{ message: Message; replay: boolean }>> {
   if (!validPrincipal(principal)) return denied('unavailable');
   const command = parseSend(input);
   if (!command.ok) return command;
@@ -48,7 +48,7 @@ export async function sendMessage(db: Database, principal: Principal, input: unk
   });
 }
 
-export async function readHistory(db: Database, principal: Principal, input: unknown): Promise<Result<{ messages: Message[]; nextBeforeSeq: number | null }>> {
+export async function readHistory(db: AuthorizedDatabase, principal: Principal, input: unknown): Promise<Result<{ messages: Message[]; nextBeforeSeq: number | null }>> {
   if (!validPrincipal(principal)) return denied('unavailable');
   const command = parseHistory(input);
   if (!command.ok) return command;
@@ -66,7 +66,7 @@ export async function readHistory(db: Database, principal: Principal, input: unk
 }
 
 /** Stops future interaction only; never deletes the archive or implements a retention policy. */
-export async function closeCouple(db: Database, principal: Principal, coupleId: unknown, membershipEpoch: unknown): Promise<Result<null>> {
+export async function closeCouple(db: AuthorizedDatabase, principal: Principal, coupleId: unknown, membershipEpoch: unknown): Promise<Result<null>> {
   if (!validPrincipal(principal)) return denied('unavailable');
   if (!isUuid(coupleId) || !isEpoch(membershipEpoch)) return denied('invalid_request');
   return db.transaction(async tx => {

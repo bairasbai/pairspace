@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
 import { sendMessage } from '../src/chat.ts';
@@ -39,4 +40,14 @@ it('outbox permits references only, forbids duplicate and incoherent event kinds
   await expect(pg.query("INSERT INTO outbox_events(couple_id,type,message_id) VALUES($1,'chat.message_created',$2)", [c1, result.value.message.id])).rejects.toMatchObject({ code: '23505' });
   await expect(pg.query("INSERT INTO outbox_events(couple_id,type) VALUES($1,'chat.message_created')", [c1])).rejects.toMatchObject({ code: '23514' });
   await expect(pg.query("INSERT INTO outbox_events(couple_id,type,message_id) VALUES($1,'couple.closed',$2)", [c1, result.value.message.id])).rejects.toMatchObject({ code: '23514' });
+});
+
+it('provider identity migration enforces domain FK and one-to-one mapping without session copies', async () => {
+  await pg.exec(await readFile(new URL('../migrations/003_better_auth_identity.sql', import.meta.url), 'utf8'));
+  await pg.query('INSERT INTO better_auth_identities VALUES ($1,$2)', ['provider-one', principal.userId]);
+  await expect(pg.query('INSERT INTO better_auth_identities VALUES ($1,$2)', ['provider-one', u2])).rejects.toMatchObject({ code: '23505' });
+  await expect(pg.query('INSERT INTO better_auth_identities VALUES ($1,$2)', ['provider-two', principal.userId])).rejects.toMatchObject({ code: '23505' });
+  await expect(pg.query('INSERT INTO better_auth_identities VALUES ($1,$2)', ['provider-three', id(999)])).rejects.toMatchObject({ code: '23503' });
+  await expect(pg.query('INSERT INTO better_auth_identities VALUES ($1,$2)', ['', u2])).rejects.toMatchObject({ code: '23514' });
+  expect((await pg.query('SELECT * FROM better_auth_identities')).rows).toHaveLength(1);
 });

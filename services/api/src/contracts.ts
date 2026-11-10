@@ -1,3 +1,4 @@
+import type { SessionAuthority } from './auth-authority.ts';
 export interface SqlExecutor {
   query<T>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
 }
@@ -7,7 +8,12 @@ export interface Database {
   transaction<T>(work: (tx: SqlExecutor) => Promise<T>): Promise<T>;
 }
 /** Created only by a trusted verifier, never from request body; revalidated in each SQL transaction. */
-export type Principal = Readonly<{ userId: string; sessionId: string; tokenExpiresAt: number }>;
+export type Principal = Readonly<{ userId: string; sessionId: string; tokenExpiresAt: number } & (
+  { source: 'synthetic-jwt' } | { source: 'better-auth'; authUserId: string }
+)>;
+export interface AuthorizedDatabase extends Database {
+  readonly sessionAuthority: SessionAuthority;
+}
 export type ApiError = 'unavailable' | 'invalid_request' | 'invalid_text' | 'empty_text'
   | 'text_too_long' | 'idempotency_conflict' | 'stale_membership';
 export type Result<T> = Readonly<{ ok: true; value: T } | { ok: false; error: ApiError }>;

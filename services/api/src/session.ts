@@ -1,20 +1,16 @@
-import type { Database, Principal, SqlExecutor } from './contracts.ts';
+import type { AuthorizedDatabase, Principal, SqlExecutor } from './contracts.ts';
 import { isUuid } from './validation.ts';
 
-export const validPrincipal = (principal: Principal) => isUuid(principal.userId)
-  && isUuid(principal.sessionId) && Number.isSafeInteger(principal.tokenExpiresAt) && principal.tokenExpiresAt > 0;
+export const providerIdentifier = (value: unknown): value is string => typeof value === 'string'
+  && value.length > 0 && value.length <= 200 && value.trim() === value && !/\p{Cc}/u.test(value);
 
-/** Authoritative transaction check. All account/session revokers must use user → session lock order. */
-export async function activeSession(tx: SqlExecutor, db: Database, principal: Principal): Promise<boolean> {
-  const user = await tx.query<{ deleted_at: string | null }>(
-    'SELECT deleted_at FROM users WHERE id=$1 FOR SHARE', [principal.userId]);
-  if (!user.rows[0] || user.rows[0].deleted_at !== null) return false;
-  const session = await tx.query<{ revoked_at: string | null; created_at: string; expires_at: string }>(
-    `SELECT revoked_at::text, created_at::text, expires_at::text FROM auth_sessions
-     WHERE id=$1 AND user_id=$2 FOR SHARE`, [principal.sessionId, principal.userId]);
-  const row = session.rows[0];
-  if (!row || row.revoked_at !== null) return false;
-  const now = db.now().getTime();
-  if (!Number.isFinite(now)) throw new Error('invalid_server_clock');
-  return now < principal.tokenExpiresAt * 1000 && now >= Date.parse(row.created_at) && now < Date.parse(row.expires_at);
+export const validPrincipal = (principal: Principal) => isUuid(principal.userId)
+  && Number.isSafeInteger(principal.tokenExpiresAt) && principal.tokenExpiresAt > 0
+  && (principal.source === 'synthetic-jwt' ? isUuid(principal.sessionId)
+    : principal.source === 'better-auth' && providerIdentifier(principal.sessionId) && providerIdentifier(principal.authUserId));
+
+/** Every private use case repeats this check inside its existing SQL transaction. */
+export async function activeSession(tx: SqlExecutor, db: AuthorizedDatabase, principal: Principal): Promise<boolean> {
+  if (!db.sessionAuthority || db.sessionAuthority.source !== principal.source) return false;
+  return db.sessionAuthority.recheck(tx, db, principal);
 }
