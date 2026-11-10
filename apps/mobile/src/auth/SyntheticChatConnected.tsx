@@ -35,7 +35,7 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
       onOpen={() => { void blind.open(); }} onRead={() => { void blind.read(); }}
       onSubmit={() => { void blind.submit(); }} onRetry={() => { void blind.retry(); }} />
     <DatesPanel locale={locale} view={datesView} onDraft={dates.setDraft} onLocalDate={dates.setLocalDate}
-      onTimezone={dates.setTimezone} onCancel={dates.cancel} onCreate={() => { void dates.create(); }}
+      onRecurrence={dates.setRecurrence} onLeapDayPolicy={dates.setLeapDayPolicy} onTimezone={dates.setTimezone} onCancel={dates.cancel} onCreate={() => { void dates.create(); }}
       onRetry={() => { void dates.retry(); }} onList={() => { void dates.list(); }} />
     <TasksPanel locale={locale} view={tasksView} onDraft={tasks.setDraft} onCancel={tasks.cancel}
       onCreate={() => { void tasks.create(); }} onRetry={() => { void tasks.retry(); }}

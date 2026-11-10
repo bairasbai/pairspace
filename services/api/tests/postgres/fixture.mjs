@@ -8,7 +8,7 @@ import { getMigrations } from 'better-auth/db/migration';
 import { withDeadline } from './async-bounds.mjs';
 import { localConfiguration, verifyDisposable } from './guard.mjs';
 
-export async function createFixture({ skipBlindRoundsMigration = false } = {}) {
+export async function createFixture({ skipBlindRoundsMigration = false, skipAnnualDatesMigration = false } = {}) {
   const configuration = localConfiguration(process.env);
   const schema = `ps_case_${randomBytes(8).toString('hex')}`;
   const admin = new Pool({ ...configuration.connection, max: 2, application_name: 'pairspace-spike-observer' });
@@ -28,7 +28,7 @@ export async function createFixture({ skipBlindRoundsMigration = false } = {}) {
       logger: { level: 'error' },
     };
     await (await getMigrations(options)).runMigrations();
-    for (const name of ['001_chat.sql', '002_auth.sql', '003_better_auth_identity.sql', '004_pair_invites.sql', '005_care_signals.sql', '006_letters.sql', '007_scheduled_letters.sql', '008_pair_leave.sql', '009_shared_tasks.sql', '010_blind_answers.sql', ...(skipBlindRoundsMigration ? [] : ['011_repeatable_blind_rounds.sql']), '012_shared_dates.sql']) {
+    for (const name of ['001_chat.sql', '002_auth.sql', '003_better_auth_identity.sql', '004_pair_invites.sql', '005_care_signals.sql', '006_letters.sql', '007_scheduled_letters.sql', '008_pair_leave.sql', '009_shared_tasks.sql', '010_blind_answers.sql', ...(skipBlindRoundsMigration ? [] : ['011_repeatable_blind_rounds.sql']), '012_shared_dates.sql', ...(skipAnnualDatesMigration ? [] : ['013_annual_shared_dates.sql'])]) {
       await domainPool.query(await readFile(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
     }
     const auth = betterAuth(options);

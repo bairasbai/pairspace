@@ -242,3 +242,19 @@ Retry не зависит от canonical spelling конкретной верс�
 Forward migration 012 не изменяет существующие данные. Чтение ограничено 50
 последними созданными записями, created_at DESC/id DESC. Нет TTL или новой политики
 retention, удаления, повторений, напоминаний и передачи внешним календарям.
+
+## Ежегодные даты: additive synthetic implementation
+Migration 013 добавляет к записи и receipt `recurrence` (once/annual) и
+`leap_day_policy` (NULL/leap_years_only/feb28/mar1). Старые строки и прежний
+create payload означают once/NULL. Annual с anchor 29 февраля требует явную
+политику; для всех остальных комбинаций policy строго NULL. Generated NOT NULL
+policy key участвует в composite FK, исключая обход FK через NULL.
+Дата, заголовок, точная IANA-зона, recurrence и policy неизменяемы и входят в
+идентичность повтора. Смена alias остаётся конфликтом, а не canonical rewrite.
+`asOfLocalDate` и `nextOccurrence` вычисляются при ответе после fresh auth/locks,
+не сохраняются как обещание уведомить. Серверный instant даёт дату в зоне записи;
+само повторение рассчитывается без UTC, same-day inclusive и не раньше anchor.
+Диапазон 0001–9999, Gregorian century rules; exhausted/unsupported-year metadata
+возвращает NULL. Клиент проверяет согласованность next с schedule и server as-of.
+Последние 50 по созданию не превращаются в ближайшие 50, полного архива нет.
+Нет edit/delete, countdown, фонового scheduler, push или external calendar.

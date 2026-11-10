@@ -149,3 +149,10 @@ Backend удерживает чужой ответ до двух immutable submi
 create/list для текущей пары/epoch; клиент `apps/mobile/src/auth/dates*` и
 `DatesPanel.tsx` отделяет RAM-черновик от подтверждённой общей даты.
 [Контракт](services/api/SHARED_DATES.md), [проверки](docs/SHARED_DATES_EVIDENCE.md).
+
+## Ежегодные общие даты
+`packages/domain/dates/recurrence.ts` задаёт pure Gregorian next occurrence и явную
+политику 29 февраля; Intl получает только серверную календарную дату в exact IANA.
+Migration `013_annual_shared_dates.sql` расширяет immutable запись и receipt,
+сохраняя старые once-команды. RU/EN выбор и ручное обновление не создают reminders.
+[Доказательства](docs/ANNUAL_DATES_EVIDENCE.md).

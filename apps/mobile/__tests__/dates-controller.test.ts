@@ -15,7 +15,7 @@ it('keeps immutable create command through unknown ACK and edited draft, blocks 
   expect(f.api.getSnapshot()).toMatchObject({ status: 'retry', pending: { title: date.title } });
   await f.api.create(); expect(f.operation).toHaveBeenCalledTimes(1);
   await f.api.retry(); expect(f.command).toHaveBeenCalledTimes(1);
-  expect(await f.operation.mock.calls[1][0].json()).toEqual({ command_id: uuid(3), membership_epoch: 1, title: date.title, local_date: date.localDate, timezone: date.timezone });
+  expect(await f.operation.mock.calls[1][0].json()).toEqual({ recurrence: 'once', leap_day_policy: null, command_id: uuid(3), membership_epoch: 1, title: date.title, local_date: date.localDate, timezone: date.timezone });
   expect(f.api.getSnapshot()).toMatchObject({ status: 'saved', draft: 'New draft', dates: [date], pending: null });
   expect(f.operation.mock.calls[0][0].headers.get('Idempotency-Key')).toBe(uuid(3));
 });

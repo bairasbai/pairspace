@@ -20,7 +20,7 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
   const leaveView = { available: false, status: 'idle' as const };
   const controller: SessionController = {
     blind: { listRounds: jest.fn(), selectRound: jest.fn(), next: jest.fn(), getSnapshot: () => emptyBlind, subscribe: () => () => {}, setDraft: jest.fn(), setConsent: jest.fn(), open: jest.fn(), read: jest.fn(), submit: jest.fn(), retry: jest.fn() },
-    dates: { getSnapshot: () => emptyDates, subscribe: () => () => {}, setDraft: jest.fn(), setLocalDate: jest.fn(), setTimezone: jest.fn(), cancel: jest.fn(), create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}) },
+    dates: { setRecurrence: jest.fn(), setLeapDayPolicy: jest.fn(), getSnapshot: () => emptyDates, subscribe: () => () => {}, setDraft: jest.fn(), setLocalDate: jest.fn(), setTimezone: jest.fn(), cancel: jest.fn(), create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}) },
     tasks: { getSnapshot: () => emptyTasks, subscribe: () => () => {}, setDraft: jest.fn(), cancel: jest.fn(),
       create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}),
       complete: jest.fn(async () => {}), reopen: jest.fn(async () => {}) },

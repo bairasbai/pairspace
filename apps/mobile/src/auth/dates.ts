@@ -1,4 +1,5 @@
 import { isLocalDate, validatedTimezone } from '../../../../packages/domain/dates/calendar';
+import { isDateSchedule, type Recurrence, type LeapDayPolicy } from '../../../../packages/domain/dates/recurrence';
 import { normalizeTaskTitle } from '../../../../packages/domain/tasks/title';
 import { readBoundedJson } from '../chat/transport';
 import { readSessionContext } from './context';
@@ -6,7 +7,7 @@ import { validateSyntheticConfig, type SyntheticConfig } from './config';
 import type { InvitationHost, InvitationHostSnapshot } from './invitations-controller';
 import { emptyDates, record, sameDateContext, dateOrder, uuid, validDate, type DatesView } from './dates-state';
 export type { SharedDate, DatesView } from './dates-state';
-type Pending = Readonly<{ id: string; title: string; localDate: string; timezone: string; revision: number }>;
+type Pending = Readonly<{ id: string; title: string; localDate: string; timezone: string; recurrence: Recurrence; leapDayPolicy: LeapDayPolicy | null; revision: number }>;
 /** Drafts and unresolved immutable commands exist only in RAM, scoped to the verified session/pair. */
 export function createDatesController(config: SyntheticConfig, host: InvitationHost,
   request: (input: Request) => Promise<Response>, commandId: () => string) {
@@ -57,7 +58,7 @@ export function createDatesController(config: SyntheticConfig, host: InvitationH
         method: save ? 'POST' : 'GET', headers: { Cookie: cookie, Origin: settings.baseURL,
           ...(save ? { 'Content-Type': 'application/json', 'Idempotency-Key': command!.id } : {}) },
         ...(save ? { body: JSON.stringify({ command_id: command!.id, membership_epoch: context.membershipEpoch,
-          title: command!.title, local_date: command!.localDate, timezone: command!.timezone }) } : {}),
+          title: command!.title, local_date: command!.localDate, timezone: command!.timezone, recurrence: command!.recurrence, leap_day_policy: command!.leapDayPolicy }) } : {}),
         credentials: 'omit', redirect: 'error', cache: 'no-store',
       }));
       if (!current()) return;
@@ -85,10 +86,11 @@ export function createDatesController(config: SyntheticConfig, host: InvitationH
         const date = value.date;
         if (!validDate(date, context) || typeof value.replay !== 'boolean' || value.commandId !== command!.id
           || date.title !== command!.title || date.localDate !== command!.localDate
+          || date.recurrence !== command!.recurrence || date.leapDayPolicy !== command!.leapDayPolicy
           || date.timezone !== command!.timezone || date.creatorId !== context.userId) throw new Error('retry');
         pending = null;
         publish({ ...view, pending: null, status: 'saved',
-          ...(revision === command!.revision ? { draft: '', localDate: '', timezone: '' } : {}),
+          ...(revision === command!.revision ? { draft: '', localDate: '', timezone: '', recurrence: 'once' as const, leapDayPolicy: null } : {}),
           dates: [date, ...view.dates.filter(item => item.id !== date.id)].sort(dateOrder).slice(0, 50) });
       } else {
         const dates = value.dates;
@@ -103,26 +105,33 @@ export function createDatesController(config: SyntheticConfig, host: InvitationH
   function prepare() {
     if (!view.available || view.busy || pending || view.requiresRefresh) return Promise.resolve();
     const title = normalizeTaskTitle(view.draft), timezone = validatedTimezone(view.timezone), id = commandId();
-    if (!title.ok || !isLocalDate(view.localDate) || !timezone || !uuid(id)) {
+    if (!title.ok || !isLocalDate(view.localDate) || !timezone || !uuid(id)
+      || !isDateSchedule(view.localDate, view.recurrence, view.leapDayPolicy)) {
       publish({ ...view, status: 'invalid' }); return Promise.resolve();
     }
-    pending = Object.freeze({ id, title: title.text, localDate: view.localDate, timezone, revision });
-    publish({ ...view, pending: { title: title.text, localDate: view.localDate, timezone } });
+    pending = Object.freeze({ id, title: title.text, localDate: view.localDate, timezone, recurrence: view.recurrence, leapDayPolicy: view.leapDayPolicy, revision });
+    publish({ ...view, pending: { title: title.text, localDate: view.localDate, timezone, recurrence: view.recurrence, leapDayPolicy: view.leapDayPolicy } });
     return run('save');
   }
   return { reset, sync, actions: {
     getSnapshot: () => view,
     subscribe(notify: () => void) { listeners.add(notify); return () => { listeners.delete(notify); }; },
     setDraft(draft: string) { if (view.available) { revision++; publish({ ...view, draft: draft.slice(0, 800) }); } },
-    setLocalDate(localDate: string) { if (view.available) { revision++; publish({ ...view, localDate: localDate.slice(0, 10) }); } },
+    setLocalDate(localDate: string) { if (view.available) { revision++; publish({ ...view, localDate: localDate.slice(0, 10),
+      leapDayPolicy: localDate === view.localDate ? view.leapDayPolicy : null }); } },
     setTimezone(timezone: string) { if (view.available) { revision++; publish({ ...view, timezone: timezone.slice(0, 100) }); } },
+    setRecurrence(recurrence: Recurrence) { if (view.available) { revision++;
+      publish({ ...view, recurrence, leapDayPolicy: recurrence === view.recurrence ? view.leapDayPolicy : null }); } },
+    setLeapDayPolicy(leapDayPolicy: LeapDayPolicy) { if (view.available && view.recurrence === 'annual' && view.localDate.endsWith('-02-29')) {
+      revision++; publish({ ...view, leapDayPolicy });
+    } },
     create: prepare,
     retry: () => run('save'), list: () => run('list'),
     cancel() {
       revision++;
       // Cancel only the unsent draft/read. An already submitted command may have committed.
       if (activeAction === 'list') { sequence++; activeAction = null; publish({ ...view, busy: false }); }
-      publish({ ...view, draft: '', localDate: '', timezone: '' });
+      publish({ ...view, draft: '', localDate: '', timezone: '', recurrence: 'once', leapDayPolicy: null });
     },
   } };
 }

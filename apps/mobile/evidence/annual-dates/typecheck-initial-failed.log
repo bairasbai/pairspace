@@ -1,0 +1,8 @@
+# Generated verification output; absolute workspace paths normalized.
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/mobile@0.1.0 typecheck
+> tsc --noEmit
+
+__tests__/annual-calendar.test.ts(1,64): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.
+../../packages/domain/dates/recurrence.ts(1,29): error TS5097: An import path can only end with a '.ts' extension when 'allowImportingTsExtensions' is enabled.

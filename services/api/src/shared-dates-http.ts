@@ -22,11 +22,13 @@ export function createSharedDatesHandler(db: AuthorizedDatabase) {
         let body: unknown;
         try { body = await readJson(request); } catch { return error(400, 'invalid_request'); }
         const keys = 'command_id,local_date,membership_epoch,timezone,title';
-        if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).sort().join(',') !== keys) return error(400, 'invalid_request');
+        if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).filter(key => !['recurrence', 'leap_day_policy'].includes(key)).sort().join(',') !== keys) return error(400, 'invalid_request');
         const fields = body as Record<string, unknown>;
         if (!isUuid(fields.command_id) || request.headers.get('idempotency-key') !== fields.command_id) return error(400, 'invalid_request');
         input = { coupleId: route[1], commandId: fields.command_id, membershipEpoch: fields.membership_epoch,
-          title: fields.title, localDate: fields.local_date, timezone: fields.timezone };
+          title: fields.title, localDate: fields.local_date, timezone: fields.timezone,
+          ...(Object.hasOwn(fields, 'recurrence') ? { recurrence: fields.recurrence } : {}),
+          ...(Object.hasOwn(fields, 'leap_day_policy') ? { leapDayPolicy: fields.leap_day_policy } : {}) };
       } else {
         if (request.body || [...url.searchParams.keys()].join(',') !== 'membership_epoch'
           || !/^[1-9][0-9]*$/.test(url.searchParams.get('membership_epoch') ?? '')) return error(400, 'invalid_request');

@@ -197,3 +197,13 @@ Create/list с явным распространением на обоих уч�
 Повторения, разлуки/день встречи, редактирование/удаление, reminders и external
 calendar ещё не реализованы. Независимая проверка SHA и native/device gates открыты.
 Доказательства: [SHARED_DATES_EVIDENCE](SHARED_DATES_EVIDENCE.md).
+
+### Ежегодные общие даты: bounded synthetic-срез
+Явный once/annual и нейтральный выбор для 29 февраля: только високосные годы,
+28 февраля либо 1 марта. Старые записи остаются once, silent default отсутствует.
+Следующая календарная дата вычисляется относительно серверного дня в exact IANA
+после проверки доступа, показывается с as-of и обновляется только вручную.
+Не раньше anchor; same-day inclusive; Gregorian 1900/2000/2100 и границы 0001–9999.
+Никаких reminders, push, countdown, edit/delete или background notifications.
+Независимая приёмка frozen SHA и native/device/production gates остаются открыты.
+[Доказательства](ANNUAL_DATES_EVIDENCE.md).

@@ -5,7 +5,7 @@ import { emptyDates } from '../src/auth/dates-state';
 import { date } from './dates-fixtures';
 const initial = { ...emptyDates, available: true };
 function props(locale: 'ru' | 'en') {
-  return { locale, view: initial, onDraft: jest.fn(), onLocalDate: jest.fn(), onTimezone: jest.fn(), onCreate: jest.fn(), onRetry: jest.fn(), onList: jest.fn(), onCancel: jest.fn() };
+  return { locale, view: initial, onRecurrence: jest.fn(), onLeapDayPolicy: jest.fn(), onDraft: jest.fn(), onLocalDate: jest.fn(), onTimezone: jest.fn(), onCreate: jest.fn(), onRetry: jest.fn(), onList: jest.fn(), onCancel: jest.fn() };
 }
 it.each(['ru', 'en'] as const)('explicit share/list/retry and honest one-off cap UI %s', locale => {
   const p = props(locale), t = datesCopy[locale]; const ui = render(<DatesPanel {...p} />);
@@ -18,7 +18,7 @@ it.each(['ru', 'en'] as const)('explicit share/list/retry and honest one-off cap
   ui.rerender(<DatesPanel {...p} view={{ ...initial, checked: true }} />); expect(screen.getByText(t.none)).toBeTruthy();
   ui.rerender(<DatesPanel {...p} view={{ ...initial, dates: [date], error: true }} />);
   expect(screen.getByText(date.localDate + ' · ' + date.timezone)).toBeTruthy(); expect(screen.getByText(t.error)).toBeTruthy();
-  ui.rerender(<DatesPanel {...p} view={{ ...initial, status: 'retry', pending: { title: 'Original', localDate: date.localDate, timezone: date.timezone }, dates: [date] }} />);
+  ui.rerender(<DatesPanel {...p} view={{ ...initial, status: 'retry', pending: { recurrence: 'once', leapDayPolicy: null, title: 'Original', localDate: date.localDate, timezone: date.timezone }, dates: [date] }} />);
   fireEvent.press(screen.getByText(t.again)); expect(p.onRetry).toHaveBeenCalledTimes(1);
   fireEvent.press(screen.getByText(t.create)); expect(p.onCreate).toHaveBeenCalledTimes(1);
 });

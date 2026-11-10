@@ -1,0 +1,44 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test
+> vitest run --coverage
+
+
+ RUN  v5.1.0 <checkout>
+      Coverage enabled with v8
+
+
+ Test Files  35 passed (35)
+      Tests  242 passed (242)
+   Start at  17:48:27
+   Duration  112.98s (tests 98%, import 1%, transform 1%, worker 1%)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   99.36 |    98.76 |     100 |   99.91 |
+ ...s/domain/dates |     100 |    98.27 |     100 |     100 |
+  recurrence.ts    |     100 |    97.36 |     100 |     100 | 41
+ services/api/src  |   99.31 |    98.72 |     100 |   99.91 |
+  auth.ts          |    97.5 |    98.27 |     100 |   96.77 | 52
+  ...swers-http.ts |     100 |    97.33 |     100 |     100 | 39,44
+  blind-answers.ts |   99.11 |    99.32 |     100 |     100 | 75
+  ...gnals-http.ts |     100 |       96 |     100 |     100 | 31,35
+  http.ts          |     100 |    97.91 |     100 |     100 | 65
+  letters-http.ts  |     100 |    96.36 |     100 |     100 | 32,36
+  pair-close.ts    |      90 |    83.87 |     100 |     100 | 16-19,26,29,38
+  pair-leave.ts    |    92.3 |    94.11 |     100 |     100 | 35,39,55
+  ...-provision.ts |   98.57 |    98.38 |     100 |     100 | 77
+  ...dates-http.ts |     100 |    98.03 |     100 |     100 | 34
+  shared-dates.ts  |     100 |    98.57 |     100 |     100 | 73
+  ...tasks-http.ts |     100 |    96.49 |     100 |     100 | 32,37
+  shared-tasks.ts  |    98.7 |     97.5 |     100 |     100 | 45,65
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 99.36% ( 1733/1744 )
+Branches     : 98.76% ( 2006/2031 )
+Functions    : 100% ( 259/259 )
+Lines        : 99.91% ( 1246/1247 )
+================================================================================

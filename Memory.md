@@ -247,3 +247,16 @@ IANA-пояс служит ссылкой для отображения, не п
 Черновик только RAM; неизвестный ACK удерживает неизменяемую исходную команду.
 Default Kimi/offline и существующая политика закрытия пары сохранены.
 Проверки и ограничения: docs/SHARED_DATES_EVIDENCE.md. Native/device/production открыты.
+
+## 2026-11-10: ежегодные общие даты
+Продолжен bounded synthetic-срез поверх tree c902e859df60f1f83d55dd668a47af8753922fb2.
+Additive once/annual, явная политика 29 февраля, immutable retry schedule и exact
+IANA. Следующая дата зависит от серверного zoned today после fresh auth/locks;
+ручной refresh не scheduler и не напоминание. Старые create/строки совместимы.
+Приёмка автора и независимый review разделены, native и два устройства не
+подтверждены. Доказательства и границы: docs/ANNUAL_DATES_EVIDENCE.md.
+
+Первый annual freeze 0b0d0a9 не прошёл независимый mobile typecheck (TS5097).
+False PASS возник из masked shell exit; сохранён failed log и исправлен noEmit
+tsconfig для .ts imports. Приёмка требует отдельных exit codes и просмотра
+завершённых logs, а не только успешной последней команды.

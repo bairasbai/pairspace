@@ -9,7 +9,7 @@ import { gate, waitForQueryLock } from './profile-fixture.mjs';
 import { observeTask, barrierOrCompletion, settleBounded } from './async-bounds.mjs';
 
 const scope = x => ({ coupleId: x.pairA, membershipEpoch: 1 });
-const createCommand = x => ({ ...scope(x), commandId: randomUUID(), title: 'Synthetic race date', localDate: '2028-02-29', timezone: 'Asia/Tokyo' });
+const createCommand = x => ({ ...scope(x), commandId: randomUUID(), title: 'Synthetic race date', localDate: '2028-02-29', timezone: 'Asia/Tokyo', recurrence: 'annual', leapDayPolicy: 'leap_years_only' });
 const leaveCommand = x => ({ ...scope(x), commandId: randomUUID(), confirm: true });
 
 for (const firstOperation of ['leave', 'create', 'list']) {
@@ -127,3 +127,26 @@ test('shared dates PostgreSQL: equal server millisecond timestamp uses stable de
     for (const member of [actor, partner]) assert.deepEqual((await listSharedDates(db, member, scope(x))).value.dates.map(d => d.id), expected);
   } finally { await x.f.close(); }
 });
+
+for (const operation of ['create', 'replay', 'list']) {
+  test(`annual dates PostgreSQL: ${operation} samples calendar clock only after pair lock and fresh authority`, async () => {
+    const x = await datesFixture(); let held; const pending = [];
+    try {
+      const db = x.f.database(), actor = await x.principal(0);
+      const command = { ...createCommand(x), localDate: '2020-01-01', timezone: 'UTC', leapDayPolicy: null };
+      assert.equal((await createSharedDate(db, actor, command)).ok, true);
+      let instant = '2026-12-31T23:59:59.000Z', samples = 0;
+      const clock = { ...db, now: () => { samples++; return new Date(instant); } };
+      held = await x.f.domainPool.connect(); await held.query('BEGIN');
+      await held.query('SELECT id FROM couples WHERE id=$1 FOR UPDATE', [x.pairA]);
+      pending.push(observeTask(operation === 'list' ? listSharedDates(clock, actor, scope(x))
+        : createSharedDate(clock, actor, operation === 'replay' ? command : { ...command, commandId: randomUUID() })));
+      await waitForQueryLock(x.f, '%FROM couples%FOR %'); assert.equal(samples, 0);
+      instant = '2027-01-01T00:00:01.000Z';
+      await held.query('COMMIT'); held.release(); held = null;
+      const [result] = await Promise.all(pending); assert.equal(result.ok, true); assert.ok(samples >= 1);
+      const dates = operation === 'list' ? result.value.dates : [result.value.date];
+      for (const date of dates) { assert.equal(date.asOfLocalDate, '2027-01-01'); assert.equal(date.nextOccurrence, '2027-01-01'); }
+    } finally { if (held) { await held.query('ROLLBACK'); held.release(); } await settleBounded(pending); await x.f.close(); }
+  });
+}

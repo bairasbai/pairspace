@@ -42,7 +42,7 @@ it('retries exact zone payload even when Intl canonical spelling changes between
 it.each(['Asia/Tokyo', 'America/Los_Angeles'])('keeps all-day/DST calendar labels unchanged in %s', async timezone => {
   for (const localDate of ['2026-03-08', '2026-11-01', '2028-02-29', '0001-01-01', '9999-12-31']) {
     const f = fixture(); f.api.setLocalDate(localDate); f.api.setTimezone(timezone);
-    f.operation.mockResolvedValue(ack({ ...date, localDate, timezone })); await f.api.create();
+    f.operation.mockResolvedValue(ack({ ...date, localDate, timezone, nextOccurrence: localDate >= date.asOfLocalDate ? localDate : null })); await f.api.create();
     expect(await f.operation.mock.calls[0][0].json()).toMatchObject({ local_date: localDate, timezone });
     expect(f.api.getSnapshot().dates[0].localDate).toBe(localDate);
   }
@@ -50,7 +50,7 @@ it.each(['Asia/Tokyo', 'America/Los_Angeles'])('keeps all-day/DST calendar label
 it('retains all three unknown command fields unchanged while a new draft is edited', async () => {
   const f = fixture(); f.operation.mockResolvedValueOnce(error('temporary', 503)); await f.api.create();
   f.api.setDraft('Another date'); f.api.setLocalDate('2030-01-01'); f.api.setTimezone('America/Los_Angeles');
-  expect(f.api.getSnapshot().pending).toEqual({ title: date.title, localDate: date.localDate, timezone: date.timezone });
+  expect(f.api.getSnapshot().pending).toEqual({ recurrence: 'once', leapDayPolicy: null, title: date.title, localDate: date.localDate, timezone: date.timezone });
   await f.api.retry();
   expect(await f.operation.mock.calls[1][0].json()).toEqual(await f.operation.mock.calls[0][0].json());
   expect(f.api.getSnapshot()).toMatchObject({ draft: 'Another date', localDate: '2030-01-01', timezone: 'America/Los_Angeles', status: 'saved' });

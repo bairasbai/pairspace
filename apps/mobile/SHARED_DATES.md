@@ -7,8 +7,11 @@ remains unchanged. The connected area exposes the same dates controller to RU/EN
 A title, real `YYYY-MM-DD` calendar date (years 0001–9999), and explicit IANA zone
 are entered in RAM. There is no inferred zone or inferred “today”. Only pressing
 Share date submits the date and makes it visible to both active partners.
-Dates are one-off labels: birthdays do not repeat annually. There are no reminders,
-countdown, editing, deletion, scheduling, invitations, or external calendar writes.
+Choose once or annual explicitly. Once remains the initial choice for compatibility.
+Annual February 29 requires a separate explicit choice: leap years only, February 28
+in non-leap years, or March 1 in non-leap years. There is no default leap policy.
+Other schedules use null policy; changing recurrence/date clears the prior policy.
+There are no reminders, countdown, editing, deletion, invitations, or calendar writes.
 
 ## Timezone and response contract
 
@@ -27,12 +30,12 @@ A validation failure is not a reason to guess or replace the user's selected zon
 GET `/v1/couples/:coupleId/dates?membership_epoch=N` returns at most the latest
 50 creations, descending by server createdAt then ID. This is not an upcoming
 calendar or complete archive. POST to the collection uses JSON
-`command_id,membership_epoch,title,local_date,timezone`, with a matching
+`command_id,membership_epoch,title,local_date,timezone,recurrence,leap_day_policy`, with a matching
 Idempotency-Key. Neither titles nor date drafts are placed in URLs or storage.
 
 ## Recovery and isolation
 
-Unknown ACK retains one immutable title/date/zone/ID command. The user can edit a
+Unknown ACK retains one immutable title/date/zone/recurrence/leap-policy/ID command. The user can edit a
 new draft while retrying that same original command. Successful acknowledgement
 clears the draft only if its revision has not changed. Clear draft does not cancel
 an already submitted command. Unresolved commands and drafts exist only in memory;
@@ -45,6 +48,23 @@ A conflicting command requires explicit list refresh before another creation.
 Server responses must match the authorized scope, known schema, calendar validity,
 zone identity, pending content and command ID. Lists must be bounded, sorted and
 unique. Old-pair dates cannot be exposed through a late response or retried command.
+
+## Annual metadata and manual refresh
+
+Each response date includes recurrence, leapDayPolicy, asOfLocalDate and nextOccurrence.
+The server obtains its current calendar date in the exact stored IANA zone only after
+authorization locks. The client validates the entire known schema and recomputes the
+next date using only that returned as-of label and pure Gregorian domain arithmetic.
+It never substitutes device time, infers timezone, or schedules background work.
+Malformed or inconsistent metadata is rejected before exposing any response date.
+
+Annual occurrences include the as-of day and never precede the original date anchor.
+Future anchors remain future; December rolls to the following year. Years are 0001–9999.
+A null next date means no remaining occurrence in range when as-of is known. Null
+as-of requires null next date and displays calculation unavailable, not an invented date.
+The original label and exact zone remain visible along with recurrence, Feb29 rule,
+server as-of label and next calendar occurrence. Refresh is explicitly manual, not a
+notification promise; the list stays a bounded history of the latest 50 creations.
 
 Tests cover Gregorian/leap/year boundaries, Tokyo and Los Angeles DST-date labels,
 exact alias identity, immutable recovery, both languages, partner reads, response

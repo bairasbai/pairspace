@@ -11,7 +11,7 @@ let pg: PGlite;
 const scope = { coupleId: c1, membershipEpoch: 1 };
 const command = { ...scope, commandId: id(801), title: ' Synthetic e\u0301\r\n date ', localDate: '2028-02-29', timezone: 'Asia/Tokyo' };
 const db = () => adapter(pg);
-beforeAll(async () => { pg = await createFixture(); await pg.exec(await readFile(new URL('../migrations/012_shared_dates.sql', import.meta.url), 'utf8')); });
+beforeAll(async () => { pg = await createFixture(); for (const file of ['012_shared_dates.sql', '013_annual_shared_dates.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8')); });
 afterAll(async () => { await pg.close(); });
 it('validates real bounded Gregorian days and IANA aliases without converting to instants', () => {
   for (const value of ['0001-01-01', '9999-12-31', '2028-02-29', '2000-02-29', '2026-04-30']) expect(isLocalDate(value)).toBe(true);
@@ -96,7 +96,7 @@ it('database forbids mutations, invalid calendars/zones, cross-pair receipts and
   }
   await expect(pg.query("INSERT INTO shared_dates(couple_id,creator_id,membership_epoch,title,local_date,timezone,created_at) VALUES($1,$2,1,'synthetic','2026-01-01','Mars/Olympus','2026-01-01Z')", [c1, principal.userId])).rejects.toMatchObject({ code: '23514' });
   await expect(pg.query("INSERT INTO shared_dates(couple_id,creator_id,membership_epoch,title,local_date,timezone,created_at) VALUES($1,$2,1,'synthetic','2026-01-01','UTC','2026-01-01 00:00:00.000001Z')", [c1, principal.userId])).rejects.toMatchObject({ code: '23514' });
-  await expect(pg.query('INSERT INTO shared_date_commands SELECT actor_user_id,$1,$2,membership_epoch,date_id,title,local_date,timezone FROM shared_date_commands LIMIT 1', [id(890), c2])).rejects.toMatchObject({ code: '23503' });
+  await expect(pg.query('INSERT INTO shared_date_commands(actor_user_id,command_id,couple_id,membership_epoch,date_id,title,local_date,timezone) SELECT actor_user_id,$1,$2,membership_epoch,date_id,title,local_date,timezone FROM shared_date_commands LIMIT 1', [id(890), c2])).rejects.toMatchObject({ code: '23503' });
 });
 it('caps stable latest-created lists at fifty, not an upcoming-only or complete archive view', async () => {
   for (let n = 0; n < 51; n++) await createSharedDate(db(), principal, { ...command, commandId: id(900 + n) });
