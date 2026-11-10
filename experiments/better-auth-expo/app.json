@@ -1,0 +1,1 @@
+{"expo":{"name":"Pairspace Auth Spike","slug":"pairspace-auth-spike","scheme":"pairspace-spike","plugins":["expo-secure-store"],"ios":{"bundleIdentifier":"invalid.example.pairspacespike"},"android":{"package":"invalid.example.pairspacespike"}}}
