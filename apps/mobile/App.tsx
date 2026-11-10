@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SyntheticChatConnected, type SessionController } from './src/auth/SyntheticChatConnected';
 import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { copy, type Locale } from './src/copy';
@@ -7,7 +8,9 @@ import { PreviewScreen } from './src/PreviewScreen';
 import { showcaseCopy } from './src/showcaseCopy';
 import { colors, typography } from './src/theme';
 
-export default function App() {
+export default function App() { return <PairspaceApp />; }
+
+export function PairspaceApp({ syntheticController = null }: { syntheticController?: SessionController | null } = {}) {
   const [locale, setLocale] = useState<Locale>('ru');
   const [tab, setTab] = useState<Tab>('today');
   const [draft, setDraft] = useState('');
@@ -18,7 +21,7 @@ export default function App() {
       <Text style={styles.brand}>{showcaseCopy[locale].brand}</Text>
       <Text style={styles.banner}>{text.preview}</Text>
       <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <PreviewScreen key={tab} tab={tab} text={text} locale={locale} setLocale={setLocale} draft={draft} setDraft={setDraft} />
+          {tab === 'chat' && syntheticController ? <SyntheticChatConnected controller={syntheticController} locale={locale} /> : <PreviewScreen key={tab} tab={tab} text={text} locale={locale} setLocale={setLocale} draft={draft} setDraft={setDraft} />}
         <Navigation selected={tab} onSelect={setTab} onHeart={onHeart} text={text} />
       </KeyboardAvoidingView>
     </SafeAreaView>

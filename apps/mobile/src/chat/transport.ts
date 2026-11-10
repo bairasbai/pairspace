@@ -6,7 +6,7 @@ export type ChatMessage = Readonly<{
   id: string; coupleId: string; senderId: string; clientId: string; seq: number;
   body: string; version: number; createdAt: string;
 }>;
-export type TransportSession = Readonly<{ scope: Scope; token: string; credentialGeneration: number }>;
+export type TransportSession = Readonly<{ scope: Scope; token: string; credentialGeneration: number; credentialKind?: 'cookie' }>;
 export type HistoryOptions = Readonly<{ limit: number; beforeSeq?: number }>;
 export type HistoryPage = Readonly<{
   /** Check this scope again before any later asynchronous history hydration. */
@@ -20,6 +20,8 @@ export type TransportResult<T> = Readonly<{ ok: true; value: T }
 export type QueueStore = Readonly<{ get(): QueueState; set(state: QueueState): void }>;
 export type ChatTransportOptions = Readonly<{
   baseUrl: string;
+  /** Required for cookie-auth composition; exact trusted origin. */
+  cookieOrigin?: string;
   /** Never enable outside isolated tests. Only exact loopback hosts can use HTTP. */
   allowHttpLoopbackForTests?: boolean;
   /**
@@ -90,17 +92,24 @@ async function readJson(response: Response, maxBytes: number): Promise<unknown> 
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
   let length = 0;
+  let timer: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new InvalidResponseError()), 10000);
+  });
   try {
     for (;;) {
-      const { done, value } = await reader.read();
+      const { done, value } = await Promise.race([reader.read(), deadline]);
       if (done) break;
       length += value.byteLength;
       if (length > maxBytes) {
-        try { await reader.cancel(); } finally { throw new InvalidResponseError(); }
+        throw new InvalidResponseError();
       }
       chunks.push(value);
     }
-  } finally { reader.releaseLock(); }
+  } catch (error) {
+    void reader.cancel().catch(() => {});
+    throw error;
+  } finally { clearTimeout(timer!); reader.releaseLock(); }
   const bytes = new Uint8Array(length);
   let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
@@ -109,13 +118,14 @@ async function readJson(response: Response, maxBytes: number): Promise<unknown> 
 }
 
 /** Test-only client boundary. The trusted caller supplies authentication; this does not implement it. */
-export function createChatTransport({ baseUrl, request, store, getCredentialGeneration, allowHttpLoopbackForTests = false }: ChatTransportOptions) {
+export function createChatTransport({ baseUrl, request, store, getCredentialGeneration, allowHttpLoopbackForTests = false, cookieOrigin }: ChatTransportOptions) {
   const origin = new URL(baseUrl);
   const testLoopback = allowHttpLoopbackForTests && origin.protocol === 'http:'
     && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
   if ((origin.protocol !== 'https:' && !testLoopback) || origin.username || origin.password) {
     throw new Error('invalid_base_url');
   }
+  if (cookieOrigin !== undefined && (!cookieOrigin || /[\r\n]/.test(cookieOrigin))) throw new Error('invalid_cookie_origin');
   function currentError(session: TransportSession, allowPaused = false): TransportError | null {
     const { scope, credentialGeneration } = session;
     const state = store.get();
@@ -128,10 +138,12 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
     const scope = Object.freeze({ ...session.scope });
     const token = session.token;
     const credentialGeneration = session.credentialGeneration;
-    const captured = Object.freeze({ scope, token, credentialGeneration });
+    const captured = Object.freeze({ scope, token, credentialGeneration, credentialKind: session.credentialKind });
     const denied = currentError(captured);
     if (denied) return failure(denied);
-    if (typeof token !== 'string' || token.length > 2048 || !/^[A-Za-z0-9._~-]+$/.test(token)) {
+    if (typeof token !== 'string' || (session.credentialKind === 'cookie'
+      ? !cookieOrigin || !token || token.length > 16384 || /[\x00-\x1f\x7f]/.test(token)
+      : token.length > 2048 || !/^[A-Za-z0-9._~-]+$/.test(token))) {
       return failure('invalid_token');
     }
     return { ok: true, value: captured };
@@ -141,7 +153,8 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
     let response: Response;
     try {
       const url = new URL(`/v1/couples/${encodeURIComponent(scope.coupleId)}/chat/messages`, origin);
-      const headers: Record<string, string> = { Authorization: `Bearer ${token}` };
+      const headers: Record<string, string> = session.credentialKind === 'cookie'
+        ? { Cookie: token, Origin: cookieOrigin! } : { Authorization: `Bearer ${token}` };
       if (body) {
         headers['Content-Type'] = 'application/json';
         headers['Idempotency-Key'] = body.client_message_id as string;

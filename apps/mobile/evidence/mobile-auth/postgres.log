@@ -1,0 +1,35 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 verify:postgres
+> bash scripts/run-postgres.sh
+
+Verified 14 package-local runtime symlinks
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test:postgres
+> node --test --test-concurrency=1 --test-timeout=30000 tests/postgres/*.integration.mjs
+
+✔ official client → real loopback composed app → auth → PRODUCT chat → revoke denial on real PG (644.454396ms)
+✔ composed HTTP perimeter rejects CSRF origins, missing origin, oversized and invalid requests (90.631157ms)
+✔ composed HTTP redacts auth/database failures and product outbox transaction remains atomic (293.678079ms)
+✔ stalled HTTP upload is bounded and does not prevent a later healthy request (1076.922801ms)
+✔ explicitly disabled email/password configuration cannot create accounts (70.475313ms)
+(node:606) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-mobile-auth-originfix/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-mobile-auth-originfix/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ mobile session controller cookie transport → composed HTTP → real PostgreSQL; replay, revoke and isolation (785.823992ms)
+✔ PRODUCT handler and use cases persist chat/idempotency/history/close/outbox with Better Auth only (348.522796ms)
+✔ completed official revoke blocks PRODUCT send/history/close with previously verified principal (336.3198ms)
+✔ PRODUCT transaction holds authoritative provider session lock while official revocation waits (335.574796ms)
+✔ PRODUCT row expiry, user deletion, identity remap and mixed authority fail closed (246.466755ms)
+✔ PRODUCT outbox failure rolls back message and sequence under Better Auth authority (229.951726ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5972.117461

@@ -1,0 +1,31 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test
+> vitest run --coverage
+
+
+ RUN  v5.1.0 /workspace/scratch/bb7b759a56b3/pairspace-mobile-auth-originfix
+      Coverage enabled with v8
+
+
+ Test Files  15 passed (15)
+      Tests  109 passed (109)
+   Start at  09:54:40
+   Duration  53.68s (tests 98%, import 1%)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   99.75 |    99.51 |     100 |   99.66 |
+ services/api/src  |   99.72 |    99.45 |     100 |   99.63 |
+  auth.ts          |    97.5 |    98.27 |     100 |   96.77 | 52
+  http.ts          |     100 |    97.91 |     100 |     100 | 65
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 99.75% ( 407/408 )
+Branches     : 99.51% ( 410/412 )
+Functions    : 100% ( 68/68 )
+Lines        : 99.66% ( 302/303 )
+================================================================================

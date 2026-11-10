@@ -48,6 +48,7 @@ export function client(baseURL) {
     return response;
   }
   return {
+    getCookie: async () => [...cookies].map(([key, value]) => `${key}=${value}`).join('; '),
     auth: createAuthClient({ baseURL, fetchOptions: { customFetchImpl: transport, retry: 0 } }),
     send(pairId, clientId, text = 'Synthetic message', headers = {}) {
       return transport(`${baseURL}/v1/couples/${pairId}/chat/messages`, { method: 'POST',

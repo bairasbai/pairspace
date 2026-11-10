@@ -6,6 +6,8 @@ export default defineConfig({
     testTimeout: 30000,
     hookTimeout: 30000,
     maxWorkers: 1,
+    // Execute real Expo plugin logic while mocking only native I/O in contract tests.
+    server: { deps: { inline: ['@better-auth/expo'] } },
     coverage: {
       provider: 'v8',
       reportsDirectory: 'services/api/coverage',
