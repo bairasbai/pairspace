@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { AccessibilityInfo, Alert, Platform } from 'react-native';
 import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
 import App from '../App';
+import { showcaseCopy } from '../src/showcaseCopy';
 import { copy } from '../src/copy';
 
 jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
@@ -22,7 +23,7 @@ it.each(['ios', 'android'])('navigates and keeps a draft only in this session on
   expect(screen.getByRole('button', { name: copy.ru.clear })).toBeDisabled();
   fireEvent.changeText(screen.getByLabelText(copy.ru.draft), 'Only a sample');
   fireEvent.press(screen.getByRole('tab', { name: 'Вместе' }));
-  for (const feature of copy.ru.features) expect(screen.getByText(`• ${feature}`)).toBeTruthy();
+  expect(screen.getByText(showcaseCopy.ru.activities)).toBeTruthy();
   fireEvent.press(screen.getByRole('tab', { name: 'Мы' }));
   fireEvent.press(screen.getByRole('radio', { name: 'English' }));
   expect(screen.getByText(copy.en.preview)).toBeTruthy();
@@ -39,7 +40,7 @@ it.each(['ios', 'android'])('navigates and keeps a draft only in this session on
   fireEvent.press(screen.getByRole('tab', { name: 'Us' }));
   fireEvent.press(screen.getByRole('radio', { name: 'Русский' }));
   fireEvent.press(screen.getByRole('tab', { name: 'Сегодня' }));
-  expect(screen.getByText(copy.ru.intro)).toBeTruthy();
+  expect(screen.getByText(showcaseCopy.ru.subtitle)).toBeTruthy();
 });
 
 it('does not persist the draft across unmount and restart', async () => {

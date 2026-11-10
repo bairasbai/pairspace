@@ -88,3 +88,12 @@ JWT iat — целые секунды, SQL created_at — дробные: исп
 Audit review2026-11-10: runtime0/tooling11moderate против авторского10; динамические снимки.
 Повтор: API65 tests (99.52/99.08/100/99.35), mobile184 (100/99.43/100/100), root9;
 typecheck/lint проходят. Повторная независимая приёмка ожидается; публикации нет.
+
+## UI preview checkpoint, 10 November 2026
+Implemented the first bounded visual step from the approved six-screen concept:
+Today cards, sample letter, calendar plans/tasks toggle, memories and the Together
+catalogue (questions, wishes, dates, checkers, battleship, support, films).
+These are explicitly labelled demonstration surfaces, not completed product features.
+Existing central heart, Reduce Motion and in-memory chat draft are preserved.
+Nested navigation resets when changing primary tabs; draft stays in App memory.
+Source was restored from verified b16af21 ZIP; no unrelated branch/files were edited.

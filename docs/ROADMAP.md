@@ -62,3 +62,10 @@ Synthetic tokens существуют только в тестах. Нет auth 
 Проверка jose/ES256 и SQL session/identity добавляются без provider/login/token issuance.
 Повторная проверка session/user в usecase transaction закрывает lookup→write gap;
 реальные PostgreSQL concurrency, auth lifecycle и независимая приёмка остаются открыты.
+
+## UI preview checkpoint
+First visual slice implemented: Today / Together / letters / calendar / memories,
+RU/EN demo content, nested navigation and draft preservation. Not ready for release:
+no real data, editing, sending, scheduling, notifications, media or native acceptance.
+Chat remains the existing practice composer pending backend and chosen UI integration.
+Next: real data wiring, visual/device QA and accessible focus/keyboard checks.

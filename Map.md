@@ -41,3 +41,10 @@ In-process HTTP handler with mandatory injected verifier; no listener or actual 
 
 `services/api/src/auth.ts` + `session.ts`: jose verification and transaction session revalidation.
 `services/api/migrations/002_auth.sql`: identity/session mapping; AUTH.md states prototype boundaries.
+
+## UI preview checkpoint (10 November 2026)
+- `apps/mobile/src/Showcase.tsx`: warm cream/terracotta demonstration surfaces.
+- `apps/mobile/src/showcaseCopy.ts`: RU/EN sample copy and honest feature states.
+- `PreviewScreen.tsx`: nested letters/calendar/memories routes with visible and Android back.
+- `__tests__/Showcase.test.tsx`: navigation, language, draft retention and hardware-back coverage.
+- No backend or persistence connected to these screens; approved image is a direction, not rendered proof.
