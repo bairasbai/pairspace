@@ -1,0 +1,85 @@
+# Generated verification output; absolute workspace paths normalized.
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/mobile@0.1.0 test
+> cd ../.. && node apps/mobile/node_modules/jest/bin/jest.js --config apps/mobile/jest.config.cjs --runInBand --coverage
+
+------------------------------|---------|----------|---------|---------|-----------------------------------
+File                          | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+------------------------------|---------|----------|---------|---------|-----------------------------------
+All files                     |   96.98 |    96.07 |   98.17 |   98.57 |
+ apps/mobile                  |     100 |    91.66 |     100 |     100 |
+  App.tsx                     |     100 |    91.66 |     100 |     100 | 15
+  index.ts                    |     100 |      100 |     100 |     100 |
+ apps/mobile/src              |     100 |      100 |     100 |     100 |
+  HeartButton.tsx             |     100 |      100 |     100 |     100 |
+  Navigation.tsx              |     100 |      100 |     100 |     100 |
+  PreviewScreen.tsx           |     100 |      100 |     100 |     100 |
+  Showcase.tsx                |     100 |      100 |     100 |     100 |
+  copy.ts                     |     100 |      100 |     100 |     100 |
+  showcaseCopy.ts             |     100 |      100 |     100 |     100 |
+  theme.ts                    |     100 |      100 |     100 |     100 |
+  useReducedMotion.ts         |     100 |      100 |     100 |     100 |
+ apps/mobile/src/auth         |   97.66 |    96.33 |   99.04 |   99.75 |
+  BlindPanel.tsx              |     100 |    93.93 |     100 |     100 | 21-23
+  CarePanel.tsx               |     100 |      100 |     100 |     100 |
+  ConnectedNavigation.tsx     |     100 |    93.75 |     100 |     100 | 37
+  DatesPanel.tsx              |     100 |      100 |     100 |     100 |
+  InvitationPanel.tsx         |     100 |      100 |     100 |     100 |
+  LeavePanel.tsx              |     100 |      100 |     100 |     100 |
+  LettersPanel.tsx            |     100 |      100 |     100 |     100 |
+  SyntheticChatConnected.tsx  |   94.33 |      100 |   91.89 |      95 | 33-34
+  SyntheticChatPanel.tsx      |     100 |      100 |     100 |     100 |
+  TasksPanel.tsx              |     100 |      100 |     100 |     100 |
+  blind-state.ts              |     100 |      100 |     100 |     100 |
+  blind.ts                    |   96.29 |    94.67 |     100 |     100 | 51-54,71-72,76-78,81,98,110,123
+  blindCopy.ts                |     100 |      100 |     100 |     100 |
+  care.ts                     |   96.03 |    93.23 |     100 |     100 | 64-67,78-79,85-87,97
+  careCopy.ts                 |     100 |      100 |     100 |     100 |
+  config.ts                   |     100 |      100 |     100 |     100 |
+  context.ts                  |     100 |      100 |     100 |     100 |
+  controller.ts               |   98.48 |    94.84 |     100 |   99.62 | 175
+  dates-state.ts              |     100 |      100 |     100 |     100 |
+  dates.ts                    |   97.48 |    94.55 |     100 |     100 | 50-53,64-65,70-71,100
+  datesCopy.ts                |     100 |      100 |     100 |     100 |
+  invitations-controller.ts   |     100 |      100 |     100 |     100 |
+  invitations.ts              |     100 |      100 |     100 |     100 |
+  leave.ts                    |   96.64 |    92.66 |     100 |     100 | 53,62,90,98-99,104-105,113
+  letters.ts                  |   94.21 |    93.77 |     100 |     100 | 92-95,107-108,115-117,124-126,147
+  lettersCopy.ts              |     100 |      100 |     100 |     100 |
+  official-client.ts          |     100 |      100 |     100 |     100 |
+  profile.ts                  |     100 |      100 |     100 |     100 |
+  runtime.ts                  |     100 |      100 |     100 |     100 |
+  tasks-state.ts              |     100 |      100 |     100 |     100 |
+  tasks.ts                    |    97.5 |    95.29 |     100 |     100 | 50-53,65-66,71-72,106
+  tasksCopy.ts                |     100 |      100 |     100 |     100 |
+  useControllerOwner.ts       |     100 |     87.5 |     100 |     100 | 13
+  waiting.ts                  |     100 |      100 |     100 |     100 |
+ apps/mobile/src/chat         |     100 |    99.53 |     100 |     100 |
+  draftContract.ts            |     100 |      100 |     100 |     100 |
+  history.ts                  |     100 |      100 |     100 |     100 |
+  queue.ts                    |     100 |      100 |     100 |     100 |
+  text.ts                     |       0 |        0 |       0 |       0 |
+  transport.ts                |     100 |    98.96 |     100 |     100 | 178,214
+  types.ts                    |       0 |        0 |       0 |       0 |
+ packages/domain/blind        |     100 |      100 |     100 |     100 |
+  answer.ts                   |     100 |      100 |     100 |     100 |
+  catalog.ts                  |     100 |      100 |     100 |     100 |
+ packages/domain/chat         |     100 |      100 |     100 |     100 |
+  text.ts                     |     100 |      100 |     100 |     100 |
+ packages/domain/dates        |     100 |      100 |     100 |     100 |
+  calendar.ts                 |     100 |      100 |     100 |     100 |
+ packages/domain/letters      |      80 |    79.16 |      75 |   80.95 |
+  schedule.ts                 |      80 |    79.16 |      75 |   80.95 | 7,13,27-28
+ packages/domain/subscription |       0 |        0 |       0 |       0 |
+  catalog.ts                  |       0 |      100 |     100 |       0 | 2
+  entitlement.ts              |       0 |        0 |       0 |       0 | 27-49
+ packages/domain/tasks        |     100 |      100 |     100 |     100 |
+  title.ts                    |     100 |      100 |     100 |     100 |
+------------------------------|---------|----------|---------|---------|-----------------------------------
+
+Test Suites: 51 passed, 51 total
+Tests:       1383 passed, 1383 total
+Snapshots:   0 total
+Time:        10.871 s
+Ran all test suites.

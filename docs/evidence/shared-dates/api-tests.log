@@ -1,0 +1,38 @@
+# Generated verification output; absolute workspace paths normalized.
+
+ RUN  v5.1.0 <repo>
+      Coverage enabled with v8
+
+
+ Test Files  33 passed (33)
+      Tests  231 passed (231)
+   Start at  17:30:48
+   Duration  108.49s (tests 98%, import 1%, transform 1%, worker 1%)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   99.35 |    98.78 |     100 |   99.91 |
+ services/api/src  |   99.31 |    98.71 |     100 |   99.91 |
+  auth.ts          |    97.5 |    98.27 |     100 |   96.77 | 52
+  ...swers-http.ts |     100 |    97.33 |     100 |     100 | 39,44
+  blind-answers.ts |   99.11 |    99.32 |     100 |     100 | 75
+  ...gnals-http.ts |     100 |       96 |     100 |     100 | 31,35
+  http.ts          |     100 |    97.91 |     100 |     100 | 65
+  letters-http.ts  |     100 |    96.36 |     100 |     100 | 32,36
+  pair-close.ts    |      90 |    83.87 |     100 |     100 | 16-19,26,29,38
+  pair-leave.ts    |    92.3 |    94.11 |     100 |     100 | 35,39,55
+  ...-provision.ts |   98.57 |    98.38 |     100 |     100 | 77
+  ...dates-http.ts |     100 |    97.87 |     100 |     100 | 32
+  shared-dates.ts  |     100 |    98.27 |     100 |     100 | 56
+  ...tasks-http.ts |     100 |    96.49 |     100 |     100 | 32,37
+  shared-tasks.ts  |    98.7 |     97.5 |     100 |     100 | 45,65
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 99.35% ( 1689/1700 )
+Branches     : 98.78% ( 1953/1977 )
+Functions    : 100% ( 250/250 )
+Lines        : 99.91% ( 1215/1216 )
+================================================================================

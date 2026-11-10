@@ -1,3 +1,4 @@
+import { createSharedDatesHandler } from './shared-dates-http.ts';
 import { createBlindAnswersHandler } from './blind-answers-http.ts';
 import { createSharedTasksHandler } from './shared-tasks-http.ts';
 import { createPairLeaveHandler } from './pair-leave-http.ts';
@@ -38,6 +39,8 @@ export type ApiApplicationConfig = Readonly<{
   enableSyntheticPairLeave?: boolean;
   /** Synthetic shared tasks; independent loopback-only opt-in. */
   enableSyntheticSharedTasks?: boolean;
+  /** Immutable all-day synthetic dates; independent loopback-only opt-in. */
+  enableSyntheticSharedDates?: boolean;
   /** Repeatable synthetic blind-answer rounds; independent loopback-only opt-in. */
   enableSyntheticBlindAnswers?: boolean;
   limits: BodyLimits & TransactionLimits;
@@ -72,6 +75,7 @@ function validate(config: ApiApplicationConfig): void {
     || (config.enableSyntheticLetters !== undefined && typeof config.enableSyntheticLetters !== 'boolean')
     || (config.enableSyntheticPairLeave !== undefined && typeof config.enableSyntheticPairLeave !== 'boolean')
     || (config.enableSyntheticBlindAnswers !== undefined && typeof config.enableSyntheticBlindAnswers !== 'boolean')
+    || (config.enableSyntheticSharedDates !== undefined && typeof config.enableSyntheticSharedDates !== 'boolean')
     || (config.enableSyntheticSharedTasks !== undefined && typeof config.enableSyntheticSharedTasks !== 'boolean')
     || !Array.isArray(config.trustedOrigins) || !config.trustedOrigins.length
     || !config.trustedOrigins.every(validOrigin) || !config.trustedOrigins.includes(config.baseURL)
@@ -81,7 +85,7 @@ function validate(config: ApiApplicationConfig): void {
   }
   const base = new URL(config.baseURL);
   if ((base.protocol === 'http:' || config.enableSyntheticProfileProvisioning === true || config.enableSyntheticWaitingSpaceCreation === true
-    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true || config.enableSyntheticSharedTasks === true || config.enableSyntheticBlindAnswers === true)
+    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true || config.enableSyntheticSharedDates === true || config.enableSyntheticSharedTasks === true || config.enableSyntheticBlindAnswers === true)
     && !['127.0.0.1', '[::1]', 'localhost'].includes(base.hostname)) {
     throw new Error('invalid_api_configuration');
   }
@@ -116,6 +120,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
   const care = config.enableSyntheticCareSignals === true ? createCareSignalHandler(bindSessionAuthority(database, authority)) : null;
   const letters = config.enableSyntheticLetters === true ? createLettersHandler(bindSessionAuthority(database, authority)) : null;
   const leave = config.enableSyntheticPairLeave === true ? createPairLeaveHandler(bindSessionAuthority(database, authority)) : null;
+  const dates = config.enableSyntheticSharedDates === true ? createSharedDatesHandler(bindSessionAuthority(database, authority)) : null;
   const tasks = config.enableSyntheticSharedTasks === true ? createSharedTasksHandler(bindSessionAuthority(database, authority)) : null;
   const blind = config.enableSyntheticBlindAnswers === true ? createBlindAnswersHandler(bindSessionAuthority(database, authority)) : null;
   const chat = createChatHandler(bindSessionAuthority(database, authority));
@@ -127,6 +132,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isChat = /^\/v1\/couples\/[^/]+\/chat\/messages$/.test(path);
         const isCare = /^\/v1\/couples\/[^/]+\/care-signals$/.test(path) && care !== null;
         const isLetters = /^\/v1\/couples\/[^/]+\/letters(?:\/[^/]+)?$/.test(path) && letters !== null;
+        const isDates = /^\/v1\/couples\/[^/]+\/dates$/.test(path) && dates !== null;
         const isTasks = /^\/v1\/couples\/[^/]+\/tasks(?:\/[^/]+)?$/.test(path) && tasks !== null;
         const isBlind = /^\/v1\/couples\/[^/]+\/(?:blind-round(?:\/[^/]+\/answer)?|blind-rounds(?:\/[^/]+)?)$/.test(path) && blind !== null;
         const isContext = path === '/v1/session/context';
@@ -136,7 +142,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isAcceptance = ['/v1/pair-invitations/preview', '/v1/pair-invitations/accept'].includes(path) && acceptance !== null;
         const isLeave = path === '/v1/pair/leave' && leave !== null;
         const mutation = isLeave ? leave : isAcceptance ? acceptance : isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
-        if (!isAuth && !isChat && !isCare && !isLetters && !isTasks && !isBlind && !isContext && !mutation) return failure(404, 'not_found');
+        if (!isAuth && !isChat && !isCare && !isLetters && !isTasks && !isDates && !isBlind && !isContext && !mutation) return failure(404, 'not_found');
         if (!isContext && !mutation && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');
         if (!origin || !origins.has(origin)) return failure(403, 'forbidden');
@@ -147,7 +153,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
           return failure(415, 'unsupported_media_type');
         }
         const bounded = await limitRequestBody(request, limits);
-        const response = await (mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : isCare ? care!(bounded) : isLetters ? letters!(bounded) : isBlind ? blind!(bounded) : isTasks ? tasks!(bounded) : chat(bounded));
+        const response = await (mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : isCare ? care!(bounded) : isLetters ? letters!(bounded) : isBlind ? blind!(bounded) : isDates ? dates!(bounded) : isTasks ? tasks!(bounded) : chat(bounded));
         if (response.status >= 500) return failure(503, 'temporarily_unavailable');
         const headers = new Headers(response.headers);
         headers.set('cache-control', 'no-store'); headers.set('x-content-type-options', 'nosniff');

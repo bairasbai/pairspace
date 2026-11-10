@@ -1,0 +1,5 @@
+# Generated verification output; absolute workspace paths normalized.
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/mobile@0.1.0 lint
+> eslint .

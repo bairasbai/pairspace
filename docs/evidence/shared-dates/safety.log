@@ -1,0 +1,23 @@
+# Generated verification output; absolute workspace paths normalized.
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test:safety
+> node --test tests/postgres/*.test.mjs
+
+✔ audit accepts valid clean and vulnerability reports (161.753634ms)
+✔ audit fails closed on network error, invalid JSON, metadata and operational failures (684.610854ms)
+✔ barrier fails promptly when write rejects or finishes before reaching barrier (1.714706ms)
+✔ readiness, operation and cleanup deadlines reject stuck work (32.54662ms)
+✔ shell sanitation removes all inherited PG settings before utility execution (68.340858ms)
+✔ outer GNU timeout terminates stuck subprocess with nonzero status (54.550337ms)
+✔ full PostgreSQL suite retains a fixed 240-second outer limit and ten-second kill grace (2.035926ms)
+✔ explicit synthetic loopback config only; no default PG env or remote fallback (1.937792ms)
+✔ disposable database marker rejects missing, mismatched or multiple rows (0.529525ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 9
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 970.284142

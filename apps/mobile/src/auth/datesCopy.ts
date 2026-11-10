@@ -1,0 +1,26 @@
+export const datesCopy = {
+  ru: {
+    title: 'Важные даты', notice: 'Личный черновик в памяти приложения. «Поделиться датой» сохраняет дату для обоих партнёров тестовой пары.',
+    draft: 'Название важной даты', localDate: 'Дата YYYY-MM-DD', timezone: 'Пояс важной даты IANA',
+    create: 'Поделиться датой', cancel: 'Очистить черновик даты',
+    cancelHint: 'Очистка не отменяет отправленную команду. Даты разовые: дни рождения не повторяются ежегодно. Напоминаний и отсчёта нет.',
+    list: 'Обновить важные даты', idle: 'Дата и пояс указываются явно. Календарный день не меняется между поясами.',
+    saving: 'Сохраняем дату…', retry: 'Результат даты неизвестен. Повторите ту же команду.', again: 'Повторить сохранение даты',
+    saved: 'Дата доступна обоим партнёрам.', invalid: 'Нужны название 1–200 символов, существующая дата YYYY-MM-DD (0001–9999) и пояс IANA.',
+    conflict: 'Команда даты конфликтует. Обновите список перед новым действием.', unavailable: 'Важные даты сейчас недоступны.',
+    error: 'Не удалось подтвердить даты.', none: 'Общих важных дат пока нет.',
+    bound: 'До 50 последних добавленных дат, не ближайших событий. Это не полный архив.', pending: 'Неизменяемая дата, ожидающая подтверждения:',
+  },
+  en: {
+    title: 'Important dates', notice: 'Your draft stays privately in app memory. Share date saves it for both partners in this test pair.',
+    draft: 'Important date title', localDate: 'Date YYYY-MM-DD', timezone: 'Important date IANA time zone',
+    create: 'Share date', cancel: 'Clear date draft',
+    cancelHint: 'Clearing does not undo a submitted command. Dates are one-off: birthdays do not repeat annually. No reminders or countdown.',
+    list: 'Refresh important dates', idle: 'Enter a date and zone explicitly. The calendar day stays unchanged across zones.',
+    saving: 'Saving date…', retry: 'Date outcome unknown. Retry the same command.', again: 'Retry date save',
+    saved: 'Date shared with both partners.', invalid: 'Enter a 1–200 character title, a real YYYY-MM-DD date (0001–9999), and an IANA zone.',
+    conflict: 'Date command conflict. Refresh the list before a new action.', unavailable: 'Important dates are currently unavailable.',
+    error: 'Could not confirm dates.', none: 'No shared important dates yet.',
+    bound: 'Up to 50 most recently added dates, not upcoming events. This is not the full archive.', pending: 'Unchanged date awaiting confirmation:',
+  },
+};

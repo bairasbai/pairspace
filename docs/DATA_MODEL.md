@@ -223,3 +223,22 @@ Legacy open/read остаются привязаны к первому small-joy
 подтверждает predecessor и question/version; replay возвращает исходный target,
 а не текущий раунд. История сортируется по цепочке, тела читаются отдельно.
 Окно последних десяти не устанавливает retention и не открывает доступ бывшим участникам.
+
+## Общие однократные даты: synthetic implementation
+`shared_dates(id,couple_id,creator_id,membership_epoch,title,local_date,timezone,created_at)`.
+`local_date` — текст YYYY-MM-DD, настоящая григорианская дата 0001–9999, без
+преобразования в UTC/instant. `timezone` — проверенное IANA-имя для контекста;
+сервер сохраняет исходное проверенное IANA-имя без canonical rewrite. Разные
+alias spellings — разные значения immutable payload; смена alias в том же
+command даёт conflict. Intl проверяет поддержку, PostgreSQL — точное имя в
+pg_timezone_names. Регистр сохраняется; неизвестное точное имя даёт invalid_request.
+Retry не зависит от canonical spelling конкретной версии ICU. Native поддержка
+зон и полей ввода отдельно не подтверждена.
+`shared_date_commands` связывает actor+command, couple/epoch, title/date/zone и
+созданную запись. Receipt и дата immutable; время создаёт сервер с ms precision.
+Повторы авторизуются заново после блокировок users→pair и проверяют provider session.
+Текущая активная пара должна содержать ровно двух участников. Закрытая пара
+сохраняет строки по прежней archive policy, но не выдаёт их через list/replay.
+Forward migration 012 не изменяет существующие данные. Чтение ограничено 50
+последними созданными записями, created_at DESC/id DESC. Нет TTL или новой политики
+retention, удаления, повторений, напоминаний и передачи внешним календарям.

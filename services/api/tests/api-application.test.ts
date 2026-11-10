@@ -290,3 +290,14 @@ it('blind answers are independently loopback-only and default disabled', async (
   for (const suffix of ['', '/00000000-0000-4000-8000-000000000002/answer']) expect((await app.handle(new Request(origin + path + suffix, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
   expect((await app.handle(new Request(origin + path, { headers: { origin: 'https://attacker.invalid' } }))).status).toBe(403);
 });
+
+it('shared dates are independently loopback-only and default disabled with bounded origin-checked mutations', async () => {
+  const path = '/v1/couples/00000000-0000-4000-8000-000000000001/dates';
+  for (const flag of [undefined, false]) expect((await createApiApplication({ ...config(), enableSyntheticSharedDates: flag }).handle(request(path))).status).toBe(404);
+  for (const flag of [true, 'true', null]) expect(() => createApiApplication({ ...config(), enableSyntheticSharedDates: flag } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin = 'http://127.0.0.1:1234';
+  const app = createApiApplication({ ...config(), baseURL: origin, trustedOrigins: [origin], enableSyntheticSharedDates: true });
+  expect((await app.handle(new Request(origin + path + '?membership_epoch=1', { headers: { origin } }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { headers: { origin: 'https://attacker.invalid' } }))).status).toBe(403);
+});

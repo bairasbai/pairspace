@@ -142,3 +142,10 @@ Backend удерживает чужой ответ до двух immutable submi
 [повторяемые раунды](docs/BLIND_ROUNDS_EVIDENCE.md). Не все 11 режимов и не production.
 Следующий раунд требует двух ответов и явной команды; последние десять metadata,
 выбор и чтение тела отдельно. Legacy open/read остаются привязаны к первому раунду.
+
+## Общие однократные календарные даты
+`packages/domain/dates/calendar.ts` проверяет календарную дату без UTC-конверсии.
+`services/api/src/shared-dates*` и migration `012_shared_dates.sql` дают immutable
+create/list для текущей пары/epoch; клиент `apps/mobile/src/auth/dates*` и
+`DatesPanel.tsx` отделяет RAM-черновик от подтверждённой общей даты.
+[Контракт](services/api/SHARED_DATES.md), [проверки](docs/SHARED_DATES_EVIDENCE.md).

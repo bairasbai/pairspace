@@ -1,3 +1,4 @@
+import { DatesPanel } from './DatesPanel';
 import { BlindPanel } from './BlindPanel';
 import { TasksPanel } from './TasksPanel';
 import { LeavePanel } from './LeavePanel';
@@ -15,6 +16,8 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   const blindView = useSyncExternalStore(blind.subscribe, blind.getSnapshot);
   const leave = controller.leave;
   const leaveView = useSyncExternalStore(leave.subscribe, leave.getSnapshot);
+  const dates = controller.dates;
+  const datesView = useSyncExternalStore(dates.subscribe, dates.getSnapshot);
   const tasks = controller.tasks;
   const tasksView = useSyncExternalStore(tasks.subscribe, tasks.getSnapshot);
   const letters = controller.letters;
@@ -31,6 +34,9 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
       onNext={(id, version, confirm) => { void blind.next(id, version, confirm); }}
       onOpen={() => { void blind.open(); }} onRead={() => { void blind.read(); }}
       onSubmit={() => { void blind.submit(); }} onRetry={() => { void blind.retry(); }} />
+    <DatesPanel locale={locale} view={datesView} onDraft={dates.setDraft} onLocalDate={dates.setLocalDate}
+      onTimezone={dates.setTimezone} onCancel={dates.cancel} onCreate={() => { void dates.create(); }}
+      onRetry={() => { void dates.retry(); }} onList={() => { void dates.list(); }} />
     <TasksPanel locale={locale} view={tasksView} onDraft={tasks.setDraft} onCancel={tasks.cancel}
       onCreate={() => { void tasks.create(); }} onRetry={() => { void tasks.retry(); }}
       onList={() => { void tasks.list(); }} onComplete={id => { void tasks.complete(id); }}
