@@ -104,3 +104,9 @@ Chat, history and security never depend on paid eligibility; existing ACL remain
 Exact server-time boundaries and same-pair matching are enforced without transfer.
 Billing integration and breakup/ownership policies remain separate future work.
 Acceptance awaits independent review; no publication or deployment in this change.
+
+## Уточнение карты Tan Ata, 10 ноября 2026
+Карта docs/TAN_ATA_MAP.md дополнена пропущенными сценариями и 11 точными режимами.
+Сердце мобильного preview вызывает только alert; живые сценарии не перенесены.
+Астрология/нумерология требуют отдельного решения. Изменены только документы;
+независимая приёмка этой инвентаризации ещё не проведена.

@@ -53,3 +53,7 @@ In-process HTTP handler with mandatory injected verifier; no listener or actual 
 `packages/domain/subscription/`: immutable pair price catalogue and pure billing
 eligibility. `services/api/tests/subscription.test.ts` covers synthetic boundaries.
 See `docs/SUBSCRIPTION_DOMAIN.md`; no purchases, provider integration or UI wiring.
+
+## Инвентаризация Tan Ata
+[docs/TAN_ATA_MAP.md](docs/TAN_ATA_MAP.md): полный перечень обнаруженных сценариев,
+11 точных режимов разговоров, источники и разделение локальной работы, демо и плана.

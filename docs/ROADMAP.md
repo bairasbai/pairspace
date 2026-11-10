@@ -75,3 +75,9 @@ Reference catalogue and pure entitlement tests implemented without payment SDKs.
 Before billing: decide paid feature list, breakup/transfer and renewal policies;
 implement provider verification, ownership, one-per-pair transaction constraints,
 idempotent events and restore. Free chat/history/security must remain unaffected.
+
+## Проверка полноты переноса Tan Ata
+Перед реализацией сверять [TAN_ATA_MAP.md](TAN_ATA_MAP.md): 11 режимов разговоров,
+песни, капсула, шаги, дневник, небо, воспоминание дня, погода, путь, присутствие,
+день встречи и управление письмами/разлуками/рейсом. UI-демо не закрывает эти этапы.
+Астрология и нумерология не входят автоматически: сначала решение владельца.
