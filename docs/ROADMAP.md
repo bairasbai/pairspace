@@ -69,3 +69,9 @@ RU/EN demo content, nested navigation and draft preservation. Not ready for rele
 no real data, editing, sending, scheduling, notifications, media or native acceptance.
 Chat remains the existing practice composer pending backend and chosen UI integration.
 Next: real data wiring, visual/device QA and accessible focus/keyboard checks.
+
+## Subscription domain checkpoint
+Reference catalogue and pure entitlement tests implemented without payment SDKs.
+Before billing: decide paid feature list, breakup/transfer and renewal policies;
+implement provider verification, ownership, one-per-pair transaction constraints,
+idempotent events and restore. Free chat/history/security must remain unaffected.

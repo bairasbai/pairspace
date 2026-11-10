@@ -97,3 +97,10 @@ These are explicitly labelled demonstration surfaces, not completed product feat
 Existing central heart, Reduce Motion and in-memory chat draft are preserved.
 Nested navigation resets when changing primary tabs; draft stays in App memory.
 Source was restored from verified b16af21 ZIP; no unrelated branch/files were edited.
+
+## Subscription domain checkpoint, 10 November 2026
+Pure policy added for the approved 299 RUB/month or 2490 RUB/year for two people.
+Chat, history and security never depend on paid eligibility; existing ACL remains.
+Exact server-time boundaries and same-pair matching are enforced without transfer.
+Billing integration and breakup/ownership policies remain separate future work.
+Acceptance awaits independent review; no publication or deployment in this change.

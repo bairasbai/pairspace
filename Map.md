@@ -48,3 +48,8 @@ In-process HTTP handler with mandatory injected verifier; no listener or actual 
 - `PreviewScreen.tsx`: nested letters/calendar/memories routes with visible and Android back.
 - `__tests__/Showcase.test.tsx`: navigation, language, draft retention and hardware-back coverage.
 - No backend or persistence connected to these screens; approved image is a direction, not rendered proof.
+
+## Subscription domain checkpoint
+`packages/domain/subscription/`: immutable pair price catalogue and pure billing
+eligibility. `services/api/tests/subscription.test.ts` covers synthetic boundaries.
+See `docs/SUBSCRIPTION_DOMAIN.md`; no purchases, provider integration or UI wiring.
