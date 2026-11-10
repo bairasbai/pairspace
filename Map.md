@@ -79,3 +79,9 @@ Device visual acceptance remains open; no backend features added.
 Тесты: `auth-chat-recovery.test.ts`, `connected-chat-recovery.test.tsx`,
 `services/api/tests/postgres/mobile-chat-recovery.integration.mjs`.
 Доказательства: `apps/mobile/evidence/chat-recovery/`; native-приёмка не выполнена.
+
+## Synthetic draft lifecycle contract
+- `apps/mobile/src/chat/draftContract.ts`: bounded injected-store experiment, not wired to App.
+- `apps/mobile/src/chat/DRAFT_CONTRACT.md`: binding, deletion/send ordering and native blockers.
+- `apps/mobile/__tests__/draft-contract.test.ts`: failure/race/restart harness with real send adapter.
+- `apps/mobile/evidence/draft-contract/`: local verification; independent acceptance separate.

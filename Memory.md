@@ -138,3 +138,11 @@ Transient discovery сохраняет RAM только для ранее про
 смена/logout/unmount очищают private state. ACK означает принятие сервером, не чтение.
 Реальный disposable PostgreSQL fixture проверяет одну message/outbox при replay.
 Контракт: apps/mobile/CHAT_RECOVERY.md. Без persistence/autoretry/production/native build.
+
+## Draft lifecycle experiment
+Added opt-in synthetic bounded draft coordinator, not real storage or product UX.
+Verified-context gate, user/couple/epoch/origin binding, normalized 2KiB envelope,
+serialized purge and terminal consume-before-send tested with injected storage.
+Unknown ACK restart harness uses real queue/transport and never creates a new send.
+Do not ship before durable logout/install policy, native/device checks and controller
+integration. Real application drafts remain in memory. See chat/DRAFT_CONTRACT.md.

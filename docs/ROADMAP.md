@@ -110,3 +110,10 @@ production доставка, abuse/rate limits, конфигурация и depl
 - [ ] Независимая приёмка точного SHA этого шага.
 - [ ] Native iOS/Android и два устройства, durable restart recovery, production gate.
 Контракт и ограничения: [CHAT_RECOVERY](../apps/mobile/CHAT_RECOVERY.md).
+
+### Synthetic bounded draft contract, not durable product persistence
+Verified-context/binding, stale-operation suppression, terminal consume-before-send
+and injected-store restart harness implemented. No native adapter or App wiring.
+Next gate: durable logout/revocation/install policy, full controller integration,
+platform failure/size/backup testing and independent acceptance. 8k chat drafts
+are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
