@@ -2,7 +2,8 @@ import { createQueue, enqueue, retry } from '../chat/queue';
 import { createChatTransport, type ChatMessage, type TransportSession } from '../chat/transport';
 import type { QueueState } from '../chat/types';
 import { validateSyntheticConfig, type SyntheticConfig } from './config';
-import type { SessionClient } from './official-client';
+import { readSessionContext } from './context';
+import type { AuthIdentity, SessionClient } from './official-client';
 
 export type AuthView = Readonly<{
   phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
@@ -12,10 +13,13 @@ const empty: AuthView = { phase: 'signed_out', error: null, draft: '', messages:
 /** Ephemeral UI state; never persists credentials, drafts or message bodies. */
 export function createSessionController(config: SyntheticConfig, client: SessionClient,
   request: (request: Request) => Promise<Response>, commandId: () => string) {
-  validateSyntheticConfig(config);
+  const contextConfig: SyntheticConfig = Object.freeze({ mode: config.mode, baseURL: config.baseURL });
+  validateSyntheticConfig(contextConfig);
   let view = empty;
   let generation = 0;
   let refreshSequence = 0;
+  let discoverySequence = 0;
+  let authIdentity: AuthIdentity | null = null;
   let session: TransportSession | null = null;
   let queue: QueueState | null = null;
   let abort = new AbortController();
@@ -26,7 +30,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
   const invalidate = () => {
     generation++; abort.abort(); abort = new AbortController();
-    session = null; queue = null; sending = false; pending.clear();
+    session = null; authIdentity = null; queue = null; sending = false; pending.clear();
     publish({ ...empty, phase: 'busy' });
     return generation;
   };
@@ -35,44 +39,74 @@ export function createSessionController(config: SyntheticConfig, client: Session
     return authTail;
   };
   const transport = createChatTransport({
-    baseUrl: config.baseURL, allowHttpLoopbackForTests: true, cookieOrigin: config.baseURL,
+    baseUrl: contextConfig.baseURL, allowHttpLoopbackForTests: true, cookieOrigin: contextConfig.baseURL,
     getCredentialGeneration: () => generation,
     store: {
       get() { if (!queue) throw new Error('no_session'); return queue; },
       set(next) { queue = next; },
     },
-    async request(input) {
-      const controller = new AbortController();
-      const lifecycle = abort.signal;
-      const cancel = () => controller.abort();
-      lifecycle.addEventListener('abort', cancel, { once: true });
-      const timer = setTimeout(cancel, 10000);
-      try {
-        if (lifecycle.aborted) controller.abort();
-        return await request(new Request(input, { signal: controller.signal }));
-      } finally { clearTimeout(timer); lifecycle.removeEventListener('abort', cancel); }
-    },
+    request: boundedRequest,
   });
-  async function credentials(): Promise<TransportSession | null> {
-    const captured = session;
-    if (!captured || view.phase !== 'signed_in') return null;
-    const token = await client.getCookie();
-    if (captured !== session) return null;
-    if (!token) { denied('auth_required'); return null; }
-    return { ...captured, token };
+  async function boundedRequest(input: Request) {
+    const controller = new AbortController();
+    const lifecycle = abort.signal;
+    const cancel = () => controller.abort();
+    lifecycle.addEventListener('abort', cancel, { once: true });
+    const timer = setTimeout(cancel, 10000);
+    try {
+      if (lifecycle.aborted) controller.abort();
+      return await request(new Request(input, { signal: controller.signal }));
+    } finally { clearTimeout(timer); lifecycle.removeEventListener('abort', cancel); }
+  }
+  async function discover(): Promise<{ credential: TransportSession; changed: boolean } | null> {
+    const expected = authIdentity;
+    if (!expected) return null;
+    const current = generation; const sequence = ++discoverySequence;
+    try {
+      const cookie = await client.getCookie();
+      if (current !== generation || expected !== authIdentity) return null;
+      const result = await readSessionContext(contextConfig, expected.sessionId, cookie, boundedRequest);
+      if (current !== generation || expected !== authIdentity) return null;
+      // Any auth denial invalidates the current session, even from an older discovery request.
+      if (!result.ok && (result.error === 'auth_required' || result.error === 'access_required')) {
+        block(result.error); return null;
+      }
+      if (sequence !== discoverySequence) return null;
+      if (!result.ok) { block(result.error); return null; }
+      const value = result.value;
+      if (value.state !== 'ready') { block('context_' + value.state); return null; }
+      const changed = session !== null && (session.scope.userId !== value.userId
+        || session.scope.coupleId !== value.coupleId || session.scope.membershipEpoch !== value.membershipEpoch);
+      if (changed) { invalidate(); authIdentity = expected; }
+      if (!session) {
+        const scope = { userId: value.userId, coupleId: value.coupleId, membershipEpoch: value.membershipEpoch,
+          sessionId: `${expected.sessionId}:${generation}` };
+        queue = createQueue(scope);
+        session = { scope, token: '', credentialGeneration: generation, credentialKind: 'cookie' };
+        publish({ ...empty, phase: 'signed_in' });
+      }
+      return { credential: { ...session, token: cookie }, changed };
+    } catch {
+      if (current === generation && sequence === discoverySequence) block('transport_error');
+      return null;
+    }
+  }
+  function block(error: string) {
+    invalidate(); publish({ ...empty, phase: 'blocked', error });
   }
   function denied(error: string) {
     if (error === 'auth_required' || error === 'access_required') {
-      invalidate(); publish({ ...empty, phase: 'blocked', error });
+      block(error);
     } else publish({ ...view, error });
   }
   async function refresh() {
-    const current = generation;
+    let current = generation;
     const sequence = ++refreshSequence;
     try {
-      const credential = await credentials();
-      if (!credential) return;
-      const result = await transport.history(credential, { limit: 50 });
+      const discovered = await discover();
+      if (!discovered) return;
+      current = discovered.credential.credentialGeneration;
+      const result = await transport.history(discovered.credential, { limit: 50 });
       if (current !== generation) return;
       if (!result.ok && (result.error === 'auth_required' || result.error === 'access_required')) {
         denied(result.error); return;
@@ -94,15 +128,11 @@ export function createSessionController(config: SyntheticConfig, client: Session
         if (current !== generation) return;
         const identity = await client.signIn(email, password);
         if (current !== generation) return;
-        const mapping = identity && config.identities[identity.userId];
-        if (!identity || !mapping) {
+        if (!identity) {
           if (!await client.signOut()) throw new Error('cleanup_failed');
           publish({ ...empty, error: 'login_failed' }); return;
         }
-        const scope = { ...mapping, sessionId: `${identity.sessionId}:${current}` };
-        queue = createQueue(scope);
-        session = { scope, token: '', credentialGeneration: current, credentialKind: 'cookie' };
-        publish({ ...empty, phase: 'signed_in' });
+        authIdentity = identity;
       }).then(async () => { if (current === generation) await refresh(); });
     },
     signOut() {
@@ -117,8 +147,9 @@ export function createSessionController(config: SyntheticConfig, client: Session
       sending = true;
       const current = generation; const body = view.draft;
       try {
-        const credential = await credentials();
-        if (!credential || !queue) return;
+        const discovered = await discover();
+        if (!discovered || discovered.changed || current !== generation || !queue) return;
+        const credential = discovered.credential;
         const id = pending.get(body) ?? commandId();
         const added = enqueue(queue, credential.scope, id, body);
         if (!added.ok) { denied(added.error); return; }

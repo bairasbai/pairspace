@@ -35,7 +35,7 @@ it('REAL official Expo plugin isolates cookie read/send/clear across host and po
       ? { 'set-cookie': `better-auth.session_token=synthetic-cookie-${index}; Path=/; HttpOnly; Max-Age=3600` }
       : {} });
   });
-  const configs = origins.map(baseURL => ({ mode: 'synthetic-loopback' as const, baseURL, identities: {} }));
+  const configs = origins.map(baseURL => ({ mode: 'synthetic-loopback' as const, baseURL }));
   const clients = configs.map(createOfficialSessionClient);
   expect(await clients[0].signIn('a@example.test', 'synthetic-only')).toEqual({
     userId: 'synthetic-user-0', sessionId: 'synthetic-session-0',

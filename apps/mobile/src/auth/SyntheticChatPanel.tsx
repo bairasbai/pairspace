@@ -18,6 +18,8 @@ export type SyntheticChatPanelProps = {
 const copy = {
   ru: {
     title: 'Тестовый чат',
+    unmapped: 'Тестовый аккаунт ещё не связан с профилем. Создание профиля здесь недоступно.',
+    noPair: 'У тестового профиля нет активной пары. Создание пары здесь недоступно.',
     mode: 'Синтетический тестовый режим',
     notice: 'Только тестовые аккаунты и сообщения. Не вводите личные данные или пароли от других сервисов.',
     signed_out: 'Войдите с тестовым аккаунтом.',
@@ -39,6 +41,8 @@ const copy = {
   },
   en: {
     title: 'Test chat',
+    unmapped: 'This test account has no linked profile. Profile creation is not available here.',
+    noPair: 'This test profile has no active pair. Pair creation is not available here.',
     mode: 'Synthetic test mode',
     notice: 'Use test accounts and messages only. Do not enter personal data or passwords from other services.',
     signed_out: 'Sign in with a test account.',
@@ -120,7 +124,7 @@ export function SyntheticChatPanel({
     <Text style={styles.body}>{t.notice}</Text>
     <Text accessibilityLiveRegion="polite" style={styles.status}>{t[phase]}</Text>
     {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive"
-      style={styles.error}>{error}</Text> : null}
+      style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error}</Text> : null}
     {/* Remounting on each phase change clears the password before the next paint. */}
     {phase !== 'signed_in' ? <Login key={phase} locale={locale} phase={phase}
       email={email} onEmail={setEmail} onSignIn={onSignIn} onSignOut={onSignOut} /> : <>

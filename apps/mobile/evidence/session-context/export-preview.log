@@ -1,0 +1,33 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/mobile@0.1.0 export
+> expo export --platform ios --platform android
+
+Expo Autolinking module resolution enabled
+Starting Metro Bundler
+
+| (node:18) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:18) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:18) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:18) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:18) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:18) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+iOS Bundled 6224ms index.ts (632 modules)
+Android Bundled 12054ms index.ts (199 modules)
+
+› ios bundles (1):
+_expo/static/js/ios/index-6dd21f51fca812554d12d105131192e3.hbc (1.6MB)
+
+› android bundles (1):
+_expo/static/js/android/index-647290e530c727dff31aa7a3c5f5f28e.hbc (1.6MB)
+
+› Files (1):
+metadata.json (244B)
+
+Exported: dist

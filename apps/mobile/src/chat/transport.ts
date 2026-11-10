@@ -87,7 +87,7 @@ function parsePage(input: JsonRecord, session: TransportSession, options: Histor
 const SEND_RESPONSE_BYTES = 65536;
 const HISTORY_RESPONSE_BYTES = 8 * 1024 * 1024;
 class InvalidResponseError extends Error {}
-async function readJson(response: Response, maxBytes: number): Promise<unknown> {
+export async function readBoundedJson(response: Response, maxBytes: number): Promise<unknown> {
   if (!response.body || typeof response.body.getReader !== 'function') throw new InvalidResponseError();
   const reader = response.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -184,7 +184,7 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
     if (response.status === 429) return failure('rate_limited');
     if (!response.ok) return failure('rejected');
     let json: unknown;
-    try { json = await readJson(response, body ? SEND_RESPONSE_BYTES : HISTORY_RESPONSE_BYTES); }
+    try { json = await readBoundedJson(response, body ? SEND_RESPONSE_BYTES : HISTORY_RESPONSE_BYTES); }
     catch (error) {
       return failure(currentError(session) ?? (error instanceof InvalidResponseError ? 'invalid_response' : 'transport_error'));
     }

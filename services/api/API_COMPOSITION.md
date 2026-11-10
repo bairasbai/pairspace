@@ -1,6 +1,6 @@
 # Explicit product API composition
 
-Status: implemented and author-verified; pending independent acceptance of this revision. This is backend runtime code, not a deployed service or available mobile login. No frontend source was changed.
+Status: implemented and author-verified; pending independent acceptance of this revision. This is backend runtime code, not a deployed service. The historical verification counts below describe the original composition milestone; current session-context changes and checks are recorded in [SESSION_CONTEXT.md](SESSION_CONTEXT.md).
 
 ## API and ownership
 
@@ -16,7 +16,8 @@ Email/password enablement is an explicit boolean. False is verified to prevent s
 
 - `/api/auth/*`: official Better Auth handler, unchanged provider schemas.
 - `/v1/couples/:id/chat/messages`: existing product chat handler, send/history, membership checks, sequencing, deduplication and content-free outbox.
-- Other paths return 404. Methods other than GET/POST return 405 with Allow. No production close-couple HTTP endpoint was added.
+- `/v1/session/context`: read-only authenticated server-selected session context. See [SESSION_CONTEXT.md](SESSION_CONTEXT.md) for response variants, lock protocol and current evidence.
+- Other paths return 404. Context allows GET only; the other routes allow GET/POST. Unsupported methods return 405 with Allow. No production close-couple HTTP endpoint was added.
 - Every mounted request currently requires an exact allowed Origin (or Expo-origin only when Origin is absent). This strict policy is explicit: ordinary browser GETs without Origin are rejected. Cross-origin browser CORS/OPTIONS behavior and native Expo end-to-end transport remain separate work; accepting a scheme in the allowlist is not native runtime proof.
 - POST requires application/json. Actual streamed bytes are bounded even without an honest Content-Length. Invalid declarations/read failures return 400, excessive bytes 413 and stalled reads 408 at the Request API level. The official Node adapter may close the underlying stalled socket instead of delivering 408; the loopback regression accepts and verifies that bounded close behavior.
 - Controlled provider 4xx responses remain intact. Unexpected thrown/provider 5xx errors become an opaque 503. Responses have no-store and nosniff. SQL details and secrets are not returned; injected auth SQL failure also verifies no raw console.error logging.
@@ -31,7 +32,7 @@ Additional loopback checks cover CSRF/missing origins, media/JSON/body-size fail
 
 Run from services/api: `npm ci --ignore-scripts`, `npm run typecheck`, `npm run lint`, `npm test`, `npm run test:safety`, `npm run verify:postgres`. Existing backend transport tests still need unchanged apps/mobile dependencies for Expo tsconfig resolution. The PostgreSQL test runner remains Linux x64-only with GNU timeout and the previously reviewed pinned third-party packaged PostgreSQL 18.6 runtime. No binary is included in the source backup. Native-library vulnerability scanning, production roles/RLS, TLS, reverse-proxy trust, rate limits, migrations/backfill, complete account lifecycle and mobile SecureStore/two-device verification remain open.
 
-No login is wired into mobile UI. Top-level Map/Memory/ROADMAP are maintained by the parent because this task is services/api-only.
+The original composition milestone was backend-only. Current mobile auth/context integration is documented under apps/mobile. Top-level Map/Memory/ROADMAP are maintained by the parent.
 
 ## Recorded checks for this revision
 

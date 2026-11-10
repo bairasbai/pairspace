@@ -3,6 +3,7 @@ import type { Pool } from 'pg';
 import { bindSessionAuthority } from './auth-authority.ts';
 import { createBetterAuthAuthority } from './better-auth-authority.ts';
 import { createChatHandler } from './http.ts';
+import { createSessionContextHandler } from './session-context.ts';
 import { createPostgresDatabase, type TransactionLimits } from './postgres-database.ts';
 import { limitRequestBody, RequestLimitError, type BodyLimits } from './request-limits.ts';
 
@@ -61,9 +62,11 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
     logger: { disabled: true }, telemetry: { enabled: false }, onAPIError: { throw: true },
   });
   const database = createPostgresDatabase(config.pool, limits);
-  const authority = createBetterAuthAuthority(database, {
-    getSession: headers => auth.api.getSession({ headers }), trustedOrigins: [...origins],
-  });
+  const authOptions = {
+    getSession: (headers: Headers) => auth.api.getSession({ headers }), trustedOrigins: [...origins],
+  };
+  const authority = createBetterAuthAuthority(database, authOptions);
+  const context = createSessionContextHandler(database, authOptions);
   const chat = createChatHandler(bindSessionAuthority(database, authority));
   return {
     async handle(request) {
@@ -71,10 +74,12 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const path = new URL(request.url).pathname;
         const isAuth = path.startsWith('/api/auth/');
         const isChat = /^\/v1\/couples\/[^/]+\/chat\/messages$/.test(path);
-        if (!isAuth && !isChat) return failure(404, 'not_found');
-        if (request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
+        const isContext = path === '/v1/session/context';
+        if (!isAuth && !isChat && !isContext) return failure(404, 'not_found');
+        if (!isContext && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');
         if (!origin || !origins.has(origin)) return failure(403, 'forbidden');
+        if (isContext) return context(request);
         if (request.method === 'POST'
           && request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
           return failure(415, 'unsupported_media_type');

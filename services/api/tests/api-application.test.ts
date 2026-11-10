@@ -70,3 +70,19 @@ it('redacts thrown errors/provider 5xx and preserves controlled provider validat
   provider.handler.mockResolvedValueOnce(Response.json({ code: 'INVALID_PASSWORD' }, { status: 400 }));
   expect((await app.handle(request())).status).toBe(400);
 });
+
+it('mounts selector-free session context with the same provider and strict origin perimeter', async () => {
+  const app = createApiApplication(config());
+  const path = '/v1/session/context';
+  expect((await app.handle(request(path))).status).toBe(401);
+  expect((await app.handle(request(path, 'GET', { origin: baseURL, cookie: 'synthetic' }))).status).toBe(401);
+  expect(provider.getSession).toHaveBeenCalledWith({ headers: expect.any(Headers) });
+  expect(provider.handler).not.toHaveBeenCalled();
+  expect(provider.create).toHaveBeenCalledOnce();
+  expect((await app.handle(request(path, 'GET', {}))).status).toBe(403);
+  expect((await app.handle(request(path, 'GET', { origin: 'https://attacker.invalid', 'expo-origin': 'pairspace://' }))).status).toBe(403);
+  expect((await app.handle(request(path + '?coupleId=spoofed'))).status).toBe(400);
+  const method = await app.handle(request(path, 'POST', { origin: baseURL, 'content-type': 'application/json' }, '{}'));
+  expect(method.status).toBe(405); expect(method.headers.get('allow')).toBe('GET');
+  expect((await app.handle(request(path, 'DELETE'))).status).toBe(405);
+});

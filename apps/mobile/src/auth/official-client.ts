@@ -12,11 +12,12 @@ export type SessionClient = Readonly<{
 
 /** Official plugin owns cookie parsing/persistence. No custom token or cookie storage. */
 export function createOfficialSessionClient(config: SyntheticConfig): SessionClient {
-  const storagePrefix = syntheticStoragePrefix(config);
+  const snapshot: SyntheticConfig = Object.freeze({ mode: config.mode, baseURL: config.baseURL });
+  const storagePrefix = syntheticStoragePrefix(snapshot);
   const client = createAuthClient({
-    baseURL: config.baseURL, basePath: '/api/auth',
+    baseURL: snapshot.baseURL, basePath: '/api/auth',
     plugins: [expoClient({ scheme: 'pairspace-synthetic', storagePrefix, storage: SecureStore, disableCache: true })],
-    fetchOptions: { headers: { Origin: config.baseURL }, timeout: 10000, retry: 0, redirect: 'error' },
+    fetchOptions: { headers: { Origin: snapshot.baseURL }, timeout: 10000, retry: 0, redirect: 'error' },
   });
   return {
     async signIn(email, password) {

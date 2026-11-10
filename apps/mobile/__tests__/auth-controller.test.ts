@@ -1,5 +1,5 @@
 import { createSessionController } from '../src/auth/controller';
-import { defaultAuthConfig, validateSyntheticConfig, type SyntheticConfig } from '../src/auth/config';
+import { defaultAuthConfig, syntheticStoragePrefix, validateSyntheticConfig, type SyntheticConfig } from '../src/auth/config';
 import type { AuthIdentity } from '../src/auth/official-client';
 import { createChatTransport, type ChatMessage, type TransportSession } from '../src/chat/transport';
 import { createQueue } from '../src/chat/queue';
@@ -8,12 +8,10 @@ import type { QueueState } from '../src/chat/types';
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const config: SyntheticConfig = {
   mode: 'synthetic-loopback', baseURL: 'http://127.0.0.1:8787',
-  identities: {
-    'auth-a': { userId: uuid(1), coupleId: uuid(2), membershipEpoch: 1 },
-    'auth-b': { userId: uuid(11), coupleId: uuid(12), membershipEpoch: 2 },
-  },
 };
 const identity: AuthIdentity = { userId: 'auth-a', sessionId: 'synthetic-session' };
+const readyContext = { state: 'ready', sessionId: identity.sessionId,
+  userId: uuid(1), coupleId: uuid(2), membershipEpoch: 1 };
 const message: ChatMessage = {
   coupleId: uuid(2), id: uuid(4), senderId: uuid(1), clientId: uuid(3),
   seq: 1, body: 'Synthetic history A', version: 1, createdAt: '2026-11-10T00:00:00.000Z',
@@ -28,7 +26,7 @@ function deferred<T>() {
   const promise = new Promise<T>((yes, no) => { resolve = yes; reject = no; });
   return { promise, resolve, reject };
 }
-async function settle() { for (let i = 0; i < 20; i++) await Promise.resolve(); }
+async function settle() { for (let i = 0; i < 60; i++) await Promise.resolve(); }
 function setup(handler: (request: Request) => Promise<Response> = async () => page()) {
   const client = {
     signIn: jest.fn<Promise<AuthIdentity | null>, [string, string]>().mockResolvedValue(identity),
@@ -36,10 +34,12 @@ function setup(handler: (request: Request) => Promise<Response> = async () => pa
     getCookie: jest.fn<Promise<string>, []>().mockResolvedValue('better-auth.session_token=synthetic-cookie'),
   };
   const request = jest.fn(handler);
+  const discovery = jest.fn(async (_input: Request) => envelope({ ok: true, value: readyContext }));
   const commandId = jest.fn(() => uuid(3));
-  const controller = createSessionController(config, client, request, commandId);
+  const controller = createSessionController(config, client, input =>
+    new URL(input.url).pathname === '/v1/session/context' ? discovery(input) : request(input), commandId);
   const login = () => controller.signIn('fixture@example.test', 'synthetic-password');
-  return { controller, client, request, commandId, login };
+  return { controller, client, request, discovery, commandId, login };
 }
 afterEach(() => jest.useRealTimers());
 
@@ -49,6 +49,14 @@ it('defaults to disabled auth and accepts only explicit exact HTTP loopback orig
     expect(() => validateSyntheticConfig({ ...config, baseURL })).not.toThrow();
   }
   expect(() => validateSyntheticConfig({ ...config, mode: 'production' as SyntheticConfig['mode'] })).toThrow('invalid_synthetic_config');
+});
+it('isolates persistent SDK storage by the complete validated origin without lossy namespace collisions', () => {
+  const prefix = syntheticStoragePrefix(config);
+  expect(prefix).toMatch(/^pairspace-synthetic-v1-[0-9a-f]+$/);
+  const encoded = prefix.replace('pairspace-synthetic-v1-', '');
+  expect(encoded.match(/.{4}/g)?.map(unit => String.fromCharCode(Number.parseInt(unit, 16))).join('')).toBe(config.baseURL);
+  expect(syntheticStoragePrefix({ ...config, baseURL: 'http://127.0.0.1:8788' })).not.toBe(prefix);
+  expect(syntheticStoragePrefix({ ...config, baseURL: 'http://localhost:8787' })).not.toBe(prefix);
 });
 it.each(['https://localhost', 'http://example.invalid', 'http://127.0.0.1.evil.test', 'file:///tmp/test',
   'http://localhost/', 'http://localhost/path', 'http://localhost?test=1', 'http://localhost#test',
@@ -66,7 +74,7 @@ it('starts with no private state and ignores session-only actions while signed o
   expect(request).not.toHaveBeenCalled();
   expect(commandId).not.toHaveBeenCalled();
 });
-it('cleans old credentials, maps the verified identity, and sends cookie/origin without bearer auth', async () => {
+it('cleans old credentials, discovers the verified identity context, and sends cookie/origin without bearer auth', async () => {
   const { controller, client, request, login } = setup();
   const listener = jest.fn();
   const unsubscribe = controller.subscribe(listener);
@@ -91,9 +99,9 @@ it('cleans old credentials, maps the verified identity, and sends cookie/origin 
   controller.setDraft('new draft');
   expect(listener).toHaveBeenCalledTimes(3);
 });
-it.each([null, { userId: 'unmapped-account', sessionId: 'synthetic-session' }])('clears an unsuccessful or unmapped sign-in %p', async result => {
+it('clears an unsuccessful sign-in and allows a fresh attempt', async () => {
   const { controller, client, request, login } = setup();
-  client.signIn.mockResolvedValueOnce(result);
+  client.signIn.mockResolvedValueOnce(null);
   await login();
   expect(client.signOut).toHaveBeenCalledTimes(2);
   expect(request).not.toHaveBeenCalled();
@@ -214,14 +222,17 @@ it.each([true, false])('only the latest logout may finish the session transition
   expect(client.signIn).toHaveBeenCalledTimes(1);
 });
 it('isolates history, drafts and request scope between accounts and relogins', async () => {
-  const { controller, client, request, login } = setup();
+  const { controller, client, request, discovery, login } = setup();
   await login();
   controller.setDraft('private A draft');
   const signingOut = controller.signOut();
   expect(controller.getSnapshot()).toEqual({ phase: 'busy', error: null, draft: '', messages: [] });
   await signingOut;
   client.signIn.mockResolvedValueOnce({ userId: 'auth-b', sessionId: identity.sessionId });
-  client.getCookie.mockResolvedValueOnce('better-auth.session_token=synthetic-cookie-b');
+  client.getCookie.mockResolvedValue('better-auth.session_token=synthetic-cookie-b');
+  discovery.mockImplementation(async () => envelope({ ok: true, value: {
+    ...readyContext, userId: uuid(11), coupleId: uuid(12), membershipEpoch: 2,
+  } }));
   request.mockResolvedValueOnce(page([messageB]));
   await login();
   expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error: null, draft: '', messages: [messageB] });
@@ -229,15 +240,18 @@ it('isolates history, drafts and request scope between accounts and relogins', a
   expect(input.url).toBe(`${config.baseURL}/v1/couples/${uuid(12)}/chat/messages?membership_epoch=2&limit=50`);
   expect(input.headers.get('cookie')).toContain('synthetic-cookie-b');
 });
-it.each(['refresh', 'send'] as const)('maps getCookie rejection during %s to an opaque recoverable error', async operation => {
+it.each(['refresh', 'send'] as const)('blocks getCookie rejection during %s until explicit logout and fresh login', async operation => {
   const { controller, client, request, login } = setup();
   await login();
   controller.setDraft('private draft');
   client.getCookie.mockRejectedValueOnce(new Error('cookie secret'));
   await controller[operation]();
   expect(request).toHaveBeenCalledTimes(1);
-  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error: 'transport_error', draft: 'private draft', messages: [message] });
+  expect(controller.getSnapshot()).toEqual({ phase: 'blocked', error: 'transport_error', draft: '', messages: [] });
   await controller.refresh();
+  expect(request).toHaveBeenCalledTimes(1);
+  await controller.signOut();
+  await login();
   expect(controller.getSnapshot().error).toBeNull();
 });
 it.each(['refresh', 'send'] as const)('blocks and purges private state if the official cookie disappears during %s', async operation => {
@@ -509,7 +523,7 @@ it('aborts timed-out requests, reports the opaque failure, and removes timers', 
 });
 
 function cookieTransport(cookieOrigin: string | undefined = config.baseURL) {
-  const scope = { ...config.identities['auth-a'], sessionId: 'session-a' };
+  const scope = { userId: uuid(1), coupleId: uuid(2), membershipEpoch: 1, sessionId: 'session-a' };
   let state: QueueState = createQueue(scope);
   const request = jest.fn(async () => page());
   const transport = createChatTransport({ baseUrl: config.baseURL, allowHttpLoopbackForTests: true,

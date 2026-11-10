@@ -14,7 +14,7 @@ jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: j
 jest.mock('expo/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-crypto', () => ({ randomUUID: jest.fn() }));
 jest.mock('../src/auth/controller', () => ({ createSessionController: jest.fn() }));
-const config = { mode: 'synthetic-loopback' as const, baseURL: 'http://127.0.0.1:1234', identities: {} };
+const config = { mode: 'synthetic-loopback' as const, baseURL: 'http://127.0.0.1:1234' };
 const email = jest.fn(); const getSession = jest.fn(); const signOut = jest.fn(); const getCookie = jest.fn();
 beforeEach(() => {
   jest.clearAllMocks();
@@ -53,7 +53,7 @@ it('rejects remote configuration before constructing the official client', () =>
 it('explicit runtime uses Expo streaming fetch and official command IDs', async () => {
   createSyntheticRuntime(config);
   const args = jest.mocked(createSessionController).mock.calls[0];
-  expect(args[0]).toBe(config); expect(args[3]).toBe(randomUUID);
+  expect(args[0]).toEqual(config); expect(args[0]).not.toBe(config); expect(Object.isFrozen(args[0])).toBe(true); expect(args[3]).toBe(randomUUID);
   const input = { url: config.baseURL, method: 'GET', headers: new Headers(), body: null, signal: new AbortController().signal } as Request;
   await args[2](input);
   expect(expoFetch).toHaveBeenCalledWith(input, { credentials: 'omit', redirect: 'error' });

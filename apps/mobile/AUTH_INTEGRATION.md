@@ -4,9 +4,9 @@ Status: implemented, author checks passed, not independently accepted. No deploy
 
 ## Explicit wiring and disabled default
 
-The ordinary App remains the existing Kimi-styled preview, with its navigation and central heart unchanged. It does not instantiate an auth client or make requests. To exercise the new panel, an isolated development harness explicitly calls createSyntheticRuntime(config) and renders PairspaceApp with its syntheticController prop. The configuration requires mode "synthetic-loopback", an exact HTTP loopback origin and a fixture identity map keyed by provider user ID. There are no environment-derived URLs, credentials or automatic production endpoints.
+The ordinary App remains the existing Kimi-styled preview, with its navigation and central heart unchanged. It does not instantiate an auth client or make requests. To exercise the new panel, an isolated development harness explicitly calls createSyntheticRuntime(config) and renders PairspaceApp with its syntheticController prop. The configuration requires mode "synthetic-loopback", an exact HTTP loopback origin only; domain context is discovered from the authenticated server endpoint. There are no environment-derived URLs, credentials or automatic production endpoints.
 
-The map contains only synthetic domain UUID, couple UUID and membership epoch. It is not an authorization grant: every chat request still goes through authoritative server session and membership checks. Production session-to-domain discovery, provisioning and invitation flows are NOT implemented. No signup UI or real account is provisioned by this stage. Default auth configuration is null.
+The former injected fixture identity map has been removed. The client obtains its own domain UUID, active couple and membership epoch from GET /v1/session/context, bound to the verified provider session ID. Discovery is a snapshot, not an authorization grant: each chat operation still rechecks server session and membership. Provisioning/invitations remain absent; no signup UI or real account is provisioned. Default auth configuration is null. See SESSION_CONTEXT.md for this revision's contract and evidence.
 
 Official better-auth and @better-auth/expo are pinned together at 1.7.19 (MIT), above the previously reviewed security floor 1.7.16. Expo SDK 58 packages are pinned: SecureStore 58.0.2, Constants 58.0.15, Linking 58.0.16, Network 58.0.4, WebBrowser 58.0.7 and Crypto 58.0.7. These are official Expo packages from the npm registry, MIT, not custom security implementations. Crypto is used only for client command UUIDs.
 
@@ -38,7 +38,7 @@ Mobile dependency audit: 29 findings (28 moderate, 1 low, 0 high/critical); no a
 
 Top-level Map/Memory/ROADMAP are maintained by the parent. Independent review and exact final verification counts are required before publication.
 
-## Recorded author checks
+## Previous mobile-origin checkpoint checks (historical)
 
 290 mobile tests passed (12 suites). Mobile global coverage: 95.41% statements, 95.10% branches, 96.21% functions, 96.32% lines. Auth runtime/controller group exceeds 97% across all four metrics; component and official-client adapter tests cover 100%. Coverage includes unimported production files without relaxed thresholds.
 

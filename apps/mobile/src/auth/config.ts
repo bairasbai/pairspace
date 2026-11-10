@@ -1,8 +1,6 @@
 export type SyntheticConfig = Readonly<{
   mode: 'synthetic-loopback';
   baseURL: string;
-  /** Fixture mapping only. It grants no server permission. */
-  identities: Readonly<Record<string, Readonly<{ userId: string; coupleId: string; membershipEpoch: number }>>>;
 }>;
 /** Production networking is disabled. Tests/dev harness must inject configuration explicitly. */
 export const defaultAuthConfig: SyntheticConfig | null = null;

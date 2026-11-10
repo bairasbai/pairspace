@@ -183,3 +183,13 @@ it('clears the password on sign-in, sign-out, interruption and remount', () => {
   expect(screen.getByLabelText(labels.en.email)).toHaveDisplayValue('');
   expect(screen.getByLabelText(labels.en.password)).toHaveDisplayValue('');
 });
+
+it.each([
+  ['en', 'context_unmapped', 'This test account has no linked profile. Profile creation is not available here.'],
+  ['en', 'context_no_active_pair', 'This test profile has no active pair. Pair creation is not available here.'],
+  ['ru', 'context_unmapped', 'Тестовый аккаунт ещё не связан с профилем. Создание профиля здесь недоступно.'],
+  ['ru', 'context_no_active_pair', 'У тестового профиля нет активной пары. Создание пары здесь недоступно.'],
+] as const)('explains safe discovery state in %s: %s', (locale, error, text) => {
+  render(<SyntheticChatPanel {...props({ locale, phase: 'blocked', error })} />);
+  expect(screen.getByRole('alert')).toHaveTextContent(text);
+});

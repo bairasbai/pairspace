@@ -29,11 +29,8 @@ test('mobile session controller cookie transport → composed HTTP → real Post
       accounts.push({ email, userId: signup.data.user.id });
     }
     const pairA = randomUUID(); const pairB = randomUUID();
-    const idsA = await f.provision(accounts.slice(0, 2).map(a => a.userId), pairA);
-    const idsB = await f.provision(accounts.slice(2).map(a => a.userId), pairB);
-    const identities = Object.fromEntries(accounts.map((a, i) => [a.userId, {
-      userId: i < 2 ? idsA[i] : idsB[i - 2], coupleId: i < 2 ? pairA : pairB, membershipEpoch: 1,
-    }]));
+    await f.provision(accounts.slice(0, 2).map(a => a.userId), pairA);
+    await f.provision(accounts.slice(2).map(a => a.userId), pairB);
     const c = client(f.baseURL);
     // Node fixture wraps the official client; native Expo/SecureStore is not executed here.
     const sessionClient = {
@@ -47,7 +44,7 @@ test('mobile session controller cookie transport → composed HTTP → real Post
       getCookie: c.getCookie,
     };
     let loseAck = true;
-    const controller = createSessionController({ mode: 'synthetic-loopback', baseURL: f.baseURL, identities }, sessionClient,
+    const controller = createSessionController({ mode: 'synthetic-loopback', baseURL: f.baseURL }, sessionClient,
       async request => {
         assert.equal(request.headers.has('authorization'), false);
         assert.equal(request.headers.get('origin'), f.baseURL);
@@ -65,6 +62,13 @@ test('mobile session controller cookie transport → composed HTTP → real Post
     assert.equal(controller.getSnapshot().messages.length, 1);
     assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM chat_messages')).rows[0].n, 1);
     assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM outbox_events')).rows[0].n, 1);
+    controller.setDraft('old-epoch draft');
+    await f.domainPool.query('UPDATE couples SET membership_epoch=membership_epoch+1 WHERE id=$1', [pairA]);
+    await controller.send();
+    assert.equal(controller.getSnapshot().draft, '', 'changed server context discards old pending draft before send');
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM chat_messages')).rows[0].n, 1);
+    await controller.refresh();
+    assert.equal(controller.getSnapshot().messages.length, 1);
     controller.setDraft('private A draft');
     await controller.signOut();
     await controller.signIn(accounts[2].email, password);

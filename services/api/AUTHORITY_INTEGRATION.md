@@ -8,9 +8,9 @@ Status: implemented, author checks passed; pending independent review. This is p
 
 - `createSyntheticAuthority(verify)` explicitly selects the existing signed-token/test prototype and its auth_sessions recheck. Tests opt into it. It is not automatically chosen by the handler.
 - `createBetterAuthAuthority(database, {getSession, trustedOrigins})` binds an official Better Auth getSession reader from the **same trusted PostgreSQL database/schema**. The integration fixture passes `headers => auth.api.getSession({headers})`, with cookie cache disabled. Only cookie transport and explicitly trusted exact Origin/Expo-origin are accepted. Bearer credentials are rejected on this authority.
-- No service bootstrap automatically enables this provider. Existing mobile bearer transport is unchanged. A controlled composition/frontend migration remains separate work.
+- The original authority milestone did not enable a service or migrate mobile transport. Current controlled composition is documented in API_COMPOSITION.md and session-context/mobile integration in SESSION_CONTEXT.md and apps/mobile.
 
-Provider output is runtime-validated. The provider user maps to an independent domain UUID using migration 003's better_auth_identities table. This is an identity map, not a second session store. Mapping mutations are unsupported until reviewed. No production account provisioning/backfill is included.
+Provider output validation and authoritative provider-session SQL now live in the shared `better-auth-session.ts` module. Both the chat authority and [session context endpoint](SESSION_CONTEXT.md) reuse it. Provider output is runtime-validated. The provider user maps to an independent domain UUID using migration 003's better_auth_identities table. This is an identity map, not a second session store. Mapping mutations are unsupported until reviewed. No production account provisioning/backfill is included.
 
 ## Transactional source of truth
 
