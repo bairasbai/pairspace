@@ -186,9 +186,9 @@ it('clears the password on sign-in, sign-out, interruption and remount', () => {
 
 it.each([
   ['en', 'context_unmapped', 'This test account has no linked profile. You can explicitly create a test profile.'],
-  ['en', 'context_no_active_pair', 'This test profile has no space. You can explicitly create a space waiting for a partner.'],
+  ['en', 'context_no_active_pair', 'This test profile has no space. Enter an invitation manually or create your own space waiting for a partner.'],
   ['ru', 'context_unmapped', 'Тестовый аккаунт ещё не связан с профилем. Вы можете явно создать тестовый профиль.'],
-  ['ru', 'context_no_active_pair', 'У тестового профиля нет пространства. Вы можете явно создать пространство ожидания партнёра.'],
+  ['ru', 'context_no_active_pair', 'У тестового профиля нет пространства. Введите приглашение вручную или создайте своё пространство ожидания партнёра.'],
 ] as const)('explains safe discovery state in %s: %s', (locale, error, text) => {
   render(<SyntheticChatPanel {...props({ locale, phase: 'blocked', error })} />);
   expect(screen.getByRole('alert')).toHaveTextContent(text);

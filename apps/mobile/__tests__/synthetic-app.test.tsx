@@ -3,13 +3,21 @@ import { AccessibilityInfo } from 'react-native';
 import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
 import { PairspaceApp } from '../App';
 import type { SessionController } from '../src/auth/SyntheticChatConnected';
+import type { InviteView } from '../src/auth/invitations-controller';
 import type { AuthView } from '../src/auth/controller';
 jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
 it('connects opt-in synthetic chat without changing navigation or the heart', async () => {
   jest.spyOn(AccessibilityInfo, 'isReduceMotionEnabled').mockResolvedValue(true);
   let view: AuthView = { phase: 'signed_out', error: null, draft: '', messages: [] };
   const listeners = new Set<() => void>();
+  const inviteView: InviteView = { mode: 'unavailable', busy: null, error: null, invitation: null,
+    issuedToken: null, tokenInput: '', preview: null, consent: false, recovery: 'none' };
   const controller: SessionController = {
+    invitations: { getSnapshot: () => inviteView, subscribe: () => () => {},
+      readMetadata: jest.fn(async () => {}), issue: jest.fn(async () => {}), revoke: jest.fn(async () => {}),
+      setToken: jest.fn(), preview: jest.fn(async () => {}), setConsent: jest.fn(),
+      accept: jest.fn(async () => {}), cancel: jest.fn(),
+    },
     getSnapshot: () => view,
     subscribe: callback => { listeners.add(callback); return () => { listeners.delete(callback); }; },
     setDraft: jest.fn(), signIn: jest.fn(async () => {}), signOut: jest.fn(async () => {}),

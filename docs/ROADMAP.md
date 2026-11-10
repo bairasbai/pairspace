@@ -93,3 +93,11 @@ Exit gate: добровольный минимальный ввод без ск�
 ## Kimi styling alignment
 See [KIMI_DESIGN_ALIGNMENT](KIMI_DESIGN_ALIGNMENT.md): bounded mobile palette/typography/navigation styling.
 Device visual acceptance remains open; no backend features added.
+
+## Синтетический mobile invitation flow
+Реализован opt-in клиент выпуска/метаданных/отзыва и ручного preview → consent → accept.
+Проверяются повторные запросы, lost ACK, смена cookie/сеанса/области и две учётные
+записи через реальный loopback PostgreSQL → активная пара → чат.
+См. [контракт](../apps/mobile/PAIR_INVITATIONS.md). Независимая приёмка ожидается.
+Следующие отдельные gates: native iOS/Android и два устройства, lifecycle/background,
+production доставка, abuse/rate limits, конфигурация и deployment/security review.

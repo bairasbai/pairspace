@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radii, spacing, typography } from '../theme';
+import { InvitationPanel, type InvitationPanelProps } from './InvitationPanel';
 
 export type SyntheticChatPanelProps = {
   locale: 'ru' | 'en';
@@ -15,6 +16,7 @@ export type SyntheticChatPanelProps = {
   onRefresh: () => void;
   onCreateProfile: () => void;
   onCreateWaitingSpace: () => void;
+  invitations?: Omit<InvitationPanelProps, 'locale'>;
 };
 
 const copy = {
@@ -24,11 +26,11 @@ const copy = {
     createProfile: 'Создать тестовый профиль',
     profileRetry: 'Ответ не получен. Профиль мог быть создан. Повторная проверка не создаст дубликат.',
     retryProfile: 'Повторить создание профиля',
-    noPair: 'У тестового профиля нет пространства. Вы можете явно создать пространство ожидания партнёра.',
+    noPair: 'У тестового профиля нет пространства. Введите приглашение вручную или создайте своё пространство ожидания партнёра.',
     createWaiting: 'Создать пространство ожидания',
     retryWaiting: 'Повторить создание пространства',
     waiting: 'Ожидание партнёра',
-    waitingNotice: 'Ваше тестовое пространство создано. Чат и приглашения пока недоступны.',
+    waitingNotice: 'Ваше тестовое пространство создано. Чат станет доступен после принятия приглашения партнёром.',
     waitingRetry: 'Ответ не получен. Пространство могло быть создано. Повторная проверка не создаст дубликат.',
     mode: 'Синтетический тестовый режим',
     notice: 'Только тестовые аккаунты и сообщения. Не вводите личные данные или пароли от других сервисов.',
@@ -55,11 +57,11 @@ const copy = {
     createProfile: 'Create test profile',
     profileRetry: 'No response was received. The profile may already exist. Retrying will not create a duplicate.',
     retryProfile: 'Retry profile creation',
-    noPair: 'This test profile has no space. You can explicitly create a space waiting for a partner.',
+    noPair: 'This test profile has no space. Enter an invitation manually or create your own space waiting for a partner.',
     createWaiting: 'Create waiting space',
     retryWaiting: 'Retry space creation',
     waiting: 'Waiting for a partner',
-    waitingNotice: 'Your test space exists. Chat and invitations are not available yet.',
+    waitingNotice: 'Your test space exists. Chat becomes available after a partner accepts an invitation.',
     waitingRetry: 'No response was received. The space may already exist. Retrying will not create a duplicate.',
     mode: 'Synthetic test mode',
     notice: 'Use test accounts and messages only. Do not enter personal data or passwords from other services.',
@@ -131,25 +133,30 @@ function Login({ locale, phase, email, onEmail, onSignIn, onSignOut }: LoginProp
 
 /** Controlled synthetic-only UI. The parent owns requests, session and message state. */
 export function SyntheticChatPanel({
-  locale, phase, error, draft, messages, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace,
+  locale, phase, error, draft, messages, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
 }: SyntheticChatPanelProps) {
   const t = copy[locale];
   const [email, setEmail] = useState('');
+  const invitationBusy = invitations !== undefined && (invitations.view.busy !== null
+    || invitations.view.recovery === 'accept_uncertain');
+  const invitationVisible = invitations !== undefined && invitations.view.mode !== 'unavailable'
+    && phase === 'blocked';
 
   return <View style={styles.container}>
     <Text style={styles.mode}>{t.mode}</Text>
     <Text accessibilityRole="header" style={styles.title}>{t.title}</Text>
     <Text style={styles.body}>{t.notice}</Text>
-    <Text accessibilityLiveRegion="polite" style={styles.status}>{error === 'context_waiting_partner' ? t.waiting : t[phase]}</Text>
+    <Text accessibilityLiveRegion="polite" style={styles.status}>{error === 'context_waiting_partner' ? t.waiting : invitationVisible ? t.signed_in : t[phase]}</Text>
     {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive"
       style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error === 'profile_retry_required' ? t.profileRetry : error === 'context_waiting_partner' ? t.waitingNotice : error === 'waiting_retry_required' ? t.waitingRetry : error}</Text> : null}
     {phase === 'blocked' && (error === 'context_unmapped' || error === 'profile_retry_required')
       && <Action label={error === 'context_unmapped' ? t.createProfile : t.retryProfile} onPress={onCreateProfile} />}
     {phase === 'blocked' && (error === 'context_no_active_pair' || error === 'waiting_retry_required')
-      && <Action label={error === 'context_no_active_pair' ? t.createWaiting : t.retryWaiting} onPress={onCreateWaitingSpace} />}
+      && <Action label={error === 'context_no_active_pair' ? t.createWaiting : t.retryWaiting} disabled={invitationBusy} onPress={onCreateWaitingSpace} />}
+    {invitationVisible && <InvitationPanel {...invitations} locale={locale} />}
     {/* Remounting on each phase change clears the password before the next paint. */}
-    {phase === 'blocked' && error === 'context_waiting_partner' ? <View style={styles.card}>
-      <Action label={t.refresh} onPress={onRefresh} />
+    {phase === 'blocked' && (error === 'context_waiting_partner' || invitationVisible) ? <View style={styles.card}>
+      <Action label={t.refresh} disabled={invitationBusy} onPress={onRefresh} />
       <Action label={t.signOut} onPress={onSignOut} />
     </View> : phase !== 'signed_in' ? <Login key={phase} locale={locale} phase={phase}
       email={email} onEmail={setEmail} onSignIn={onSignIn} onSignOut={onSignOut} /> : <>

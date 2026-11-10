@@ -1,0 +1,33 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/mobile@0.1.0 export
+> expo export --platform ios --platform android --output-dir dist-auth-import
+
+Expo Autolinking module resolution enabled
+Starting Metro Bundler
+
+| (node:27) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:27) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:27) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:27) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:27) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:27) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+iOS Bundled 6159ms auth-import-verification.ts (605 modules)
+Android Bundled 11074ms auth-import-verification.ts (700 modules)
+
+› ios bundles (1):
+_expo/static/js/ios/auth-import-verification-e4c911eb992ed729279a0018b4b6228c.hbc (1.9MB)
+
+› android bundles (1):
+_expo/static/js/android/auth-import-verification-a76ab7a92f1e9b8a04321f9a7638bf4a.hbc (1.9MB)
+
+› Files (1):
+metadata.json (282B)
+
+Exported: dist-auth-import

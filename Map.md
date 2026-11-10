@@ -64,3 +64,10 @@ See `docs/SUBSCRIPTION_DOMAIN.md`; no purchases, provider integration or UI wiri
 ## Kimi styling alignment
 See [KIMI_DESIGN_ALIGNMENT](docs/KIMI_DESIGN_ALIGNMENT.md): bounded mobile palette/typography/navigation styling.
 Device visual acceptance remains open; no backend features added.
+
+## Мобильные синтетические приглашения
+`apps/mobile/src/auth/InvitationPanel.tsx`, `invitations-controller.ts` и `invitations.ts`:
+явный выпуск/метаданные/условный отзыв; ручной токен, предпросмотр и отдельное согласие.
+Контракт: [PAIR_INVITATIONS](apps/mobile/PAIR_INVITATIONS.md).
+Реальный loopback/PG harness: `services/api/tests/postgres/mobile-invitations.integration.mjs`.
+Доказательства: `apps/mobile/evidence/invitations/`; независимая приёмка ожидается.

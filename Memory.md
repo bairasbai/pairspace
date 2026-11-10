@@ -122,3 +122,11 @@ Acceptance awaits independent review; no publication or deployment in this chang
 ## Kimi styling alignment
 See [KIMI_DESIGN_ALIGNMENT](docs/KIMI_DESIGN_ALIGNMENT.md): bounded mobile palette/typography/navigation styling.
 Device visual acceptance remains open; no backend features added.
+
+## 2026-11-10 — мобильные синтетические приглашения, приёмка ожидается
+Поверх API 0814b0f реализован opt-in UI владельца и получателя, RAM-only токены,
+точный retry принятия после lost ACK и очистка при смене сеанса/контекста.
+Kimi/default network-off сохранены. Внешней доставки, clipboard API, production и native
+приёмки нет. Токен владельца не выделяется для копирования системным меню.
+Контракт и ограничения: apps/mobile/PAIR_INVITATIONS.md; результаты: evidence/invitations/.
+Не считать выполнением production onboarding или независимой приёмкой.

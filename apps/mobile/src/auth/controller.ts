@@ -2,7 +2,8 @@ import { createQueue, enqueue, retry } from '../chat/queue';
 import { createChatTransport, type ChatMessage, type TransportSession } from '../chat/transport';
 import type { QueueState } from '../chat/types';
 import { validateSyntheticConfig, type SyntheticConfig } from './config';
-import { readSessionContext } from './context';
+import { readSessionContext, type SessionContext } from './context';
+import { createInvitationController } from './invitations-controller';
 import { provisionProfile } from './profile';
 import { requestWaitingSpace } from './waiting';
 import type { AuthIdentity, SessionClient } from './official-client';
@@ -23,6 +24,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   let discoverySequence = 0;
   let authIdentity: AuthIdentity | null = null;
   let waitingUserId: string | null = null;
+  let verifiedContext: SessionContext | null = null;
   let session: TransportSession | null = null;
   let queue: QueueState | null = null;
   let abort = new AbortController();
@@ -33,6 +35,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
   const invalidate = () => {
     generation++; abort.abort(); abort = new AbortController();
+    verifiedContext = null; invitationController.reset();
     session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending.clear();
     publish({ ...empty, phase: 'busy' });
     return generation;
@@ -41,6 +44,11 @@ export function createSessionController(config: SyntheticConfig, client: Session
     authTail = authTail.then(action).catch(() => publish({ ...empty, phase: 'blocked', error: 'auth_failed' }));
     return authTail;
   };
+  const invitationController = createInvitationController(contextConfig, {
+    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
+    getCookie: () => client.getCookie(), block, refresh,
+  }, boundedRequest, commandId);
+  const invitations = invitationController.actions;
   const transport = createChatTransport({
     baseUrl: contextConfig.baseURL, allowHttpLoopbackForTests: true, cookieOrigin: contextConfig.baseURL,
     getCredentialGeneration: () => generation,
@@ -55,11 +63,15 @@ export function createSessionController(config: SyntheticConfig, client: Session
     const lifecycle = abort.signal;
     const cancel = () => controller.abort();
     lifecycle.addEventListener('abort', cancel, { once: true });
+    input.signal.addEventListener('abort', cancel, { once: true });
     const timer = setTimeout(cancel, 10000);
     try {
-      if (lifecycle.aborted) controller.abort();
+      if (lifecycle.aborted || input.signal.aborted) controller.abort();
       return await request(new Request(input, { signal: controller.signal }));
-    } finally { clearTimeout(timer); lifecycle.removeEventListener('abort', cancel); }
+    } finally {
+      clearTimeout(timer); lifecycle.removeEventListener('abort', cancel);
+      input.signal.removeEventListener('abort', cancel);
+    }
   }
   async function discover(): Promise<{ credential: TransportSession; changed: boolean } | null> {
     const expected = authIdentity;
@@ -80,6 +92,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
       if (value.state !== 'ready') {
         block('context_' + value.state);
         authIdentity = expected;
+        verifiedContext = value; invitationController.sync();
         if (value.state === 'no_active_pair') waitingUserId = value.userId;
         return null;
       }
@@ -93,6 +106,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
         session = { scope, token: '', credentialGeneration: generation, credentialKind: 'cookie' };
         publish({ ...empty, phase: 'signed_in' });
       }
+      verifiedContext = value; invitationController.sync();
       return { credential: { ...session, token: cookie }, changed };
     } catch {
       if (current === generation && sequence === discoverySequence) block('transport_error');
@@ -125,6 +139,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
     } catch { if (current === generation && sequence === refreshSequence) publish({ ...view, error: 'transport_error' }); }
   }
   return {
+    invitations,
     getSnapshot: () => view,
     subscribe(notify: () => void) { listeners.add(notify); return () => { listeners.delete(notify); }; },
     setDraft(draft: string) { if (view.phase === 'signed_in') publish({ ...view, draft }); },
@@ -180,7 +195,8 @@ export function createSessionController(config: SyntheticConfig, client: Session
       }
     },
     async createWaitingSpace() {
-      if (view.phase !== 'blocked' || !['context_no_active_pair', 'waiting_retry_required'].includes(view.error ?? '')
+      if (invitations.getSnapshot().busy || invitations.getSnapshot().recovery === 'accept_uncertain'
+        || view.phase !== 'blocked' || !['context_no_active_pair', 'waiting_retry_required'].includes(view.error ?? '')
         || !authIdentity || !waitingUserId) return;
       const expected = authIdentity; const expectedUserId = waitingUserId;
       const current = invalidate(); authIdentity = expected; waitingUserId = expectedUserId;

@@ -1,0 +1,113 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 verify:postgres
+> bash scripts/run-postgres.sh
+
+Verified 14 package-local runtime symlinks
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test:postgres
+> node --test --test-concurrency=1 --test-timeout=30000 tests/postgres/*.integration.mjs
+
+✔ invitation expiry after real couple and invitation lock waits prevents activation using fresh database time (1435.811955ms)
+✔ session expiry after real couple and invitation lock waits prevents activation using fresh database time (1370.739215ms)
+✔ acceptance rechecks owner deleted committed during observed lock wait and grants nothing (334.1325ms)
+✔ acceptance rechecks recipient deleted committed during observed lock wait and grants nothing (281.361166ms)
+✔ acceptance rechecks owner provider removed committed during observed lock wait and grants nothing (268.242014ms)
+✔ acceptance rechecks recipient signed out committed during observed lock wait and grants nothing (274.31697ms)
+✔ acceptance rechecks owner mapping replaced committed during observed lock wait and grants nothing (352.438892ms)
+✔ acceptance rechecks recipient mapping replaced committed during observed lock wait and grants nothing (287.986623ms)
+✔ acceptance rechecks owner membership revoked committed during observed lock wait and grants nothing (275.147085ms)
+✔ acceptance rechecks owner slot changed committed during observed lock wait and grants nothing (275.260997ms)
+✔ each acceptance write rolls back the entire transaction on PostgreSQL failure and returns only a redacted error (286.732068ms)
+✔ serialized acceptance: two recipients never grants a third membership or increments epoch twice (481.248491ms)
+✔ serialized acceptance: same recipient sessions never grants a third membership or increments epoch twice (373.062915ms)
+✔ serialized acceptance: same recipient different couples never grants a third membership or increments epoch twice (377.998108ms)
+✔ accept versus owner revoke follows observed PostgreSQL lock order in both directions (573.711889ms)
+✔ both lexical UUID orders lock both domain users before any provider, session, mapping or couple lock (494.997402ms)
+✔ opposing invitation choices share UUID lock order and terminate without deadlock or membership bypass (294.200615ms)
+✔ official signup → explicit profiles → waiting → preview → accept → epoch-2 contexts and real chat (641.441948ms)
+✔ acceptance is independently disabled and strict JSON-only HTTP rejects spoofing without consuming (370.42133ms)
+✔ self-join, an own waiting space or an active pair cannot grant another membership (374.922154ms)
+✔ lost accepted HTTP acknowledgement and expired consumed token replay are idempotent, but closed/deleted pairs never resurrect (376.626766ms)
+✔ issuer logout alone preserves a valid invitation; a recipient never needs the issuer login session (290.721444ms)
+✔ official client → real loopback composed app → auth → PRODUCT chat → revoke denial on real PG (588.143398ms)
+✔ composed HTTP perimeter rejects CSRF origins, missing origin, oversized and invalid requests (85.287076ms)
+✔ composed HTTP redacts auth/database failures and product outbox transaction remains atomic (347.831111ms)
+✔ stalled HTTP upload is bounded and does not prevent a later healthy request (1079.702008ms)
+✔ explicitly disabled email/password configuration cannot create accounts (72.644972ms)
+✔ expired metadata and same-command replay reveal no secret, and only a new command replaces atomically (309.296865ms)
+✔ invitation expiry and replacement TTL use the database clock after contended couple and invitation locks (1189.977063ms)
+✔ real PostgreSQL constraints reserve one open slot even when expired and reject invalid or duplicate invitation data (249.096996ms)
+✔ distinct official sessions serialize same and different invitation commands on the domain user (777.105246ms)
+✔ concurrent targeted revocations acknowledge exactly one mutation and never touch a replacement (299.997504ms)
+✔ issue versus revoke follows observed lock order: revoke-first permits replacement and issue-first conflicts (582.953895ms)
+✔ official sign-out committed before invitation authority locks denies read, issue and revoke without mutation (594.158328ms)
+✔ issuance and revocation holding authoritative session lock finish before waiting official sign-out (372.02705ms)
+✔ authoritative session expiry during invitation lock waits denies metadata, issuance and revocation (1730.049973ms)
+✔ couple closure and membership revocation committed during a lock wait cannot mint into stale waiting state (169.122998ms)
+✔ invitation routes are independently default-off and never provision a profile or waiting space (619.348567ms)
+✔ official auth to profile to waiting to issue/replay/revoke stores a hash only and never grants chat authority (375.121415ms)
+✔ lost committed issuance acknowledgement never recovers the secret; metadata, targeted revoke and a fresh command recover safely (221.435912ms)
+✔ two waiting pairs cannot read or revoke each other, spoof caller IDs, or reuse malformed requests to write (391.269686ms)
+✔ active, closed, malformed and deleted-owner spaces fail closed without minting or revoking invitations (283.329219ms)
+✔ failed replacement INSERT rolls back expired-row revocation and exposes no SQL details (194.976714ms)
+(node:982) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-mobile-invitations-product/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-mobile-invitations-product/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ mobile session controller cookie transport → composed HTTP → real PostgreSQL; replay, revoke and isolation (822.650883ms)
+✔ explicit mobile profile action creates server identity once without fixture mapping or pair creation (384.956084ms)
+✔ explicit mobile waiting-space action reserves one own space but never authorizes chat or invites (416.585987ms)
+(node:1003) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-mobile-invitations-product/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-mobile-invitations-product/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ actual mobile controllers: explicit profile → own waiting → invitation consent → two contexts at epoch 2 → chat (1022.103832ms)
+✔ mobile lost issue/revoke acknowledgements: metadata recovery and stale targeted revoke preserve a replacement (586.986425ms)
+✔ mobile lost accept acknowledgement retries exact approved token directly and recovers context without another preview (519.423039ms)
+✔ mobile logout invalidates pending real issue, preview and accepted responses without claiming committed SQL was undone (896.974029ms)
+✔ PRODUCT handler and use cases persist chat/idempotency/history/close/outbox with Better Auth only (318.322522ms)
+✔ completed official revoke blocks PRODUCT send/history/close with previously verified principal (293.565925ms)
+✔ PRODUCT transaction holds authoritative provider session lock while official revocation waits (321.161852ms)
+✔ PRODUCT row expiry, user deletion, identity remap and mixed authority fail closed (213.714902ms)
+✔ PRODUCT outbox failure rolls back message and sequence under Better Auth authority (208.216477ms)
+✔ profile endpoint defaults disabled; explicit synthetic opt-in creates exactly one own profile with no pair access (507.965742ms)
+✔ profile HTTP rejects identity selectors, unknown fields, malformed input, origins and unauthenticated clients without writes (180.695586ms)
+✔ simultaneous profile requests from distinct sessions serialize on provider user and retry with domain-first lock order (257.95519ms)
+✔ lost real HTTP acknowledgement after COMMIT is safely retried without orphan or duplicate profile (156.879512ms)
+✔ revocation completed while profile waits for provider-user lock denies all domain writes (178.975934ms)
+✔ profile-first session lock makes official revocation wait; revoked retry cannot create another profile (164.595929ms)
+✔ deleted domain profiles remain unavailable and never get resurrected or reassigned across accounts (166.019379ms)
+✔ observed mapping removal or unsupported reassignment fails closed without overwriting any identity (304.58132ms)
+✔ mapping-insert failure rolls back the new domain row and a later retry creates one complete profile (157.277739ms)
+✔ authoritative expiry is checked again after a real mapping-row lock wait (1258.970239ms)
+✔ context discovers only server-owned unmapped/no-pair/ready states and refreshes pair/epoch (454.812965ms)
+✔ context HTTP rejects forged selectors, missing cookie, bearer credentials, origins and non-GET writes (176.048008ms)
+✔ context denies revoked/expired/provider-deleted and domain-deleted identities and redacts SQL failure (216.93785ms)
+✔ official revocation between provider verification and context transaction fails closed on real PG (161.383999ms)
+✔ context transaction holds provider session lock while official revocation waits (167.471076ms)
+✔ context detects an unsupported mapping remap between discovery and authoritative lock (160.783553ms)
+✔ context snapshots recheck authoritative expiry after mapping and waiting-couple row lock waits (2551.51799ms)
+✔ distinct sessions simultaneously creating a waiting space serialize on the domain user, not session identity (342.99727ms)
+✔ a real lost HTTP acknowledgement after COMMIT retries idempotently with no orphan or duplicate waiting space (189.667459ms)
+✔ official revocation completed while creation waits for its domain-user lock prevents both inserts (175.464807ms)
+✔ creation holds authoritative session lock before official revocation; revoked retry cannot create again (190.321941ms)
+✔ waiting creation and idempotent retry recheck authoritative expiry after real mapping/couple lock waits (2531.634211ms)
+✔ observed mapping removal or reassignment fails closed without creating a space for either identity (325.110562ms)
+✔ domain deletion and waiting membership revocation during lock waits do not resurrect or replace state (330.318333ms)
+✔ waiting creation is explicit, independently gated and never provisions a missing profile (591.600108ms)
+✔ two accounts create isolated own waiting spaces and context snapshots without chat authority (348.071139ms)
+✔ waiting HTTP rejects caller IDs, malformed bodies, wrong methods/origins and unauthenticated requests without writes (177.139197ms)
+✔ an active pair or closed live membership cannot be bypassed by creating another space (199.744465ms)
+✔ malformed waiting membership fails closed, and deleted profiles are never resurrected (292.633271ms)
+✔ failed member insert rolls back its waiting couple and retry creates exactly one complete space (177.098377ms)
+ℹ tests 85
+ℹ suites 0
+ℹ pass 85
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 45526.523855
