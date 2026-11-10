@@ -1,3 +1,4 @@
+import type { HistoryView } from '../chat/history';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, radii, spacing, typography } from '../theme';
@@ -6,6 +7,8 @@ import { InvitationPanel, type InvitationPanelProps } from './InvitationPanel';
 export type SyntheticChatPanelProps = {
   locale: 'ru' | 'en';
   phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
+  history?: HistoryView;
+  onLoadOlder?: () => void;
   outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent' }>;
   error: string | null;
   draft: string;
@@ -46,6 +49,13 @@ const copy = {
     retrySignOut: 'Повторить выход',
     cancel: 'Отменить и выйти',
     history: 'Тестовые сообщения',
+    older: 'Загрузить предыдущие сообщения',
+    olderRetry: 'Повторить загрузку истории',
+    historyLoading: 'История загружается…',
+    historyError: 'Не удалось загрузить историю. Можно повторить запрос.',
+    historyEnd: 'Начало истории.',
+    historyCap: 'Показано не более 200 сообщений. Обновите историю, чтобы вернуться к последним.',
+    historyWindow: 'После обновления показаны только последние 50 сообщений. Предыдущие можно загрузить снова.',
     empty: 'Тестовых сообщений пока нет.',
     sender: 'Тестовый отправитель',
     draft: 'Тестовое сообщение',
@@ -82,6 +92,13 @@ const copy = {
     retrySignOut: 'Retry sign-out',
     cancel: 'Cancel and sign out',
     history: 'Test messages',
+    older: 'Load older messages',
+    olderRetry: 'Retry loading history',
+    historyLoading: 'Loading history…',
+    historyError: 'Could not load history. You can retry.',
+    historyEnd: 'Beginning of history.',
+    historyCap: 'Up to 200 messages shown. Refresh history to return to the latest messages.',
+    historyWindow: 'Refreshing shows only the latest 50 messages. You can load older messages again.',
     empty: 'No test messages yet.',
     sender: 'Test sender',
     draft: 'Test message',
@@ -144,7 +161,7 @@ function Login({ locale, phase, email, onEmail, onSignIn, onSignOut }: LoginProp
 
 /** Controlled synthetic-only UI. The parent owns requests, session and message state. */
 export function SyntheticChatPanel({
-  locale, phase, error, draft, messages, outgoing, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
+  locale, phase, error, draft, messages, outgoing, history, onLoadOlder, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
 }: SyntheticChatPanelProps) {
   const t = copy[locale];
   const [email, setEmail] = useState('');
@@ -173,6 +190,16 @@ export function SyntheticChatPanel({
       email={email} onEmail={setEmail} onSignIn={onSignIn} onSignOut={onSignOut} /> : <>
       <View style={styles.card}>
         <Text accessibilityRole="header" style={styles.heading}>{t.history}</Text>
+        {history && <View>
+          {history.windowReset && <Text>{t.historyWindow}</Text>}
+          {history.status === 'loading' && <Text accessibilityLiveRegion="polite">{t.historyLoading}</Text>}
+          {history.status === 'error' && <Text accessibilityRole="alert">{t.historyError}</Text>}
+          {history.status === 'ready' && history.nextBeforeSeq === null && <Text>{t.historyEnd}</Text>}
+          {history.nextBeforeSeq !== null && messages.length >= 200 && <Text>{t.historyCap}</Text>}
+          {history.nextBeforeSeq !== null && messages.length < 200 && onLoadOlder &&
+            <Action label={history.status === 'error' ? t.olderRetry : t.older}
+              disabled={history.status === 'loading'} onPress={onLoadOlder} />}
+        </View>}
         {messages.length === 0 ? <Text style={styles.body}>{t.empty}</Text> : messages.map(message =>
           <View key={message.id} style={styles.message}>
             <Text style={styles.sender}>{t.sender}: {message.senderId}</Text>

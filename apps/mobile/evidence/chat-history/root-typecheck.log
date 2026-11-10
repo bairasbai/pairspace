@@ -1,0 +1,6 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> pairspace@0.1.0 typecheck
+> tsc --noEmit
+
+sh: 1: tsc: not found

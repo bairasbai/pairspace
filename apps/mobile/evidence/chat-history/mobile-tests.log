@@ -1,0 +1,52 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/mobile@0.1.0 test
+> cd ../.. && node apps/mobile/node_modules/jest/bin/jest.js --config apps/mobile/jest.config.cjs --runInBand --coverage --silent
+
+------------------------------|---------|----------|---------|---------|-------------------
+File                          | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+------------------------------|---------|----------|---------|---------|-------------------
+All files                     |   97.55 |    97.43 |   98.28 |   98.11 |
+ apps/mobile                  |     100 |     87.5 |     100 |     100 |
+  App.tsx                     |     100 |     87.5 |     100 |     100 | 13
+  index.ts                    |     100 |      100 |     100 |     100 |
+ apps/mobile/src              |     100 |      100 |     100 |     100 |
+  HeartButton.tsx             |     100 |      100 |     100 |     100 |
+  Navigation.tsx              |     100 |      100 |     100 |     100 |
+  PreviewScreen.tsx           |     100 |      100 |     100 |     100 |
+  Showcase.tsx                |     100 |      100 |     100 |     100 |
+  copy.ts                     |     100 |      100 |     100 |     100 |
+  showcaseCopy.ts             |     100 |      100 |     100 |     100 |
+  theme.ts                    |     100 |      100 |     100 |     100 |
+  useReducedMotion.ts         |     100 |      100 |     100 |     100 |
+ apps/mobile/src/auth         |   99.32 |    98.78 |     100 |   99.81 |
+  InvitationPanel.tsx         |     100 |      100 |     100 |     100 |
+  SyntheticChatConnected.tsx  |     100 |      100 |     100 |     100 |
+  SyntheticChatPanel.tsx      |     100 |      100 |     100 |     100 |
+  config.ts                   |     100 |      100 |     100 |     100 |
+  context.ts                  |     100 |      100 |     100 |     100 |
+  controller.ts               |   98.51 |    96.12 |     100 |   99.56 | 126
+  invitations-controller.ts   |     100 |      100 |     100 |     100 |
+  invitations.ts              |     100 |      100 |     100 |     100 |
+  official-client.ts          |     100 |      100 |     100 |     100 |
+  profile.ts                  |     100 |      100 |     100 |     100 |
+  runtime.ts                  |     100 |      100 |     100 |     100 |
+  waiting.ts                  |     100 |      100 |     100 |     100 |
+ apps/mobile/src/chat         |     100 |    99.53 |     100 |     100 |
+  draftContract.ts            |     100 |      100 |     100 |     100 |
+  history.ts                  |     100 |      100 |     100 |     100 |
+  queue.ts                    |     100 |      100 |     100 |     100 |
+  text.ts                     |       0 |        0 |       0 |       0 |
+  transport.ts                |     100 |    98.96 |     100 |     100 | 178,214
+  types.ts                    |       0 |        0 |       0 |       0 |
+ packages/domain/chat         |     100 |      100 |     100 |     100 |
+  text.ts                     |     100 |      100 |     100 |     100 |
+ packages/domain/subscription |       0 |        0 |       0 |       0 |
+  catalog.ts                  |       0 |      100 |     100 |       0 | 2
+  entitlement.ts              |       0 |        0 |       0 |       0 | 27-49
+------------------------------|---------|----------|---------|---------|-------------------
+
+Test Suites: 29 passed, 29 total
+Tests:       950 passed, 950 total
+Snapshots:   0 total
+Time:        5.232 s

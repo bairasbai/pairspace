@@ -117,3 +117,10 @@ and injected-store restart harness implemented. No native adapter or App wiring.
 Next gate: durable logout/revocation/install policy, full controller integration,
 platform failure/size/backup testing and independent acceptance. 8k chat drafts
 are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
+
+## 2026-11-10 — окно старой истории (не принято)
+- [x] Синтетический мобильный RU/EN Load older: cursor, retry, конец, лимит 200.
+- [x] Refresh показывает последние 50 с явным предупреждением о сбросе окна.
+- [x] Unit/renderer сценарии lifecycle, конфликтов и гонок; real PostgreSQL >50 rows.
+- [ ] Независимая проверка точного финального SHA и физические iOS/Android сценарии.
+- Без production rollout, бесконечного архива, удаления, realtime или receipts.

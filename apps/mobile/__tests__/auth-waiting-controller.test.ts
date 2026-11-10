@@ -165,7 +165,7 @@ it.each([unmapped, noPair, waiting, ready])('uses authoritative rediscovery rath
   f.commit(context, ack({ userId: uuid(91), coupleId: uuid(92), membershipEpoch: 9 }));
   await f.controller.createWaitingSpace();
   expect(f.controller.getSnapshot()).toEqual(context.state === 'ready'
-    ? { phase: 'signed_in', error: null, draft: '', messages: [] } : blocked(`context_${context.state}`));
+    ? { phase: 'signed_in', error: null, draft: '', messages: [], history: { status: 'ready', nextBeforeSeq: null, windowReset: true } } : blocked(`context_${context.state}`));
   expect(f.chat).toHaveBeenCalledTimes(context.state === 'ready' ? 1 : 0);
   if (context.state === 'ready') expect(f.chat.mock.calls[0][0].url).toContain(`/couples/${ready.coupleId}/`);
 });
@@ -245,7 +245,7 @@ it.each([waiting, ready, unmapped])('preflight %p skips POST and retains the app
   await f.controller.createWaitingSpace();
   expect(f.create).not.toHaveBeenCalled();
   expect(f.controller.getSnapshot()).toEqual(context.state === 'ready'
-    ? { phase: 'signed_in', error: null, draft: '', messages: [] } : blocked(`context_${context.state}`));
+    ? { phase: 'signed_in', error: null, draft: '', messages: [], history: { status: 'ready', nextBeforeSeq: null, windowReset: true } } : blocked(`context_${context.state}`));
   if (context.state === 'unmapped') {
     f.profile.mockImplementationOnce(async () => { f.setContext(noPair); return json({ ok: true, value: ackValue }); });
     await f.controller.createProfile();
@@ -446,7 +446,7 @@ it('never grants chat access for waiting membership, but can rediscover an indep
   expect(f.profile).not.toHaveBeenCalled();
   f.setContext(ready);
   await f.controller.refresh();
-  expect(f.controller.getSnapshot()).toEqual({ phase: 'signed_in', error: null, draft: '', messages: [] });
+  expect(f.controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [] });
   expect(f.chat).toHaveBeenCalledTimes(1);
   expect(f.chat.mock.calls[0][0].method).toBe('GET');
 });

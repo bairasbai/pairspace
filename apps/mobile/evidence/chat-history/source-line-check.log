@@ -1,0 +1,18 @@
+  94 Map.md
+ 157 Memory.md
+  60 apps/mobile/CHAT_HISTORY.md
+ 129 apps/mobile/__tests__/auth-chat-history.test.ts
+ 565 apps/mobile/__tests__/auth-controller.test.ts
+ 432 apps/mobile/__tests__/auth-profile-controller.test.ts
+ 475 apps/mobile/__tests__/auth-waiting-controller.test.ts
+  45 apps/mobile/__tests__/connected-chat-history.test.tsx
+  53 apps/mobile/__tests__/synthetic-app.test.tsx
+  27 apps/mobile/src/auth/SyntheticChatConnected.tsx
+ 251 apps/mobile/src/auth/SyntheticChatPanel.tsx
+ 331 apps/mobile/src/auth/controller.ts
+  29 apps/mobile/src/chat/history.ts
+ 126 docs/ROADMAP.md
+  81 services/api/src/chat.ts
+ 154 services/api/tests/chat.test.ts
+ 101 services/api/tests/postgres/mobile-chat-history.integration.mjs
+PASS: all changed handwritten source/docs <=600 lines.

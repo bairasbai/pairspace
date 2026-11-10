@@ -58,7 +58,7 @@ export async function readHistory(db: AuthorizedDatabase, principal: Principal, 
     const authorization = await authorize(tx, principal, coupleId, membershipEpoch, false);
     if (authorization) return denied(authorization);
     const result = await tx.query<Row>(`SELECT ${columns} FROM chat_messages WHERE couple_id = $1
-      AND ($2::bigint IS NULL OR seq < $2) ORDER BY seq DESC LIMIT $3`, [coupleId, beforeSeq ?? null, limit + 1]);
+      AND ($2::bigint IS NULL OR seq < $2) ORDER BY chat_messages.seq DESC LIMIT $3`, [coupleId, beforeSeq ?? null, limit + 1]);
     const page = result.rows.slice(0, limit).map(message);
     const nextBeforeSeq = result.rows.length > limit ? page[page.length - 1].seq : null;
     return { ok: true, value: { messages: page.reverse(), nextBeforeSeq } };

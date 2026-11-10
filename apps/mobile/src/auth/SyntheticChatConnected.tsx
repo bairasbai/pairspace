@@ -21,6 +21,7 @@ export function SyntheticChatConnected({ controller, locale }: { controller: Ses
     onSignOut={() => { void controller.signOut(); }} onSend={() => { void controller.send(); }}
     onCreateWaitingSpace={() => { void controller.createWaitingSpace(); }}
     onCreateProfile={() => { void controller.createProfile(); }}
+    onLoadOlder={() => { void controller.loadOlder(); }}
     onRefresh={() => { void controller.refresh(); }} />
   </ScrollView>;
 }

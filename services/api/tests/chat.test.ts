@@ -8,6 +8,30 @@ beforeEach(async () => { pg = await createFixture(); });
 afterEach(async () => { await pg.close(); });
 
 describe('SQL-backed message use cases', () => {
+  it('orders numeric sequences across digit widths with exclusive cursors', async () => {
+    await pg.query(`INSERT INTO chat_messages(couple_id,sender_id,client_message_id,seq,body)
+      SELECT $1,$2,gen_random_uuid(),n,'Synthetic pagination row'
+      FROM generate_series(1,125) n`, [c1, principal.userId]);
+    const db = adapter(pg);
+    const latest = await readHistory(db, principal, history);
+    expect(latest.ok).toBe(true);
+    if (!latest.ok) return;
+    expect(latest.value.messages.map(row => row.seq)).toEqual(
+      Array.from({ length: 50 }, (_, index) => index + 76));
+    expect(latest.value.nextBeforeSeq).toBe(76);
+    const older = await readHistory(db, principal, { ...history, beforeSeq: 76 });
+    expect(older.ok).toBe(true);
+    if (!older.ok) return;
+    expect(older.value.messages.map(row => row.seq)).toEqual(
+      Array.from({ length: 50 }, (_, index) => index + 26));
+    expect(older.value.nextBeforeSeq).toBe(26);
+    const last = await readHistory(db, principal, { ...history, beforeSeq: 26 });
+    expect(last).toMatchObject({ ok: true, value: { nextBeforeSeq: null } });
+    if (!last.ok) return;
+    expect(last.value.messages.map(row => row.seq)).toEqual(
+      Array.from({ length: 25 }, (_, index) => index + 1));
+  });
+
   it('persists canonical message + content-free outbox atomically', async () => {
     const db = adapter(pg);
     const sent = await sendMessage(db, principal, { ...command, body: 'e\u0301\r\nhello' });

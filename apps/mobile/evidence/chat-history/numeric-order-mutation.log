@@ -1,0 +1,112 @@
+
+ RUN  v5.1.0 /workspace/scratch/bb7b759a56b3/pairspace-chat-history
+
+ ❯ services/api/tests/chat.test.ts (12 tests | 1 failed | 11 skipped) 1483ms
+   ❯ SQL-backed message use cases (12)
+     × orders numeric sequences across digit widths and pages exclusively through gaps 1482ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  services/api/tests/chat.test.ts > SQL-backed message use cases > orders numeric sequences across digit widths and pages exclusively through gaps
+AssertionError: expected [ Array(50) ] to deeply equal [ 76, 77, 78, 79, 80, 81, 82, …(43) ]
+
+- Expected
++ Received
+
+  [
++   54,
++   55,
++   56,
++   57,
++   58,
++   59,
++   6,
++   60,
++   61,
++   62,
++   63,
++   64,
++   65,
++   66,
++   67,
++   68,
++   69,
++   7,
++   70,
++   71,
++   72,
++   73,
++   74,
++   75,
+    76,
+    77,
+    78,
+    79,
++   8,
+    80,
+    81,
+    82,
+    83,
+    84,
+    85,
+    86,
+    87,
+    88,
+    89,
++   9,
+    90,
+    91,
+    92,
+    93,
+    94,
+    95,
+    96,
+    97,
+    98,
+    99,
+-   100,
+-   101,
+-   102,
+-   103,
+-   104,
+-   105,
+-   106,
+-   107,
+-   108,
+-   109,
+-   110,
+-   111,
+-   112,
+-   113,
+-   114,
+-   115,
+-   116,
+-   117,
+-   118,
+-   119,
+-   120,
+-   121,
+-   122,
+-   123,
+-   124,
+-   125,
+  ]
+
+ ❯ services/api/tests/chat.test.ts:19:55
+     17|     expect(latest.ok).toBe(true);
+     18|     if (!latest.ok) return;
+     19|     expect(latest.value.messages.map(row => row.seq)).toEqual(
+       |                                                       ^
+     20|       Array.from({ length: 50 }, (_, index) => index + 76));
+     21|     expect(latest.value.nextBeforeSeq).toBe(76);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  14:47:19
+   Duration  1.69s (tests 95%, transform 3%, import 2%)
+
+
+Mutation run exit code: 1 (expected nonzero)

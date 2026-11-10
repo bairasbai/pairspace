@@ -1,3 +1,4 @@
+import { mergeHistory, type HistoryView } from '../chat/history';
 import { createQueue, enqueue, retry } from '../chat/queue';
 import { createChatTransport, type ChatMessage, type TransportSession } from '../chat/transport';
 import type { QueueState } from '../chat/types';
@@ -11,6 +12,7 @@ import type { AuthIdentity, SessionClient } from './official-client';
 export type AuthView = Readonly<{
   phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
   error: string | null; draft: string; messages: readonly ChatMessage[];
+  history?: HistoryView;
   outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent' }>;
 }>;
 const empty: AuthView = { phase: 'signed_out', error: null, draft: '', messages: [] };
@@ -22,6 +24,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   let view = empty;
   let generation = 0;
   let refreshSequence = 0;
+  let historyBusy = false;
   let discoverySequence = 0;
   let authIdentity: AuthIdentity | null = null;
   let waitingUserId: string | null = null;
@@ -36,7 +39,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   const listeners = new Set<() => void>();
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
   const invalidate = () => {
-    generation++; abort.abort(); abort = new AbortController();
+    generation++; historyBusy = false; abort.abort(); abort = new AbortController();
     verifiedContext = null; invitationController.reset();
     session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending = null; draftRevision++;
     publish({ ...empty, phase: 'busy' });
@@ -136,6 +139,8 @@ export function createSessionController(config: SyntheticConfig, client: Session
   async function refresh() {
     let current = generation;
     const sequence = ++refreshSequence;
+    historyBusy = true;
+    if (view.phase === 'signed_in') publish({ ...view, history: { ...view.history, status: 'loading', nextBeforeSeq: view.history?.nextBeforeSeq ?? null } });
     try {
       const discovered = await discover();
       if (!discovered) return;
@@ -146,12 +151,49 @@ export function createSessionController(config: SyntheticConfig, client: Session
         denied(result.error); return;
       }
       if (sequence !== refreshSequence) return;
-      if (result.ok) publish({ ...view, error: null, messages: result.value.messages });
+      if (result.ok) publish({ ...view, error: null, messages: result.value.messages,
+        history: { status: 'ready', nextBeforeSeq: result.value.nextBeforeSeq, windowReset: true } });
       else denied(result.error);
     } catch { if (current === generation && sequence === refreshSequence) publish({ ...view, error: 'transport_error' }); }
+    finally {
+      if (current === generation && sequence === refreshSequence) {
+        historyBusy = false;
+        if (view.history?.status === 'loading') publish({ ...view, history: { ...view.history, status: 'error' } });
+      }
+    }
+  }
+  async function loadOlder() {
+    const cursor = view.history?.nextBeforeSeq;
+    if (historyBusy || view.phase !== 'signed_in' || cursor == null || view.messages.length >= 200) return;
+    const current = generation;
+    const sequence = ++refreshSequence;
+    historyBusy = true;
+    publish({ ...view, history: { ...view.history, nextBeforeSeq: cursor, status: 'loading' } });
+    try {
+      const discovered = await discover();
+      if (!discovered || current !== generation || sequence !== refreshSequence) return;
+      const result = await transport.history(discovered.credential, { limit: Math.min(50, 200 - view.messages.length), beforeSeq: cursor });
+      if (current !== generation) return;
+      if (!result.ok && (result.error === 'auth_required' || result.error === 'access_required')) {
+        denied(result.error); return;
+      }
+      if (sequence !== refreshSequence) return;
+      if (!result.ok) { denied(result.error); return; }
+      const messages = mergeHistory(view.messages, result.value.messages);
+      if (!messages) { denied('invalid_response'); return; }
+      publish({ ...view, error: null, messages,
+        history: { ...view.history, status: 'ready', nextBeforeSeq: result.value.nextBeforeSeq } });
+    } catch { if (current === generation && sequence === refreshSequence) publish({ ...view, error: 'transport_error' }); }
+    finally {
+      if (current === generation && sequence === refreshSequence) {
+        historyBusy = false;
+        if (view.history?.status === 'loading') publish({ ...view, history: { ...view.history, status: 'error' } });
+      }
+    }
   }
   return {
     invitations,
+    loadOlder,
     getSnapshot: () => view,
     subscribe(notify: () => void) { listeners.add(notify); return () => { listeners.delete(notify); }; },
     setDraft(draft: string) {

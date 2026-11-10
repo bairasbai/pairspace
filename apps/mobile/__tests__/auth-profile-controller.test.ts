@@ -117,7 +117,7 @@ it('loads chat only after successful creation and an independently verified read
   setPostContext(ready);
   await controller.createProfile();
   expect(profile).toHaveBeenCalledTimes(1);
-  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error: null, draft: '', messages: [message] });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [message] });
   expect(chat).toHaveBeenCalledTimes(1);
   await controller.createProfile();
   expect(profile).toHaveBeenCalledTimes(1);

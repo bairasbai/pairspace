@@ -84,7 +84,7 @@ it('cleans old credentials, discovers the verified identity context, and sends c
   expect(client.signOut).toHaveBeenCalledTimes(1);
   expect(client.signIn).toHaveBeenCalledWith('fixture@example.test', 'synthetic-password');
   expect(client.signOut.mock.invocationCallOrder[0]).toBeLessThan(client.signIn.mock.invocationCallOrder[0]);
-  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error: null, draft: '', messages: [message] });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [message] });
   const input = request.mock.calls[0][0];
   expect(input.url).toBe(`${config.baseURL}/v1/couples/${uuid(2)}/chat/messages?membership_epoch=1&limit=50`);
   expect(input.method).toBe('GET');
@@ -235,7 +235,7 @@ it('isolates history, drafts and request scope between accounts and relogins', a
   } }));
   request.mockResolvedValueOnce(page([messageB]));
   await login();
-  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error: null, draft: '', messages: [messageB] });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [messageB] });
   const input = request.mock.calls[1][0];
   expect(input.url).toBe(`${config.baseURL}/v1/couples/${uuid(12)}/chat/messages?membership_epoch=2&limit=50`);
   expect(input.headers.get('cookie')).toContain('synthetic-cookie-b');
@@ -379,7 +379,7 @@ it('clears an unchanged draft only after ACK and then refreshes server history',
   controller.setDraft('hello');
   request.mockResolvedValueOnce(ack('hello')).mockResolvedValueOnce(page([{ ...message, body: 'hello' }]));
   await controller.send();
-  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error: null, draft: '', messages: [{ ...message, body: 'hello' }], outgoing: { body: 'hello', status: 'sent' } });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [{ ...message, body: 'hello' }], outgoing: { body: 'hello', status: 'sent' } });
 });
 it.each([400, 429, 503, 'lost-ack'] as const)('retries %s using the same command and body without duplicating a committed message', async failure => {
   const { controller, request, commandId, login } = setup();
@@ -469,7 +469,7 @@ it.each([[400, 'rejected'], [429, 'rate_limited'], [503, 'transport_error']] as 
   controller.setDraft('hello');
   request.mockResolvedValueOnce(envelope({ private: 'server detail' }, status));
   await controller.send();
-  expect(controller.getSnapshot()).toEqual({ phase: 'signed_in', error, draft: 'hello', messages: [message], outgoing: { body: 'hello', status: 'retry' } });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error, draft: 'hello', messages: [message], outgoing: { body: 'hello', status: 'retry' } });
   expect(request).toHaveBeenCalledTimes(2);
 });
 it('reports invalid history responses without replacing the last verified history', async () => {

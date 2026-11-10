@@ -85,3 +85,10 @@ Device visual acceptance remains open; no backend features added.
 - `apps/mobile/src/chat/DRAFT_CONTRACT.md`: binding, deletion/send ordering and native blockers.
 - `apps/mobile/__tests__/draft-contract.test.ts`: failure/race/restart harness with real send adapter.
 - `apps/mobile/evidence/draft-contract/`: local verification; independent acceptance separate.
+
+## 2026-11-10 — ограниченное окно истории чата
+- apps/mobile/src/chat/history.ts: bounded union, дедупликация и отказ при конфликте.
+- apps/mobile/src/auth/controller.ts: loadOlder, свежий контекст, cursor и latest-50 reset.
+- apps/mobile/CHAT_HISTORY.md: RU/EN путь, лимит 200, гонки и ограничения проверки.
+- services/api/tests/postgres/mobile-chat-history.integration.mjs: >50 сообщений,
+  разреженные seq, две пары, права и настоящий PostgreSQL.

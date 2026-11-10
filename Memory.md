@@ -146,3 +146,12 @@ serialized purge and terminal consume-before-send tested with injected storage.
 Unknown ACK restart harness uses real queue/transport and never creates a new send.
 Do not ship before durable logout/install policy, native/device checks and controller
 integration. Real application drafts remain in memory. See chat/DRAFT_CONTRACT.md.
+
+## 2026-11-10 — старые сообщения в синтетическом чате
+Добавлен явный RU/EN Load older с загрузкой/ошибкой/retry/началом истории и лимитом
+200 сообщений. Каждый запрос повторно проверяет cookie/session/account/pair/epoch.
+Refresh намеренно сбрасывает окно к последним 50 и сообщает об этом, чтобы не скрыть
+разрыв при появлении >50 новых сообщений. Черновик и unresolved outgoing сохранены.
+Реальный PostgreSQL выявил сортировку seq::text по alias; исправлена сортировка
+по числовому chat_messages.seq. Доказательства и ограничения: apps/mobile/CHAT_HISTORY.md и evidence/chat-history.
+Статус: локально реализовано, независимая приёмка ожидается; native не проверен.
