@@ -28,7 +28,7 @@ export async function createFixture() {
       logger: { level: 'error' },
     };
     await (await getMigrations(options)).runMigrations();
-    for (const name of ['001_chat.sql', '002_auth.sql', '003_better_auth_identity.sql', '004_pair_invites.sql', '005_care_signals.sql', '006_letters.sql', '007_scheduled_letters.sql', '008_pair_leave.sql']) {
+    for (const name of ['001_chat.sql', '002_auth.sql', '003_better_auth_identity.sql', '004_pair_invites.sql', '005_care_signals.sql', '006_letters.sql', '007_scheduled_letters.sql', '008_pair_leave.sql', '009_shared_tasks.sql']) {
       await domainPool.query(await readFile(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
     }
     const auth = betterAuth(options);

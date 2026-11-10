@@ -124,3 +124,11 @@ Device visual acceptance remains open; no backend features added.
 - `services/api/migrations/008_pair_leave.sql`: receipt и отложенный запрет активных членств закрытой пары.
 - `apps/mobile/src/auth/leave.ts`, `LeavePanel.tsx`: RU/EN подтверждение, scrub, pending/retry/closed.
 - `docs/PAIR_LEAVE_EVIDENCE.md`: проверки, ограничения, synthetic-решения против открытых owner ADR.
+
+## Общие задачи активной synthetic-пары
+- `packages/domain/tasks/title.ts`: независимая нормализация ограниченного заголовка.
+- `services/api/src/shared-tasks.ts`, `shared-tasks-http.ts`: create/list/complete/reopen,
+  optimistic version и immutable receipt; миграция `009_shared_tasks.sql`.
+- `apps/mobile/src/auth/tasks.ts`, `TasksPanel.tsx`: общий connected controller,
+  RAM-черновик, неизменяемый retry, RU/EN и явное обновление при конфликте.
+- `docs/SHARED_TASKS_EVIDENCE.md`: проверки и открытые gates.

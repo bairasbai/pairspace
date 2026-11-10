@@ -268,3 +268,15 @@ it('pair leave is independently opt-in, loopback-only, origin/body bounded and P
   expect((await app.handle(req('POST', 'x'.repeat(17)))).status).toBe(413);
   expect((await app.handle(req('POST', '{}'))).status).toBe(401);
 });
+
+it('shared tasks are independently loopback-only and default disabled with bounded origin-checked mutations', async () => {
+  const path = '/v1/couples/00000000-0000-4000-8000-000000000001/tasks';
+  for (const flag of [undefined, false]) expect((await createApiApplication({ ...config(), enableSyntheticSharedTasks: flag }).handle(request(path))).status).toBe(404);
+  for (const flag of [true, 'true', null]) expect(() => createApiApplication({ ...config(), enableSyntheticSharedTasks: flag } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin = 'http://127.0.0.1:1234';
+  const app = createApiApplication({ ...config(), baseURL: origin, trustedOrigins: [origin], enableSyntheticSharedTasks: true });
+  expect((await app.handle(new Request(origin + path + '?membership_epoch=1', { headers: { origin } }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path + '/00000000-0000-4000-8000-000000000002', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { headers: { origin: 'https://attacker.invalid' } }))).status).toBe(403);
+});

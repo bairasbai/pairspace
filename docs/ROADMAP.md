@@ -169,3 +169,11 @@ are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
   той же команды. Смена аккаунта/пары не превращает старое подтверждение в новое.
 - Waiting-space cancellation, экспорт, production-архив/retention, E2EE, native/device
   QA и внешний пилот не входят в срез. Проверки: [PAIR_LEAVE_EVIDENCE](PAIR_LEAVE_EVIDENCE.md).
+
+## Общие задачи — bounded synthetic-срез
+- Явные create/list/complete/reopen для двух участников текущей активной пары.
+- RAM-черновик, неизменяемые команды, optimistic version и явный refresh конфликтов.
+- Последние 50 задач, детерминированно по созданию; без полного архива и realtime.
+- Не входят: assignee, due date, edit/delete, push, production и политика хранения.
+- Независимая проверка SHA, native iOS/Android, два устройства и E2EE остаются открыты.
+- Доказательства и статус: [SHARED_TASKS_EVIDENCE](SHARED_TASKS_EVIDENCE.md).

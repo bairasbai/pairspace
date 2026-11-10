@@ -1,0 +1,29 @@
+Verified 14 package-local runtime symlinks
+PostgreSQL 18.6 on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 7.5.0-3ubuntu1~18.04) 7.5.0, 64-bit
+(node:116) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///workspace/scratch/bb7b759a56b3/pairspace-shared-tasks/apps/mobile/src/auth/controller.ts is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /workspace/scratch/bb7b759a56b3/pairspace-shared-tasks/apps/mobile/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ real PostgreSQL: shared-task mobile immutable retry, newer replay, conflict and isolation (1373.655152ms)
+✔ shared tasks PostgreSQL: leave first serializes with leave and denies closed resources (777.774151ms)
+✔ shared tasks PostgreSQL: create first serializes with leave and denies closed resources (604.58011ms)
+✔ shared tasks PostgreSQL: change first serializes with leave and denies closed resources (527.798276ms)
+✔ shared tasks PostgreSQL: list first serializes with leave and denies closed resources (586.225719ms)
+✔ shared tasks PostgreSQL: create, exact replay, change and list recheck expired session after pair lock wait (1871.465257ms)
+✔ shared tasks PostgreSQL: old command cannot cross to a new pair; old resource remains isolated (548.570238ms)
+✔ shared tasks PostgreSQL: database rejects one-member active pair; service rejects uncommitted inconsistent membership (511.475753ms)
+✔ shared tasks PostgreSQL: equal timestamp order is stable and backward clock does not regress updatedAt (478.190685ms)
+✔ shared tasks PostgreSQL: both partners create/list/complete/reopen; pair, session and resource isolation (811.320461ms)
+✔ shared tasks PostgreSQL: actual lost ACK retries preserve receipt and return current state after another operation (698.406218ms)
+✔ shared tasks PostgreSQL: concurrent create and optimistic transitions serialize without silent overwrite (723.309134ms)
+✔ shared tasks PostgreSQL: bounded latest fifty are deterministic and omit old epoch tasks (984.501563ms)
+✔ shared tasks PostgreSQL: strict body, title, route and idempotency validation does not persist rejected input (589.965376ms)
+✔ shared tasks PostgreSQL: migration constrains pair FK, titles, versions and immutable receipts; failed receipt is atomic (728.309247ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 13188.973597

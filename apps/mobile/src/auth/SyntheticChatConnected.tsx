@@ -1,3 +1,4 @@
+import { TasksPanel } from './TasksPanel';
 import { LeavePanel } from './LeavePanel';
 import { LettersPanel } from './LettersPanel';
 import { useEffect, useSyncExternalStore } from 'react';
@@ -11,6 +12,8 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const leave = controller.leave;
   const leaveView = useSyncExternalStore(leave.subscribe, leave.getSnapshot);
+  const tasks = controller.tasks;
+  const tasksView = useSyncExternalStore(tasks.subscribe, tasks.getSnapshot);
   const letters = controller.letters;
   const lettersView = useSyncExternalStore(letters.subscribe, letters.getSnapshot);
   const care = controller.care;
@@ -20,6 +23,10 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   useEffect(() => ownsController ? () => controller.dispose() : undefined, [controller, ownsController]);
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16 }}>
     <LeavePanel locale={locale} view={leaveView} onBegin={leave.begin} onCancel={leave.cancel} onConfirm={() => { void leave.confirm(); }} />
+    <TasksPanel locale={locale} view={tasksView} onDraft={tasks.setDraft} onCancel={tasks.cancel}
+      onCreate={() => { void tasks.create(); }} onRetry={() => { void tasks.retry(); }}
+      onList={() => { void tasks.list(); }} onComplete={id => { void tasks.complete(id); }}
+      onReopen={id => { void tasks.reopen(id); }} />
     <LettersPanel locale={locale} view={lettersView} onDraft={letters.setDraft}
       onReleaseAt={letters.setReleaseAt} onReleaseTimezone={letters.setReleaseTimezone}
       onSendLater={() => { void letters.sendLater(); }} onSend={() => { void letters.send(); }} onList={() => { void letters.list(); }}

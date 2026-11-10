@@ -167,3 +167,28 @@ Deferred constraint запрещает active members у closed pair; closed sta
 не меняет. Параллельное подтверждение второго участника получает closed только по
 точным прежним epoch, историческому членству и проверенному уникальному close event.
 Смена командного payload, чужой ID и несогласованное состояние дают generic unavailable.
+
+## Общие synthetic-задачи (009)
+`shared_tasks(id,couple_id,creator_id,membership_epoch,title,state,version,created_at,updated_at)`.
+Два текущих участника могут create/complete/reopen; `state` open/completed, `version`
+растёт ровно на один при смене состояния. Creator/title/identity/scope/created_at
+неизменяемы. Заголовок NFC, trim/collapse whitespace, 1–200 Unicode code points,
+не больше 800 UTF-8 bytes; управляющие/невидимые format/surrogate символы запрещены.
+Составной FK связывает автора с парой. Нет assignee/due/edit/delete в этом срезе.
+
+`shared_task_commands(actor_user_id,command_id,couple_id,membership_epoch,task_id,
+operation,expected_version,title?,applied_version)` имеет PK `(actor_user_id,command_id)`
+и составные FK к историческому членству и задаче той же пары. UPDATE/DELETE receipt
+запрещены. Create хранит нормализованный title, expected=0/applied=1; остальные
+операции фиксируют task/operation/expected/applied=expected+1 без дублирования title.
+Это synthetic дедупликация, не утверждение бессрочного production-хранения.
+
+Авторизация использует порядок блокировок выхода из пары и свежую сессию после
+ожидания; закрытая пара/чужой scope недоступны даже для replay. Новый scope не
+наследует предыдущую команду. Replay подтверждает appliedVersion, но возвращает
+текущее canonical состояние задачи: complete v2 после reopen v3 не откатывает v3.
+Конфликт версии требует явного refresh; попытка изменить receipt отвергается.
+Время ограничено точностью миллисекунд в БД; updated_at не убывает даже при
+обратном ходе wall clock. Это сохраняет единый порядок SQL и мобильного списка.
+Индекс `(couple_id,membership_epoch,created_at DESC,id DESC)` поддерживает окно
+последних 50, одинаковое для обоих участников. Это не архив, retention или purge.

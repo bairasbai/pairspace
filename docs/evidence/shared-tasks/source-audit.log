@@ -1,0 +1,13 @@
+Handwritten files checked: 337; >600 lines: 0
+Named generated exceptions:
+apps/mobile/evidence/chat-history/mobile-coverage.json
+apps/mobile/evidence/mobile-auth/audit.json
+apps/mobile/package-lock.json
+experiments/better-auth-expo/package-lock.json
+experiments/better-auth-http/package-lock.json
+experiments/better-auth-postgres/package-lock.json
+package-lock.json
+services/api/evidence/api-composition/audit.json
+services/api/evidence/auth-authority/audit.json
+services/api/evidence/auth-authority/types-pg-provenance.json
+services/api/package-lock.json

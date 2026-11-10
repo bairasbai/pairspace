@@ -1,3 +1,4 @@
+import { emptyTasks } from '../src/auth/tasks-state';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
@@ -16,6 +17,9 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
   const lettersView = { available: false, busy: false, status: 'idle' as const, draft: '', releaseAtInput: '', releaseTimezoneInput: '', letters: [], opened: null, checked: false, error: false };
   const leaveView = { available: false, status: 'idle' as const };
   const controller: SessionController = {
+    tasks: { getSnapshot: () => emptyTasks, subscribe: () => () => {}, setDraft: jest.fn(), cancel: jest.fn(),
+      create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}),
+      complete: jest.fn(async () => {}), reopen: jest.fn(async () => {}) },
     leave: { getSnapshot: () => leaveView, subscribe: () => () => {}, begin: jest.fn(), cancel: jest.fn(), confirm: jest.fn(async () => {}) },
     letters: { getSnapshot: () => lettersView, subscribe: () => () => {}, setDraft: jest.fn(), setReleaseAt: jest.fn(), setReleaseTimezone: jest.fn(), sendLater: jest.fn(async () => {}), close: jest.fn(),
       send: jest.fn(async () => {}), list: jest.fn(async () => {}), open: jest.fn(async () => {}) },

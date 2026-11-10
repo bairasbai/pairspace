@@ -1,0 +1,9 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.1.0 /workspace/scratch/bb7b759a56b3/pairspace-shared-tasks
+
+
+ Test Files  2 passed (2)
+      Tests  20 passed (20)
+   Start at  16:37:53
+   Duration  2.90s (tests 92%, transform 5%, import 3%)
