@@ -3,8 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { createComposedFixture, client } from './composed-fixture.mjs';
 import { password } from './profile-fixture.mjs';
 
-export async function lettersFixture() {
-  const f = await createComposedFixture({ enableSyntheticLetters: true });
+export async function lettersFixture(options = {}) {
+  const f = await createComposedFixture({ enableSyntheticLetters: true, ...options });
   try {
     const connections = []; const identities = [];
     for (let n = 0; n < 4; n++) {

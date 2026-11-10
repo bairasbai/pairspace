@@ -106,3 +106,10 @@ Independent reviewer audit snapshot on 2026-11-10 reported 11 moderate tooling f
 the author's 10; runtime remained zero. Counts are dynamic registry snapshots, not fixed guarantees.
 
 Synthetic invitation preview/acceptance is independently default-disabled and loopback-only; see [PAIR_ACCEPTANCE.md](PAIR_ACCEPTANCE.md). It reuses existing migrations, with no mobile integration, delivery or production enablement.
+
+Synthetic voluntary active-pair closure is independently disabled by default; enable only
+with `enableSyntheticPairLeave: true` and loopback configuration. Apply migrations through
+`008_pair_leave.sql` transactionally before using the current core, including legacy close.
+The migration adds immutable receipts and closed-pair integrity constraints; it does not
+purge records or settle production archive policy. See
+[PAIR_LEAVE_EVIDENCE](../../docs/PAIR_LEAVE_EVIDENCE.md) for exact HTTP and replay behavior.

@@ -1,3 +1,4 @@
+import { LeavePanel } from './LeavePanel';
 import { LettersPanel } from './LettersPanel';
 import { useEffect, useSyncExternalStore } from 'react';
 import { ScrollView } from 'react-native';
@@ -8,6 +9,8 @@ import type { Locale } from '../copy';
 export type SessionController = ReturnType<typeof createSessionController>;
 export function SyntheticChatConnected({ controller, locale, ownsController = true, showCareSend = true }: { controller: SessionController; locale: Locale; ownsController?: boolean; showCareSend?: boolean }) {
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const leave = controller.leave;
+  const leaveView = useSyncExternalStore(leave.subscribe, leave.getSnapshot);
   const letters = controller.letters;
   const lettersView = useSyncExternalStore(letters.subscribe, letters.getSnapshot);
   const care = controller.care;
@@ -16,6 +19,7 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   const inviteView = useSyncExternalStore(invitations.subscribe, invitations.getSnapshot);
   useEffect(() => ownsController ? () => controller.dispose() : undefined, [controller, ownsController]);
   return <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16 }}>
+    <LeavePanel locale={locale} view={leaveView} onBegin={leave.begin} onCancel={leave.cancel} onConfirm={() => { void leave.confirm(); }} />
     <LettersPanel locale={locale} view={lettersView} onDraft={letters.setDraft}
       onReleaseAt={letters.setReleaseAt} onReleaseTimezone={letters.setReleaseTimezone}
       onSendLater={() => { void letters.sendLater(); }} onSend={() => { void letters.send(); }} onList={() => { void letters.list(); }}

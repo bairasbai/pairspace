@@ -253,3 +253,18 @@ it('mounts letters collection and open only with explicit boolean loopback opt-i
   const app = createApiApplication({ ...config(), baseURL: origin, trustedOrigins: [origin], enableSyntheticLetters: true });
   for (const path of paths) expect((await app.handle(new Request(origin + path + '?membership_epoch=1', { headers: { origin } }))).status).toBe(401);
 });
+
+it('pair leave is independently opt-in, loopback-only, origin/body bounded and POST-only', async () => {
+  const path = '/v1/pair/leave';
+  expect((await createApiApplication(config()).handle(request(path, 'POST', { origin: baseURL, 'content-type': 'application/json' }, '{}'))).status).toBe(404);
+  expect(() => createApiApplication({ ...config(), enableSyntheticPairLeave: true })).toThrow('invalid_api_configuration');
+  expect(() => createApiApplication({ ...config(), enableSyntheticPairLeave: 'true' } as unknown as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const local = 'http://localhost:3210';
+  const app = createApiApplication({ ...config(), baseURL: local, trustedOrigins: [local], enableSyntheticPairLeave: true });
+  const req = (method: string, body?: string, origin = local) => new Request(local + path, { method,
+    headers: { origin, cookie: 'synthetic', 'content-type': 'application/json' }, ...(body === undefined ? {} : { body }) });
+  expect((await app.handle(req('GET'))).status).toBe(405);
+  expect((await app.handle(req('POST', '{}', 'http://attacker.invalid'))).status).toBe(403);
+  expect((await app.handle(req('POST', 'x'.repeat(17)))).status).toBe(413);
+  expect((await app.handle(req('POST', '{}'))).status).toBe(401);
+});

@@ -146,3 +146,24 @@ body,created_at,release_at?,release_timezone?)`. Миграция 007 добав
 Новый schedule: 60 секунд–366 суток, строгий offset ISO + IANA без угадывания DST.
 Нет отметки прочтения, outbox/push, экспорта, редактирования или удаления.
 Политика хранения до реальных данных требует отдельного решения.
+
+## Synthetic завершение пары (008)
+`pair_leave_commands`: append-only `(actor_user_id, command_id)` → старые
+`couple_id`, `membership_epoch`, серверное `closed_at` (точное время исходного
+события `couple.closed`); FK на историческое членство.
+Нет текстов, токенов или сведений о новом партнёре. Receipt удерживается для replay;
+это не утверждённый production-срок хранения.
+
+POST `/v1/pair/leave` принимает `commandId`, `coupleId`, `membershipEpoch`, `confirm:true`.
+Caller выводится из provider auth; ID и epoch клиента только immutable предусловия.
+Все исторические domain users блокируются UPDATE в UUID-порядке до provider/session,
+mapping и couple; fresh membership/session проверяются после ожиданий. Active → closed
+увеличивает epoch, отзывает оба членства и непогашенные приглашения, создаёт один outbox.
+Deferred constraint запрещает active members у closed pair; closed status/epoch нельзя
+вернуть назад. Общий primitive защищает и прежний внутренний `closeCouple`.
+
+Успех возвращает только `state:closed`, actor/session и исходные pair/epoch/command,
+`replayed`; это не discovery текущей пары. Точный receipt после новой пары ничего в ней
+не меняет. Параллельное подтверждение второго участника получает closed только по
+точным прежним epoch, историческому членству и проверенному уникальному close event.
+Смена командного payload, чужой ID и несогласованное состояние дают generic unavailable.

@@ -37,3 +37,9 @@ The root TypeScript project excludes this directory; run both projects' checks s
 Expo, React, React Native and safe-area-context are MIT licensed; verify the full resolved
 transitive SBOM/license set before distributing. Test/lint packages are development tooling.
 Lockfile is npm-generated and is the explicit >600-line exception; no handwritten file exceeds the limit.
+
+The explicit synthetic controller also exposes voluntary active-pair closure, with RU/EN
+consequences and confirmation. Its server must opt into `enableSyntheticPairLeave` and
+migration 008. Pending/unknown closure clears private RAM content while retaining login;
+retry uses the original confirmation. The offline default App does not enable this API.
+See [closure evidence](../../docs/PAIR_LEAVE_EVIDENCE.md). Native/device QA remains open.

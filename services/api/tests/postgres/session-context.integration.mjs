@@ -82,7 +82,7 @@ test('context discovers only server-owned unmapped/no-pair/ready states and refr
     await f.domainPool.query('UPDATE couples SET membership_epoch=2 WHERE id=$1', [pairA]);
     assert.equal((await value(f, clients[1])).membershipEpoch, 2);
     assert.equal((await clients[1].history(pairA)).status, 409, 'snapshot is not an authorization grant');
-    await f.domainPool.query("UPDATE couples SET status='closed',membership_epoch=3 WHERE id=$1", [pairA]);
+    await f.domainPool.query("WITH closed AS (UPDATE couples SET status='closed',membership_epoch=3 WHERE id=$1 RETURNING id) UPDATE couple_members SET status='revoked' WHERE couple_id IN (SELECT id FROM closed)", [pairA]);
     assert.equal((await value(f, clients[1])).state, 'no_active_pair');
     await f.domainPool.query("UPDATE couple_members SET status='revoked' WHERE couple_id=$1", [pairA]);
     assert.equal((await value(f, clients[1])).state, 'no_active_pair');

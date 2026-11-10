@@ -94,7 +94,7 @@ test('real PostgreSQL: history isolates pairs and rejects missing, stale and for
     assert.equal((await history(f, connections[2], pairA, { beforeSeq: 228 })).status, 403);
     assert.equal((await history(f, connections[0], pairB, { beforeSeq: 228 })).status, 403);
     assert.equal((await history(f, connections[0], pairA, { beforeSeq: 228, epoch: 2 })).status, 409);
-    await f.domainPool.query("UPDATE couples SET status='closed',membership_epoch=2 WHERE id=$1", [pairA]);
+    await f.domainPool.query("WITH closed AS (UPDATE couples SET status='closed',membership_epoch=2 WHERE id=$1 RETURNING id) UPDATE couple_members SET status='revoked' WHERE couple_id IN (SELECT id FROM closed)", [pairA]);
     await f.domainPool.query("UPDATE couple_members SET status='revoked' WHERE couple_id=$1 AND user_id=$2", [pairA, usersA[0]]);
     assert.equal((await history(f, connections[0], pairA, { beforeSeq: 228, epoch: 2 })).status, 403);
   } finally { await f.close(); }

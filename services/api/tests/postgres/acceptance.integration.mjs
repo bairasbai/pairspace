@@ -150,7 +150,7 @@ test('lost accepted HTTP acknowledgement and expired consumed token replay are i
     await f.domainPool.query('UPDATE users SET deleted_at=clock_timestamp() WHERE id=$1', [guest.userId]);
     assert.equal((await accept(server, guest.cookie, token)).status, 409);
     await f.domainPool.query('UPDATE users SET deleted_at=NULL WHERE id=$1', [guest.userId]);
-    await f.domainPool.query("UPDATE couples SET status='closed',membership_epoch=3 WHERE id=$1", [owner.coupleId]);
+    await f.domainPool.query("WITH closed AS (UPDATE couples SET status='closed',membership_epoch=3 WHERE id=$1 RETURNING id) UPDATE couple_members SET status='revoked' WHERE couple_id IN (SELECT id FROM closed)", [owner.coupleId]);
     const before = await state(f);
     assert.equal((await accept(server, guest.cookie, token)).status, 409);
     assert.deepEqual(await state(f), before);

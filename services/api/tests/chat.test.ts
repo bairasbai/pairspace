@@ -94,8 +94,7 @@ describe('SQL-backed message use cases', () => {
     const db = { now: base.now, sessionAuthority: base.sessionAuthority, transaction: <T>(work: Parameters<typeof base.transaction<T>>[0]) => base.transaction(tx => work({
       query: <R>(sql: string, params?: unknown[]) => { queries.push(sql); return tx.query<R>(sql, params); },
     })) };
-    for (const operation of [() => sendMessage(db, principal, command), () => readHistory(db, principal, history),
-      () => closeCouple(db, principal, c1, 1)]) {
+    for (const operation of [() => sendMessage(db, principal, command), () => readHistory(db, principal, history)]) {
       queries.length = 0;
       expect(await operation()).toMatchObject({ ok: true });
       expect(queries[2]).toMatch(/FROM couples WHERE id = \$1\s+FOR (UPDATE|SHARE)/);

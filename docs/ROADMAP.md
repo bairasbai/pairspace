@@ -160,3 +160,12 @@ are not claimed to fit the experiment's 2KiB full-envelope persistence limit.
 - Открыты независимая приёмка SHA, native Intl/RU/EN/accessibility и два устройства,
   durable drafts, ответы/удаление/retention, E2EE и production security/deployment.
 - Проверки: [SCHEDULED_LETTERS_EVIDENCE](SCHEDULED_LETTERS_EVIDENCE.md).
+
+## Добровольный выход — ограниченный synthetic-срез
+- Active-pair only: явное RU/EN подтверждение, одностороннее завершение без удаления.
+- Реализованы общий hardened close primitive, scoped receipt/replay, отзыв обоих членств
+  и приглашений, окончательность закрытия и освобождение слотов в одной транзакции.
+- UI очищает приватный RAM-контент и сохраняет вход; неизвестный ACK требует повтора
+  той же команды. Смена аккаунта/пары не превращает старое подтверждение в новое.
+- Waiting-space cancellation, экспорт, production-архив/retention, E2EE, native/device
+  QA и внешний пилот не входят в срез. Проверки: [PAIR_LEAVE_EVIDENCE](PAIR_LEAVE_EVIDENCE.md).

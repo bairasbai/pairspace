@@ -228,3 +228,15 @@ it.each(['ru', 'en'] as const)('creates an own waiting space only on explicit ac
   view.rerender(<SyntheticChatPanel {...base} phase="busy" />);
   expect(screen.queryByRole('button', { name: locale === 'ru' ? 'Создать пространство ожидания' : 'Create waiting space' })).toBeNull();
 });
+it.each(['ru', 'en'] as const)('keeps credentials and offers account refresh only after leave completes in %s', locale => {
+  const p = props({ locale, phase: 'blocked', error: 'leave_pending' });
+  const label = locale === 'ru' ? 'Обновить аккаунт' : 'Refresh account';
+  const ui = render(<SyntheticChatPanel {...p} />);
+  expect(screen.queryByText('leave_pending')).toBeNull();
+  expect(screen.queryByText(labels[locale].blocked)).toBeNull();
+  expect(screen.getByRole('button', { name: label })).toBeDisabled();
+  expect(screen.queryByLabelText(labels[locale].password)).toBeNull();
+  ui.rerender(<SyntheticChatPanel {...p} error="leave_finished" />);
+  fireEvent.press(screen.getByRole('button', { name: label })); expect(p.onRefresh).toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: labels[locale].signOut })); expect(p.onSignOut).toHaveBeenCalled();
+});

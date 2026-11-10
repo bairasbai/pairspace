@@ -117,3 +117,10 @@ Device visual acceptance remains open; no backend features added.
 - `services/api/migrations/007_scheduled_letters.sql`: nullable-поля, старые письма немедленные.
 - `services/api/LETTERS.md`: серверный release gate и неизменяемое расписание.
 - `docs/SCHEDULED_LETTERS_EVIDENCE.md`: результаты, frozen source и ограничения проверки.
+
+## Добровольное завершение synthetic-пары
+- `services/api/src/pair-close.ts`: общий порядок блокировок и закрытие, включая legacy entry.
+- `services/api/src/pair-leave.ts`, `pair-leave-http.ts`: scoped immutable command и replay.
+- `services/api/migrations/008_pair_leave.sql`: receipt и отложенный запрет активных членств закрытой пары.
+- `apps/mobile/src/auth/leave.ts`, `LeavePanel.tsx`: RU/EN подтверждение, scrub, pending/retry/closed.
+- `docs/PAIR_LEAVE_EVIDENCE.md`: проверки, ограничения, synthetic-решения против открытых owner ADR.

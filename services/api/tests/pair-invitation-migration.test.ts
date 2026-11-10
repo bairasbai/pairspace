@@ -1,4 +1,3 @@
-import { readFile } from 'node:fs/promises';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
 import { createFixture, id, outsider, u2, waiting } from './fixtures.ts';
@@ -7,7 +6,7 @@ let pg: PGlite;
 const now = '2026-11-10T00:00:00Z', later = '2026-11-10T00:10:00Z';
 beforeEach(async () => {
   pg = await createFixture();
-  await pg.exec(await readFile(new URL('../migrations/004_pair_invites.sql', import.meta.url), 'utf8'));
+
   await pg.query("INSERT INTO couple_members VALUES($1,$2,1,'active')", [waiting, outsider]);
 });
 afterEach(async () => { await pg.close(); });

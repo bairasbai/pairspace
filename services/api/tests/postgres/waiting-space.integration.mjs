@@ -105,7 +105,7 @@ test('waiting HTTP rejects caller IDs, malformed bodies, wrong methods/origins a
   } finally { await f.close(); }
 });
 
-test('an active pair or closed live membership cannot be bypassed by creating another space', async () => {
+test('an active pair cannot be bypassed and invalid closed live membership is rejected by PostgreSQL', async () => {
   const f = await createComposedFixture(flags);
   try {
     const connections = [client(f.baseURL), client(f.baseURL)];
@@ -114,7 +114,8 @@ test('an active pair or closed live membership cannot be bypassed by creating an
     const ids = await f.provision(accounts.map(a => a.user.id), coupleId);
     const before = await counts(f);
     for (const status of ['active', 'closed']) {
-      await f.domainPool.query('UPDATE couples SET status=$1 WHERE id=$2', [status, coupleId]);
+      if (status === 'active') await f.domainPool.query('UPDATE couples SET status=$1 WHERE id=$2', [status, coupleId]);
+      else await assert.rejects(f.domainPool.query('UPDATE couples SET status=$1 WHERE id=$2', [status, coupleId]), { code: '23514' });
       for (const connection of connections) {
         const result = await post(f, connection); assert.equal(result.status, 409);
         assert.deepEqual(await result.json(), { ok: false, error: 'space_unavailable' });

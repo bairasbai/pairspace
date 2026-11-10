@@ -88,6 +88,7 @@ test('real PostgreSQL letters: authorized open locks recipient until body read f
     await delay(80); assert.equal(finished, false);
     lock.release(); assert.equal((await opening).ok, true); await revoke;
     await revoker.query("UPDATE couples SET status='closed', membership_epoch=membership_epoch+1 WHERE id=$1", [pairA]);
+    await revoker.query("UPDATE couple_members SET status='revoked' WHERE couple_id=$1", [pairA]);
     await revoker.query('COMMIT'); revoker.release(); revoker = null;
     assert.deepEqual(await openLetter(db, recipient, { ...scope, letterId: sent.value.letter.id }), { ok: false, error: 'unavailable' });
   } finally { lock.release(); if (revoker) { await revoker.query('ROLLBACK'); revoker.release(); } await Promise.allSettled(tasks); await f.close(); }

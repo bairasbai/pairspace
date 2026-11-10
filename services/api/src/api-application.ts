@@ -1,3 +1,4 @@
+import { createPairLeaveHandler } from './pair-leave-http.ts';
 import { createLettersHandler } from './letters-http.ts';
 import { createCareSignalHandler } from './care-signals-http.ts';
 import { betterAuth } from 'better-auth';
@@ -31,6 +32,8 @@ export type ApiApplicationConfig = Readonly<{
   enableSyntheticCareSignals?: boolean;
   /** Immutable immediate/scheduled synthetic letters; independent loopback-only opt-in. */
   enableSyntheticLetters?: boolean;
+  /** Explicit synthetic active-pair closure; default disabled, loopback only. */
+  enableSyntheticPairLeave?: boolean;
   limits: BodyLimits & TransactionLimits;
 }>;
 export type ApiApplication = Readonly<{ handle(request: Request): Promise<Response> }>;
@@ -61,6 +64,7 @@ function validate(config: ApiApplicationConfig): void {
     || (config.enableSyntheticPairAcceptance !== undefined && typeof config.enableSyntheticPairAcceptance !== 'boolean')
     || (config.enableSyntheticCareSignals !== undefined && typeof config.enableSyntheticCareSignals !== 'boolean')
     || (config.enableSyntheticLetters !== undefined && typeof config.enableSyntheticLetters !== 'boolean')
+    || (config.enableSyntheticPairLeave !== undefined && typeof config.enableSyntheticPairLeave !== 'boolean')
     || !Array.isArray(config.trustedOrigins) || !config.trustedOrigins.length
     || !config.trustedOrigins.every(validOrigin) || !config.trustedOrigins.includes(config.baseURL)
     || !config.limits || !integer(config.limits.bodyBytes, 65536) || !integer(config.limits.bodyReadMs, 30000)
@@ -69,7 +73,7 @@ function validate(config: ApiApplicationConfig): void {
   }
   const base = new URL(config.baseURL);
   if ((base.protocol === 'http:' || config.enableSyntheticProfileProvisioning === true || config.enableSyntheticWaitingSpaceCreation === true
-    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true)
+    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true)
     && !['127.0.0.1', '[::1]', 'localhost'].includes(base.hostname)) {
     throw new Error('invalid_api_configuration');
   }
@@ -103,6 +107,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
     ? createPairAcceptanceHandler(database, authOptions) : null;
   const care = config.enableSyntheticCareSignals === true ? createCareSignalHandler(bindSessionAuthority(database, authority)) : null;
   const letters = config.enableSyntheticLetters === true ? createLettersHandler(bindSessionAuthority(database, authority)) : null;
+  const leave = config.enableSyntheticPairLeave === true ? createPairLeaveHandler(bindSessionAuthority(database, authority)) : null;
   const chat = createChatHandler(bindSessionAuthority(database, authority));
   return {
     async handle(request) {
@@ -117,7 +122,8 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isWaiting = path === '/v1/spaces/waiting' && waiting !== null;
         const isInvitation = path === '/v1/spaces/waiting/invite' && invitation !== null;
         const isAcceptance = ['/v1/pair-invitations/preview', '/v1/pair-invitations/accept'].includes(path) && acceptance !== null;
-        const mutation = isAcceptance ? acceptance : isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
+        const isLeave = path === '/v1/pair/leave' && leave !== null;
+        const mutation = isLeave ? leave : isAcceptance ? acceptance : isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
         if (!isAuth && !isChat && !isCare && !isLetters && !isContext && !mutation) return failure(404, 'not_found');
         if (!isContext && !mutation && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');

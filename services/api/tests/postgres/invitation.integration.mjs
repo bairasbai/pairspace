@@ -172,7 +172,8 @@ test('active, closed, malformed and deleted-owner spaces fail closed without min
         await f.domainPool.query('UPDATE couple_members SET slot=1 WHERE user_id=$1', [own.userId]);
         await f.domainPool.query("INSERT INTO couple_members VALUES($1,$2,2,'active')", [own.coupleId, other]);
       }
-      if (['active', 'closed'].includes(state)) await f.domainPool.query('UPDATE couples SET status=$1 WHERE id=$2', [state, own.coupleId]);
+      if (state === 'active') await f.domainPool.query('UPDATE couples SET status=$1 WHERE id=$2', [state, own.coupleId]);
+      if (state === 'closed') await f.domainPool.query("WITH closed AS (UPDATE couples SET status='closed' WHERE id=$1 RETURNING id) UPDATE couple_members SET status='revoked' WHERE couple_id IN (SELECT id FROM closed)", [own.coupleId]);
       if (state === 'deleted_user') await f.domainPool.query('UPDATE users SET deleted_at=clock_timestamp() WHERE id=$1', [own.userId]);
       for (const operation of [() => issue(f, connection, randomUUID()), () => revoke(f, connection, issued.id),
         () => request(f, connection, { method: 'GET' })]) {

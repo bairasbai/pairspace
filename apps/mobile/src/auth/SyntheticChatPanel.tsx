@@ -26,6 +26,9 @@ export type SyntheticChatPanelProps = {
 const copy = {
   ru: {
     title: 'Тестовый чат',
+    leavePending: 'Завершение пары ещё не подтверждено. Используйте проверку выше.',
+    leaveFinished: 'Локальная переписка очищена. Аккаунт остаётся авторизованным.',
+    refreshAccount: 'Обновить аккаунт',
     unmapped: 'Тестовый аккаунт ещё не связан с профилем. Вы можете явно создать тестовый профиль.',
     createProfile: 'Создать тестовый профиль',
     profileRetry: 'Ответ не получен. Профиль мог быть создан. Повторная проверка не создаст дубликат.',
@@ -69,6 +72,9 @@ const copy = {
   },
   en: {
     title: 'Test chat',
+    leavePending: 'Pair closure is not yet confirmed. Use the check above.',
+    leaveFinished: 'Local conversation data is cleared. Your account remains signed in.',
+    refreshAccount: 'Refresh account',
     unmapped: 'This test account has no linked profile. You can explicitly create a test profile.',
     createProfile: 'Create test profile',
     profileRetry: 'No response was received. The profile may already exist. Retrying will not create a duplicate.',
@@ -174,16 +180,19 @@ export function SyntheticChatPanel({
     <Text style={styles.mode}>{t.mode}</Text>
     <Text accessibilityRole="header" style={styles.title}>{t.title}</Text>
     <Text style={styles.body}>{t.notice}</Text>
-    <Text accessibilityLiveRegion="polite" style={styles.status}>{error === 'context_waiting_partner' ? t.waiting : invitationVisible ? t.signed_in : t[phase]}</Text>
+    <Text accessibilityLiveRegion="polite" style={styles.status}>{error === 'leave_pending' || error === 'leave_finished' ? t.signed_in : error === 'context_waiting_partner' ? t.waiting : invitationVisible ? t.signed_in : t[phase]}</Text>
     {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive"
-      style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error === 'profile_retry_required' ? t.profileRetry : error === 'context_waiting_partner' ? t.waitingNotice : error === 'waiting_retry_required' ? t.waitingRetry : error === 'transport_error' ? t.network : error}</Text> : null}
+      style={styles.error}>{error === 'leave_pending' ? t.leavePending : error === 'leave_finished' ? t.leaveFinished : error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error === 'profile_retry_required' ? t.profileRetry : error === 'context_waiting_partner' ? t.waitingNotice : error === 'waiting_retry_required' ? t.waitingRetry : error === 'transport_error' ? t.network : error}</Text> : null}
     {phase === 'blocked' && (error === 'context_unmapped' || error === 'profile_retry_required')
       && <Action label={error === 'context_unmapped' ? t.createProfile : t.retryProfile} onPress={onCreateProfile} />}
     {phase === 'blocked' && (error === 'context_no_active_pair' || error === 'waiting_retry_required')
       && <Action label={error === 'context_no_active_pair' ? t.createWaiting : t.retryWaiting} disabled={invitationBusy} onPress={onCreateWaitingSpace} />}
     {invitationVisible && <InvitationPanel {...invitations} locale={locale} />}
     {/* Remounting on each phase change clears the password before the next paint. */}
-    {phase === 'blocked' && (error === 'context_waiting_partner' || invitationVisible) ? <View style={styles.card}>
+    {phase === 'blocked' && (error === 'leave_pending' || error === 'leave_finished') ? <View style={styles.card}>
+      <Action label={t.refreshAccount} disabled={error === 'leave_pending'} onPress={onRefresh} />
+      <Action label={t.signOut} onPress={onSignOut} />
+    </View> : phase === 'blocked' && (error === 'context_waiting_partner' || invitationVisible) ? <View style={styles.card}>
       <Action label={t.refresh} disabled={invitationBusy} onPress={onRefresh} />
       <Action label={t.signOut} onPress={onSignOut} />
     </View> : phase !== 'signed_in' ? <Login key={phase} locale={locale} phase={phase}

@@ -24,7 +24,7 @@ export async function createFixture(path?: string): Promise<PGlite> {
   const pg = new PGlite(path);
   const migration = await readFile(new URL('../migrations/001_chat.sql', import.meta.url), 'utf8');
   const auth = await readFile(new URL('../migrations/002_auth.sql', import.meta.url), 'utf8');
-  await pg.transaction(async tx => { await tx.exec(migration); await tx.exec(auth); });
+  await pg.transaction(async tx => { await tx.exec(migration); await tx.exec(auth); await tx.exec(await readFile(new URL('../migrations/004_pair_invites.sql', import.meta.url), 'utf8')); });
   await pg.transaction(async tx => {
     for (const user of [u1, u2, u3, u4, outsider]) await tx.query('INSERT INTO users(id) VALUES($1)', [user]);
     for (const user of [u1, u2, u3, u4, outsider]) {

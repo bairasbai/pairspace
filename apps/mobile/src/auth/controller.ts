@@ -1,3 +1,4 @@
+import { createLeaveController } from './leave';
 import { createLettersController } from './letters';
 import { createCareController } from './care';
 import { mergeHistory, type HistoryView } from '../chat/history';
@@ -40,8 +41,9 @@ export function createSessionController(config: SyntheticConfig, client: Session
   let pending: { readonly body: string; readonly revision: number; id: string | null } | null = null;
   const listeners = new Set<() => void>();
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
-  const invalidate = () => {
+  const invalidate = (preserveLeave = false) => {
     generation++; historyBusy = false; abort.abort(); abort = new AbortController();
+    if (!preserveLeave) leaveController.reset();
     verifiedContext = null; invitationController.reset(); careController.reset(); lettersController.reset();
     session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending = null; draftRevision++;
     publish({ ...empty, phase: 'busy' });
@@ -69,6 +71,23 @@ export function createSessionController(config: SyntheticConfig, client: Session
     getCookie: () => client.getCookie(), block, refresh,
   }, boundedRequest, commandId);
   const letters = lettersController.actions;
+  const leaveController = createLeaveController(contextConfig, {
+    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
+    getCookie: () => client.getCookie(), block,
+    suspend() {
+      if (!authIdentity || !verifiedContext) return null;
+      const identity = authIdentity; const context = verifiedContext;
+      invalidate(true); authIdentity = identity; verifiedContext = context;
+      publish({ ...empty, phase: 'blocked', error: 'leave_pending' });
+      return { generation, identity, context };
+    },
+    finish() {
+      const identity = authIdentity;
+      invalidate(true); authIdentity = identity;
+      publish({ ...empty, phase: 'blocked', error: 'leave_finished' });
+    },
+  }, boundedRequest, commandId);
+  const leave = leaveController.actions;
   const transport = createChatTransport({
     baseUrl: contextConfig.baseURL, allowHttpLoopbackForTests: true, cookieOrigin: contextConfig.baseURL,
     getCredentialGeneration: () => generation,
@@ -116,7 +135,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
       if (value.state !== 'ready') {
         block('context_' + value.state);
         authIdentity = expected;
-        verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync();
+        verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync(); leaveController.sync();
         if (value.state === 'no_active_pair') waitingUserId = value.userId;
         return null;
       }
@@ -130,7 +149,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
         session = { scope, token: '', credentialGeneration: generation, credentialKind: 'cookie' };
         publish({ ...empty, phase: 'signed_in' });
       }
-      verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync();
+      verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync(); leaveController.sync();
       return { credential: { ...session, token: cookie }, changed };
     } catch {
       if (current === generation && sequence === discoverySequence) {
@@ -149,6 +168,8 @@ export function createSessionController(config: SyntheticConfig, client: Session
     } else publish({ ...view, error });
   }
   async function refresh() {
+    if (leaveController.unresolved()) return;
+    leaveController.reset();
     let current = generation;
     const sequence = ++refreshSequence;
     historyBusy = true;
@@ -204,6 +225,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
     }
   }
   return {
+    leave,
     invitations,
     care,
     letters,

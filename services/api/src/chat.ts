@@ -1,3 +1,4 @@
+import { canClose, lockPair, mutateClosedPair } from './pair-close.ts';
 import type { ApiError, AuthorizedDatabase, Message, Principal, Result, SqlExecutor } from './contracts.ts';
 import { activeSession, validPrincipal } from './session.ts';
 import { isEpoch, isUuid, parseHistory, parseSend } from './validation.ts';
@@ -32,6 +33,7 @@ export async function sendMessage(db: AuthorizedDatabase, principal: Principal, 
     if (!await activeSession(tx, db, principal)) return denied('unavailable');
     const authorization = await authorize(tx, principal, coupleId, membershipEpoch, true);
     if (authorization) return denied(authorization);
+    if (!await activeSession(tx, db, principal)) return denied('unavailable');
     const existing = await tx.query<Row>(`SELECT ${columns} FROM chat_messages
       WHERE couple_id = $1 AND sender_id = $2 AND client_message_id = $3`, [coupleId, principal.userId, clientId]);
     if (existing.rows.length) {
@@ -57,6 +59,7 @@ export async function readHistory(db: AuthorizedDatabase, principal: Principal, 
     if (!await activeSession(tx, db, principal)) return denied('unavailable');
     const authorization = await authorize(tx, principal, coupleId, membershipEpoch, false);
     if (authorization) return denied(authorization);
+    if (!await activeSession(tx, db, principal)) return denied('unavailable');
     const result = await tx.query<Row>(`SELECT ${columns} FROM chat_messages WHERE couple_id = $1
       AND ($2::bigint IS NULL OR seq < $2) ORDER BY chat_messages.seq DESC LIMIT $3`, [coupleId, beforeSeq ?? null, limit + 1]);
     const page = result.rows.slice(0, limit).map(message);
@@ -70,12 +73,11 @@ export async function closeCouple(db: AuthorizedDatabase, principal: Principal, 
   if (!validPrincipal(principal)) return denied('unavailable');
   if (!isUuid(coupleId) || !isEpoch(membershipEpoch)) return denied('invalid_request');
   return db.transaction(async tx => {
-    if (!await activeSession(tx, db, principal)) return denied('unavailable');
-    const authorization = await authorize(tx, principal, coupleId, membershipEpoch, true);
+    const pair = await lockPair(tx, db, principal, coupleId.toLowerCase());
+    if (typeof pair === 'string') return denied('unavailable');
+    const authorization = canClose(pair, principal.userId, membershipEpoch);
     if (authorization) return denied(authorization);
-    await tx.query(`UPDATE couples SET status = 'closed', membership_epoch = membership_epoch + 1 WHERE id = $1`, [coupleId]);
-    await tx.query(`UPDATE couple_members SET status = 'revoked' WHERE couple_id = $1`, [coupleId]);
-    await tx.query(`INSERT INTO outbox_events(couple_id, type) VALUES ($1, 'couple.closed')`, [coupleId]);
+    await mutateClosedPair(tx, coupleId.toLowerCase());
     return { ok: true, value: null };
   });
 }
