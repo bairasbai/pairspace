@@ -1,0 +1,25 @@
+{
+  "name": "pairspace-better-auth-http-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test --test-timeout=15000 tests/*.test.mjs",
+    "check": "node --check src/server.mjs && node --check tests/http.test.mjs"
+  },
+  "dependencies": {
+    "@better-auth/expo": "1.7.19",
+    "better-auth": "1.7.19",
+    "expo": "58.0.23",
+    "expo-constants": "58.0.15",
+    "expo-linking": "58.0.16",
+    "expo-network": "58.0.4",
+    "expo-secure-store": "58.0.2",
+    "expo-web-browser": "58.0.7",
+    "react": "19.3.0",
+    "react-native": "0.88.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "typescript": "5.9.3"
+  }
+}
