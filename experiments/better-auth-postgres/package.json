@@ -1,0 +1,17 @@
+{
+  "name": "pairspace-better-auth-postgres-live-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/guard.test.mjs tests/audit.test.mjs tests/bounds.test.mjs",
+    "test:postgres": "node --test --test-timeout=30000 tests/postgres.integration.mjs",
+    "check": "node --check src/guard.mjs && node --check src/fixture.mjs && node --check src/domain.mjs && node --check tests/postgres.integration.mjs && node --check scripts/prepare-runtime.mjs && node --check scripts/bootstrap-database.mjs && bash -n scripts/run-postgres.sh verify.sh && node --check src/async-bounds.mjs && node --check tests/bounds.test.mjs && bash -n scripts/run-postgres-inner.sh scripts/sanitize-pg-env.sh"
+  },
+  "dependencies": {
+    "better-auth": "1.7.19",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@embedded-postgres/linux-x64": "18.6.0-beta.19"
+  }
+}
