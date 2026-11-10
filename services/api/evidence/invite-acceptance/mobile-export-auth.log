@@ -1,0 +1,28 @@
+Expo Autolinking module resolution enabled
+Starting Metro Bundler
+
+| (node:15) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:15) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:15) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:15) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:15) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+| (node:15) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+| (Use `node --trace-warnings ...` to show where the warning was created)
+iOS Bundled 5538ms .synthetic-export-entry.ts (691 modules)
+Android Bundled 10317ms .synthetic-export-entry.ts (698 modules)
+
+› ios bundles (1):
+_expo/static/js/ios/.synthetic-export-entry-439f89a8a36a700ea112d8d61befee13.hbc (1.9MB)
+
+› android bundles (1):
+_expo/static/js/android/.synthetic-export-entry-cc378e8bf970b59aee18652c0f1bb7c0.hbc (1.9MB)
+
+› Files (1):
+metadata.json (280B)
+
+Exported: dist/auth-check

@@ -5,6 +5,7 @@ import { createBetterAuthAuthority } from './better-auth-authority.ts';
 import { createChatHandler } from './http.ts';
 import { createSessionContextHandler } from './session-context.ts';
 import { createProfileProvisionHandler } from './profile-provision.ts';
+import { createPairAcceptanceHandler } from './pair-acceptance.ts';
 import { createPairInvitationHandler } from './pair-invitations.ts';
 import { createWaitingSpaceHandler } from './waiting-space.ts';
 import { createPostgresDatabase, type TransactionLimits } from './postgres-database.ts';
@@ -22,6 +23,8 @@ export type ApiApplicationConfig = Readonly<{
   enableSyntheticWaitingSpaceCreation?: boolean;
   /** Independent synthetic invitation issuance/revoke opt-in, loopback only. */
   enableSyntheticPairInvitations?: boolean;
+  /** Independent synthetic invitation preview/accept opt-in, loopback only. */
+  enableSyntheticPairAcceptance?: boolean;
   limits: BodyLimits & TransactionLimits;
 }>;
 export type ApiApplication = Readonly<{ handle(request: Request): Promise<Response> }>;
@@ -49,6 +52,7 @@ function validate(config: ApiApplicationConfig): void {
     || (config.enableSyntheticProfileProvisioning !== undefined && typeof config.enableSyntheticProfileProvisioning !== 'boolean')
     || (config.enableSyntheticWaitingSpaceCreation !== undefined && typeof config.enableSyntheticWaitingSpaceCreation !== 'boolean')
     || (config.enableSyntheticPairInvitations !== undefined && typeof config.enableSyntheticPairInvitations !== 'boolean')
+    || (config.enableSyntheticPairAcceptance !== undefined && typeof config.enableSyntheticPairAcceptance !== 'boolean')
     || !Array.isArray(config.trustedOrigins) || !config.trustedOrigins.length
     || !config.trustedOrigins.every(validOrigin) || !config.trustedOrigins.includes(config.baseURL)
     || !config.limits || !integer(config.limits.bodyBytes, 65536) || !integer(config.limits.bodyReadMs, 30000)
@@ -57,7 +61,7 @@ function validate(config: ApiApplicationConfig): void {
   }
   const base = new URL(config.baseURL);
   if ((base.protocol === 'http:' || config.enableSyntheticProfileProvisioning === true || config.enableSyntheticWaitingSpaceCreation === true
-    || config.enableSyntheticPairInvitations === true)
+    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true)
     && !['127.0.0.1', '[::1]', 'localhost'].includes(base.hostname)) {
     throw new Error('invalid_api_configuration');
   }
@@ -87,6 +91,8 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
     ? createWaitingSpaceHandler(database, authOptions) : null;
   const invitation = config.enableSyntheticPairInvitations === true
     ? createPairInvitationHandler(database, authOptions) : null;
+  const acceptance = config.enableSyntheticPairAcceptance === true
+    ? createPairAcceptanceHandler(database, authOptions) : null;
   const chat = createChatHandler(bindSessionAuthority(database, authority));
   return {
     async handle(request) {
@@ -98,7 +104,8 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isProfile = path === '/v1/profile' && profile !== null;
         const isWaiting = path === '/v1/spaces/waiting' && waiting !== null;
         const isInvitation = path === '/v1/spaces/waiting/invite' && invitation !== null;
-        const mutation = isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
+        const isAcceptance = ['/v1/pair-invitations/preview', '/v1/pair-invitations/accept'].includes(path) && acceptance !== null;
+        const mutation = isAcceptance ? acceptance : isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
         if (!isAuth && !isChat && !isContext && !mutation) return failure(404, 'not_found');
         if (!isContext && !mutation && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');

@@ -104,3 +104,5 @@ This does not replace independent security review or future registry rechecks.
 
 Independent reviewer audit snapshot on 2026-11-10 reported 11 moderate tooling findings versus
 the author's 10; runtime remained zero. Counts are dynamic registry snapshots, not fixed guarantees.
+
+Synthetic invitation preview/acceptance is independently default-disabled and loopback-only; see [PAIR_ACCEPTANCE.md](PAIR_ACCEPTANCE.md). It reuses existing migrations, with no mobile integration, delivery or production enablement.

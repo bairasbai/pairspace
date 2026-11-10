@@ -1,0 +1,32 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> @pairspace/api-core@0.1.0 test
+> vitest run --coverage
+
+
+ RUN  v5.1.0 /workspace/scratch/bb7b759a56b3/pairspace-invite-acceptance-product
+      Coverage enabled with v8
+
+
+ Test Files  24 passed (24)
+      Tests  175 passed (175)
+   Start at  12:21:28
+   Duration  63.92s (tests 98%, import 1%, worker 1%, transform 1%)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   99.78 |     99.7 |     100 |   99.85 |
+ services/api/src  |   99.77 |    99.69 |     100 |   99.84 |
+  auth.ts          |    97.5 |    98.27 |     100 |   96.77 | 52
+  http.ts          |     100 |    97.91 |     100 |     100 | 65
+  ...-provision.ts |   98.57 |    98.38 |     100 |     100 | 77
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 99.78% ( 924/926 )
+Branches     : 99.7% ( 1011/1014 )
+Functions    : 100% ( 129/129 )
+Lines        : 99.85% ( 675/676 )
+================================================================================

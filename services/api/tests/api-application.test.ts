@@ -189,3 +189,45 @@ it('bounds streamed DELETE bytes and read deadlines before verification and norm
     headers: { origin: baseURL, 'content-type': 'application/json', cookie: 'synthetic' }, body: '{"inviteId":"00000000-0000-4000-8000-000000000020"}' }));
   expect(response.status).toBe(503); expect(await response.json()).toEqual({ ok: false, error: 'temporarily_unavailable' });
 });
+
+it('gates preview/accept independently with boolean loopback opt-in and uniform perimeter/limits', async () => {
+  vi.stubEnv('ENABLE_SYNTHETIC_PAIR_ACCEPTANCE', 'true');
+  const paths = ['/v1/pair-invitations/preview', '/v1/pair-invitations/accept'];
+  for (const flag of [undefined, false]) {
+    const app = createApiApplication({ ...config(), enableSyntheticPairAcceptance: flag });
+    for (const path of paths) expect((await app.handle(request(path))).status).toBe(404);
+  }
+  for (const invalid of [true, null, 'true', 1]) {
+    expect(() => createApiApplication({ ...config(), enableSyntheticPairAcceptance: invalid } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  }
+  for (const baseURL of ['http://127.0.0.1:3123', 'http://[::1]:3123', 'https://localhost']) {
+    const app = createApiApplication({ ...config(), baseURL, trustedOrigins: [baseURL], enableSyntheticPairAcceptance: true,
+      limits: { ...config().limits, bodyBytes: 128 } });
+    for (const path of paths) {
+      const send = (method = 'POST', body?: string, headers: Record<string, string> = {}) => app.handle(new Request(baseURL + path, {
+        method, body, headers: { origin: baseURL, cookie: 'synthetic', 'content-type': 'application/json', ...headers },
+      }));
+      const body = JSON.stringify(path.endsWith('preview') ? { token: Buffer.alloc(32, 17).toString('base64url') }
+        : { token: Buffer.alloc(32, 17).toString('base64url'), accept: true });
+      expect((await send('POST', body)).status).toBe(401);
+      expect((await send('POST', body, { origin: 'https://other.invalid' })).status).toBe(403);
+      expect((await send('POST', body, { 'content-type': 'text/plain' })).status).toBe(415);
+      expect((await send('POST', 'x'.repeat(129))).status).toBe(413);
+      const method = await send('GET'); expect(method.status).toBe(405); expect(method.headers.get('allow')).toBe('POST');
+      expect((await send('DELETE', '{}')).status).toBe(405);
+    }
+    for (const path of ['/v1/profile', '/v1/spaces/waiting', '/v1/spaces/waiting/invite']) {
+      expect((await app.handle(new Request(baseURL + path, { method: 'POST', body: '{}',
+        headers: { origin: baseURL, 'content-type': 'application/json' } }))).status).toBe(404);
+    }
+  }
+  const baseURL = 'http://127.0.0.1:3123';
+  const app = createApiApplication({ ...config(), baseURL, trustedOrigins: [baseURL], enableSyntheticPairAcceptance: true });
+  for (const path of paths) {
+    const stream = (body: ReadableStream<Uint8Array>) => new Request(baseURL + path, { method: 'POST',
+      headers: { origin: baseURL, 'content-type': 'application/json' }, body, duplex: 'half' } as RequestInit);
+    expect((await app.handle(stream(new ReadableStream({ start(c) { c.enqueue(new Uint8Array(17)); c.close(); } })))).status).toBe(413);
+    expect((await app.handle(stream(new ReadableStream()))).status).toBe(408);
+  }
+  expect(provider.handler).not.toHaveBeenCalled();
+});
