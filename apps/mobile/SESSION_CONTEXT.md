@@ -16,13 +16,13 @@ sessionId is the nonsecret verified provider session ID, not a token. The client
 
 The endpoint uses the same official Better Auth instance and PostgreSQL database as chat. Provider verification is shared with the existing authority. Inside a single SQL transaction it rechecks provider user/session/expiry and mapping, then reads the current active couple/membership. Lock order remains compatible with chat. Mapping changes observed during discovery fail closed. Empty mapping/membership results are safe snapshots, not grants, and concurrent future changes may make any returned context obsolete.
 
-No provisioning, automatic pair creation, invitation handling, mapping mutation route, migration/backfill or production account is added. Signup is NOT complete: unmapped and no-active-pair states explicitly explain in RU/EN that creation is unavailable here.
+This context endpoint itself does not provision or mutate accounts. A later explicit synthetic profile action is documented in PROFILE_PROVISIONING.md; pair creation, invitations and production signup remain unavailable.
 
 ## Client lifecycle
 
 Initial verified sign-in remains busy until discovery returns a usable context. Every refresh and send discovers context again using the official cookie; both response byte size and time are bounded. The parser accepts only known state variants, validates UUIDs/epoch and exact session ID, and discards extra fields.
 
-If domain user, couple or membership epoch changes, the controller increments its local generation, aborts old requests and clears draft/history/pending commands before establishing the new context. An attempted send that discovers a change does not send its captured old draft. The user must compose a new message. Context failures block access and scrub private state; retrying official logout remains available.
+If domain user, couple or membership epoch changes, the controller increments its local generation, aborts old requests and clears draft/history/pending commands before establishing the new context. An attempted send that discovers a change does not send its captured old draft. The user must compose a new message. Context failures block chat access and scrub private state; retrying official logout remains available. An unmapped state can now retain its verified identity solely for the explicit profile action described in PROFILE_PROVISIONING.md.
 
 Older discovery results cannot replace newer data. Any authoritative denial in the same current generation still blocks access. Logout/session changes supersede all old callbacks. Context discovery is outside the serialized auth mutation queue so a slow response does not hold up logout. Server chat authorization remains mandatory even after successful discovery.
 

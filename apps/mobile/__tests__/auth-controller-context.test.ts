@@ -93,7 +93,7 @@ it.each([
   [{ state: 'no_active_pair', sessionId: identity.sessionId, userId: uuid(1) }, 'context_no_active_pair'],
 ] as const)('blocks explicit unavailable context %p without reading chat', async (context, error) => {
   const { controller, discovery, chat, commandId, login } = setup();
-  discovery.mockResolvedValueOnce(contextResponse(context));
+  discovery.mockImplementation(async () => contextResponse(context));
   await login();
   expect(controller.getSnapshot()).toEqual({ phase: 'blocked', error, draft: '', messages: [] });
   controller.setDraft('must not send');

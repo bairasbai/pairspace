@@ -3,6 +3,7 @@ import { createChatTransport, type ChatMessage, type TransportSession } from '..
 import type { QueueState } from '../chat/types';
 import { validateSyntheticConfig, type SyntheticConfig } from './config';
 import { readSessionContext } from './context';
+import { provisionProfile } from './profile';
 import type { AuthIdentity, SessionClient } from './official-client';
 
 export type AuthView = Readonly<{
@@ -74,7 +75,11 @@ export function createSessionController(config: SyntheticConfig, client: Session
       if (sequence !== discoverySequence) return null;
       if (!result.ok) { block(result.error); return null; }
       const value = result.value;
-      if (value.state !== 'ready') { block('context_' + value.state); return null; }
+      if (value.state !== 'ready') {
+        block('context_' + value.state);
+        if (value.state === 'unmapped') authIdentity = expected;
+        return null;
+      }
       const changed = session !== null && (session.scope.userId !== value.userId
         || session.scope.coupleId !== value.coupleId || session.scope.membershipEpoch !== value.membershipEpoch);
       if (changed) { invalidate(); authIdentity = expected; }
@@ -141,6 +146,35 @@ export function createSessionController(config: SyntheticConfig, client: Session
         if (!await client.signOut()) throw new Error('logout_failed');
         if (current === generation) publish(empty);
       });
+    },
+    async createProfile() {
+      if (view.phase !== 'blocked' || !['context_unmapped', 'profile_retry_required'].includes(view.error ?? '')
+        || !authIdentity) return;
+      const expected = authIdentity;
+      const current = invalidate(); authIdentity = expected;
+      try {
+        const cookie = await client.getCookie();
+        if (current !== generation || authIdentity !== expected) return;
+        // Bind this exact cookie snapshot before a mutation, not merely after its response.
+        const binding = await readSessionContext(contextConfig, expected.sessionId, cookie, boundedRequest);
+        if (current !== generation || authIdentity !== expected) return;
+        if (!binding.ok) {
+          const error = binding.error === 'access_required' ? 'access_required'
+            : binding.error === 'auth_required' || binding.error === 'invalid_context' ? 'auth_required' : 'profile_retry_required';
+          block(error);
+          if (error === 'profile_retry_required') authIdentity = expected;
+          return;
+        }
+        if (binding.value.state !== 'unmapped') { await refresh(); return; }
+        const result = await provisionProfile(contextConfig, expected.sessionId, cookie, boundedRequest);
+        if (current !== generation || authIdentity !== expected) return;
+        if (result.ok) { await refresh(); return; }
+        block(result.error);
+        if (result.error === 'profile_retry_required') authIdentity = expected;
+      } catch {
+        if (current !== generation || authIdentity !== expected) return;
+        block('profile_retry_required'); authIdentity = expected;
+      }
     },
     async send() {
       if (sending || view.phase !== 'signed_in' || !queue) return;

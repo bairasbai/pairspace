@@ -32,7 +32,7 @@ Lock order matches chat: domain user → provider user/session → mapping → c
 
 If membership disappears while waiting for the couple lock, return no_active_pair. If it moves to another pair during that wait, return opaque 503 and let a later request rediscover rather than adding a new lock-order path. Waiting/closed pairs return no_active_pair. Absence of mapping or membership is a safe snapshot, not a claim that insertion is blocked. Mapping mutations and general membership lifecycle operations remain unsupported runtime features; tests mutate synthetic fixtures only.
 
-No migrations, listeners, provisioning, pair creation, client identity fixtures, persistent credentials or production access were added. Existing API and mobile deployment/native-device limitations still apply.
+This context route adds no migrations, listeners, provisioning, pair creation, client identity fixtures, persistent credentials or production access. A separate default-disabled synthetic profile action is documented in [PROFILE_PROVISION.md](PROFILE_PROVISION.md). Existing API and mobile deployment/native-device limitations still apply.
 
 ## Checks
 

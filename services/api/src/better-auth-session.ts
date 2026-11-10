@@ -40,9 +40,11 @@ export function createBetterAuthSessionVerifier(db: Database, options: BetterAut
 }
 
 /** Call after the domain-user lock (if mapped), before mapping/couple locks. */
-export async function recheckBetterAuthSession(tx: SqlExecutor, session: VerifiedBetterAuthSession): Promise<boolean> {
+export async function recheckBetterAuthSession(tx: SqlExecutor, session: VerifiedBetterAuthSession,
+  providerLock: 'share' | 'exclusive' = 'share'): Promise<boolean> {
   // Fixed Better Auth default names, in a trusted shared schema/search_path.
-  const authUser = await tx.query<{ id: string }>('SELECT id FROM "user" WHERE id=$1 FOR SHARE', [session.authUserId]);
+  const authUser = await tx.query<{ id: string }>(
+    `SELECT id FROM "user" WHERE id=$1 FOR ${providerLock === 'exclusive' ? 'UPDATE' : 'SHARE'}`, [session.authUserId]);
   if (authUser.rows.length !== 1 || authUser.rows[0].id !== session.authUserId) return false;
   const sessions = await tx.query<{ created_at: string; expires_at: string }>(`
     SELECT "createdAt"::text AS created_at, "expiresAt"::text AS expires_at FROM "session"

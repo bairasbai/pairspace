@@ -83,3 +83,62 @@ test('mobile session controller cookie transport → composed HTTP → real Post
     assert.equal(controller.getSnapshot().phase, 'signed_out');
   } finally { await f.close(); }
 });
+
+test('explicit mobile profile action creates server identity once without fixture mapping or pair creation', async () => {
+  const f = await createComposedFixture({ enableSyntheticProfileProvisioning: true });
+  const password = 'Synthetic-profile-password-712!';
+  try {
+    const c = client(f.baseURL);
+    const email = 'mobile-profile@example.test';
+    const account = await c.auth.signUp.email({ email, password, name: 'Synthetic' });
+    assert.equal(account.error, null);
+    const sessionClient = {
+      async signIn(email, password) {
+        const result = await c.auth.signIn.email({ email, password });
+        if (result.error) return null;
+        const verified = await c.auth.getSession({ query: { disableCookieCache: true } });
+        return { userId: verified.data.user.id, sessionId: verified.data.session.id };
+      },
+      async signOut() { return !(await c.auth.signOut()).error; },
+      getCookie: c.getCookie,
+    };
+    let posts = 0;
+    const controller = createSessionController({ mode: 'synthetic-loopback', baseURL: f.baseURL }, sessionClient,
+      async request => {
+        assert.equal(request.headers.has('authorization'), false);
+        assert.equal(request.headers.get('origin'), f.baseURL);
+        if (new URL(request.url).pathname === '/v1/profile') {
+          posts++;
+          assert.deepEqual(await request.clone().json(), {});
+        }
+        const response = await fetch(request);
+        if (request.method === 'POST' && posts === 1) {
+          assert.equal(response.status, 201);
+          throw new Error('synthetic lost acknowledgement after profile commit');
+        }
+        return response;
+      }, randomUUID);
+    await controller.signIn(email, password);
+    assert.equal(controller.getSnapshot().error, 'context_unmapped');
+    assert.equal(posts, 0, 'sign-in/discovery must not auto-provision');
+    await controller.createProfile();
+    assert.equal(controller.getSnapshot().error, 'profile_retry_required');
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM users')).rows[0].n, 1);
+    await controller.createProfile();
+    assert.equal(controller.getSnapshot().error, 'context_no_active_pair');
+    assert.equal(posts, 1, 'retry discovers already-created profile before another mutation');
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM users')).rows[0].n, 1);
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM better_auth_identities')).rows[0].n, 1);
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM couples')).rows[0].n, 0);
+    assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM chat_messages')).rows[0].n, 0);
+    const mapping = await f.domainPool.query('SELECT auth_user_id FROM better_auth_identities');
+    assert.equal(mapping.rows[0].auth_user_id, account.data.user.id);
+    await controller.createProfile();
+    assert.equal(posts, 1, 'no action allowed from no-active-pair state');
+    await controller.signOut();
+    await controller.signIn(email, password);
+    assert.equal(controller.getSnapshot().error, 'context_no_active_pair');
+    assert.equal(posts, 1);
+    await controller.signOut();
+  } finally { await f.close(); }
+});

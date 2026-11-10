@@ -5,7 +5,7 @@ function props(overrides: Partial<SyntheticChatPanelProps> = {}): SyntheticChatP
   return {
     locale: 'en', phase: 'signed_out', error: null, draft: '', messages: [],
     onDraft: jest.fn(), onSignIn: jest.fn(), onSignOut: jest.fn(),
-    onSend: jest.fn(), onRefresh: jest.fn(), ...overrides,
+    onSend: jest.fn(), onRefresh: jest.fn(), onCreateProfile: jest.fn(), ...overrides,
   };
 }
 
@@ -185,11 +185,24 @@ it('clears the password on sign-in, sign-out, interruption and remount', () => {
 });
 
 it.each([
-  ['en', 'context_unmapped', 'This test account has no linked profile. Profile creation is not available here.'],
+  ['en', 'context_unmapped', 'This test account has no linked profile. You can explicitly create a test profile.'],
   ['en', 'context_no_active_pair', 'This test profile has no active pair. Pair creation is not available here.'],
-  ['ru', 'context_unmapped', 'Тестовый аккаунт ещё не связан с профилем. Создание профиля здесь недоступно.'],
+  ['ru', 'context_unmapped', 'Тестовый аккаунт ещё не связан с профилем. Вы можете явно создать тестовый профиль.'],
   ['ru', 'context_no_active_pair', 'У тестового профиля нет активной пары. Создание пары здесь недоступно.'],
 ] as const)('explains safe discovery state in %s: %s', (locale, error, text) => {
   render(<SyntheticChatPanel {...props({ locale, phase: 'blocked', error })} />);
   expect(screen.getByRole('alert')).toHaveTextContent(text);
+});
+
+it.each(['ru', 'en'] as const)('requires explicit provisioning action and offers safe retry in %s', locale => {
+  const onCreateProfile = jest.fn();
+  const view = render(<SyntheticChatPanel {...props({ locale, phase: 'blocked', error: 'context_unmapped', onCreateProfile })} />);
+  expect(onCreateProfile).not.toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('button', { name: locale === 'ru' ? 'Создать тестовый профиль' : 'Create test profile' }));
+  expect(onCreateProfile).toHaveBeenCalledTimes(1);
+  view.rerender(<SyntheticChatPanel {...props({ locale, phase: 'blocked', error: 'profile_retry_required', onCreateProfile })} />);
+  fireEvent.press(screen.getByRole('button', { name: locale === 'ru' ? 'Повторить создание профиля' : 'Retry profile creation' }));
+  expect(onCreateProfile).toHaveBeenCalledTimes(2);
+  view.rerender(<SyntheticChatPanel {...props({ locale, phase: 'busy', error: 'context_unmapped', onCreateProfile })} />);
+  expect(screen.queryByRole('button', { name: locale === 'ru' ? 'Создать тестовый профиль' : 'Create test profile' })).toBeNull();
 });

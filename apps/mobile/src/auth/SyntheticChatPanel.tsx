@@ -13,12 +13,16 @@ export type SyntheticChatPanelProps = {
   onSignOut: () => void;
   onSend: () => void;
   onRefresh: () => void;
+  onCreateProfile: () => void;
 };
 
 const copy = {
   ru: {
     title: 'Тестовый чат',
-    unmapped: 'Тестовый аккаунт ещё не связан с профилем. Создание профиля здесь недоступно.',
+    unmapped: 'Тестовый аккаунт ещё не связан с профилем. Вы можете явно создать тестовый профиль.',
+    createProfile: 'Создать тестовый профиль',
+    profileRetry: 'Ответ не получен. Профиль мог быть создан. Повторная проверка не создаст дубликат.',
+    retryProfile: 'Повторить создание профиля',
     noPair: 'У тестового профиля нет активной пары. Создание пары здесь недоступно.',
     mode: 'Синтетический тестовый режим',
     notice: 'Только тестовые аккаунты и сообщения. Не вводите личные данные или пароли от других сервисов.',
@@ -41,7 +45,10 @@ const copy = {
   },
   en: {
     title: 'Test chat',
-    unmapped: 'This test account has no linked profile. Profile creation is not available here.',
+    unmapped: 'This test account has no linked profile. You can explicitly create a test profile.',
+    createProfile: 'Create test profile',
+    profileRetry: 'No response was received. The profile may already exist. Retrying will not create a duplicate.',
+    retryProfile: 'Retry profile creation',
     noPair: 'This test profile has no active pair. Pair creation is not available here.',
     mode: 'Synthetic test mode',
     notice: 'Use test accounts and messages only. Do not enter personal data or passwords from other services.',
@@ -113,7 +120,7 @@ function Login({ locale, phase, email, onEmail, onSignIn, onSignOut }: LoginProp
 
 /** Controlled synthetic-only UI. The parent owns requests, session and message state. */
 export function SyntheticChatPanel({
-  locale, phase, error, draft, messages, onDraft, onSignIn, onSignOut, onSend, onRefresh,
+  locale, phase, error, draft, messages, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile,
 }: SyntheticChatPanelProps) {
   const t = copy[locale];
   const [email, setEmail] = useState('');
@@ -124,7 +131,9 @@ export function SyntheticChatPanel({
     <Text style={styles.body}>{t.notice}</Text>
     <Text accessibilityLiveRegion="polite" style={styles.status}>{t[phase]}</Text>
     {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive"
-      style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error}</Text> : null}
+      style={styles.error}>{error === 'context_unmapped' ? t.unmapped : error === 'context_no_active_pair' ? t.noPair : error === 'profile_retry_required' ? t.profileRetry : error}</Text> : null}
+    {phase === 'blocked' && (error === 'context_unmapped' || error === 'profile_retry_required')
+      && <Action label={error === 'context_unmapped' ? t.createProfile : t.retryProfile} onPress={onCreateProfile} />}
     {/* Remounting on each phase change clears the password before the next paint. */}
     {phase !== 'signed_in' ? <Login key={phase} locale={locale} phase={phase}
       email={email} onEmail={setEmail} onSignIn={onSignIn} onSignOut={onSignOut} /> : <>

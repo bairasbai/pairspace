@@ -86,3 +86,30 @@ it('mounts selector-free session context with the same provider and strict origi
   expect(method.status).toBe(405); expect(method.headers.get('allow')).toBe('GET');
   expect((await app.handle(request(path, 'DELETE'))).status).toBe(405);
 });
+
+it('requires explicit synthetic profile enablement and loopback baseURL with no environment fallback', async () => {
+  vi.stubEnv('ENABLE_SYNTHETIC_PROFILE_PROVISIONING', 'true');
+  for (const flag of [undefined, false]) {
+    const app = createApiApplication({ ...config(), enableSyntheticProfileProvisioning: flag });
+    expect((await app.handle(request('/v1/profile', 'POST', { origin: baseURL, 'content-type': 'application/json' }, '{}'))).status).toBe(404);
+  }
+  for (const invalid of [true, null, 'true', 1]) {
+    expect(() => createApiApplication({ ...config(), enableSyntheticProfileProvisioning: invalid } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  }
+  for (const baseURL of ['http://127.0.0.1:3123', 'http://[::1]:3123', 'https://localhost']) {
+    const app = createApiApplication({ ...config(), baseURL, trustedOrigins: [baseURL], enableSyntheticProfileProvisioning: true });
+    const send = (method = 'POST', body?: string, headers: Record<string, string> = {}) => app.handle(new Request(baseURL + '/v1/profile', {
+      method, body, headers: { origin: baseURL, cookie: 'synthetic', 'content-type': 'application/json', ...headers },
+    }));
+    expect((await send('POST', '{}')).status).toBe(401);
+    expect(provider.getSession).toHaveBeenCalledWith({ headers: expect.any(Headers) });
+    const get = await send('GET');
+    expect(get.status).toBe(405); expect(get.headers.get('allow')).toBe('POST');
+    expect((await send('DELETE')).status).toBe(405);
+    expect((await send('POST', '{}', { origin: 'https://attacker.invalid', 'expo-origin': baseURL })).status).toBe(403);
+    expect((await send('POST', '{}', { 'content-type': 'text/plain' })).status).toBe(415);
+    expect((await send('POST', 'x'.repeat(17))).status).toBe(413);
+    expect((await send('POST', '{"userId":1}')).status).toBe(400);
+  }
+  expect(provider.handler).not.toHaveBeenCalled();
+});
