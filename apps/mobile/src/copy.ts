@@ -1,0 +1,43 @@
+export type Locale = 'ru' | 'en';
+
+export const copy = {
+  ru: {
+    preview: 'Предварительная версия · без подключения к серверу',
+    today: 'Сегодня', chat: 'Чат', together: 'Вместе', us: 'Мы',
+    title: 'Ваше место для двоих',
+    welcome: 'Самое важное — быть рядом.',
+    intro: 'Здесь появятся ваша встреча, письма и общие планы. Аккаунты и приглашения пока не подключены.',
+    heart: 'Думаю о тебе',
+    heartHint: 'Открыть информацию о будущем сигнале заботы',
+    heartNotice: 'Сигнал не отправлен. Для отправки нужны аккаунт, партнёр и подключённый сервер.',
+    close: 'Понятно',
+    chatInfo: 'Переписка ещё не подключена. Можно попробовать черновик: он хранится только в памяти приложения и исчезнет при перезапуске. Не вводите личные данные.',
+    draft: 'Пробный черновик', placeholder: 'Напишите несколько пробных слов…',
+    clear: 'Очистить черновик', confirmClear: 'Удалить пробный черновик?',
+    clearInfo: 'Это действие нельзя отменить.', cancel: 'Отмена', delete: 'Удалить',
+    limit: 'Лимит: 2 000 символов. Ничего не отправляется.',
+    togetherInfo: 'Возможности Tan Ata сохраняем в плане. Эти разделы пока не работают:',
+    features: ['Письма и ответы', 'Разговоры и вопросы', 'Игры вдвоём', 'Желания и планы', 'Календарь и дела', 'Общие воспоминания'],
+    settingsInfo: 'Это настройка только текущего сеанса. Аккаунта, пары и облачного хранения ещё нет.',
+    language: 'Язык интерфейса', privacy: 'Ваши пробные записи не отправляются в сеть.',
+  },
+  en: {
+    preview: 'Preview · not connected to a server',
+    today: 'Today', chat: 'Chat', together: 'Together', us: 'Us',
+    title: 'Your space for two', welcome: 'The little ways we stay close.',
+    intro: 'Your next meeting, letters and shared plans will live here. Accounts and invitations are not connected yet.',
+    heart: 'Thinking of you', heartHint: 'Learn about the planned care signal',
+    heartNotice: 'No signal was sent. Sending requires an account, a partner and a connected server.',
+    close: 'Got it',
+    chatInfo: 'Messaging is not connected yet. Try a draft: it stays only in app memory and disappears on restart. Do not enter personal information.',
+    draft: 'Practice draft', placeholder: 'Write a few sample words…',
+    clear: 'Clear draft', confirmClear: 'Delete the practice draft?',
+    clearInfo: 'This cannot be undone.', cancel: 'Cancel', delete: 'Delete',
+    limit: 'Limit: 2,000 characters. Nothing is sent.',
+    togetherInfo: 'Tan Ata features remain in the plan. These sections are not working yet:',
+    features: ['Letters and replies', 'Conversations and questions', 'Games for two', 'Wishes and plans', 'Calendar and tasks', 'Shared memories'],
+    settingsInfo: 'This setting lasts for this session only. Accounts, pairing and cloud storage are not connected yet.',
+    language: 'Interface language', privacy: 'Your practice entries are not sent over the network.',
+  },
+} as const;
+export type Copy = (typeof copy)[Locale];

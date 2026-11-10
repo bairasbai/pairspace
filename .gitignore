@@ -11,3 +11,7 @@ coverage/
 Thumbs.db
 output/
 test-results/
+
+# Expo local artifacts
+.expo/
+dist/

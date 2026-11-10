@@ -1,0 +1,30 @@
+{
+  "name": "@pairspace/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "scripts": {
+    "start": "expo start",
+    "typecheck": "tsc --noEmit",
+    "test": "cd ../.. && node apps/mobile/node_modules/jest/bin/jest.js --config apps/mobile/jest.config.cjs --runInBand --coverage",
+    "export": "expo export --platform ios --platform android",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "expo": "58.0.23",
+    "react": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-safe-area-context": "5.11.1"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^13.3.3",
+    "@types/jest": "^30.0.0",
+    "@types/react": "^19.2.0",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^58.0.4",
+    "jest": "^30.2.0",
+    "jest-expo": "58.0.14",
+    "react-test-renderer": "19.3.0",
+    "typescript": "^5.9.3"
+  }
+}

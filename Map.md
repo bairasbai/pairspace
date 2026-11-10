@@ -26,3 +26,18 @@
 
 Файлы регистрозависимы. Не создавать вторые Architecture/architecture или Memory/MEMORY.
 Исторический docs/ARCHITECTURE.md ведёт к корневому Architecture.md.
+
+## Мобильный preview, отдельная реализационная ветка
+`apps/mobile`: самостоятельный Expo package, RU/EN, 4 вкладки, центральное сердце и RAM-черновик.
+Детали и ограничения в `apps/mobile/README.md`. Сетевые возможности ещё не реализованы.
+
+`apps/mobile/src/chat`: pure local outgoing-queue state machine and Unicode text validation.
+Not wired into UI or a server; boundary and capacity constraints in its README.
+
+`packages/domain/chat/text.ts`: shared pure Unicode normalization, used by mobile and API.
+`services/api`: SQL-backed send/history/close use cases, migration and PGlite integration tests.
+In-process HTTP handler with mandatory injected verifier; no listener or actual authentication.
+`services/api/TRANSPORT.md` describes the temporary protocol and client transport, not wired into UI.
+
+`services/api/src/auth.ts` + `session.ts`: jose verification and transaction session revalidation.
+`services/api/migrations/002_auth.sql`: identity/session mapping; AUTH.md states prototype boundaries.

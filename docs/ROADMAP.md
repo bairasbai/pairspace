@@ -38,3 +38,27 @@ security review; store privacy labels; crash/alerting без приватног�
 ## Правило статуса
 Каждая задача: pending → implementing → verification → independent review → accepted.
 Отдельные тесты не переводят весь этап в accepted. Публикация docs не завершает разработку.
+
+### Прогресс первого среза, не закрытие Этапа 1
+В отдельной ветке восстановлен Expo preview: RU/EN, четыре вкладки, сердце/reduced-motion,
+пробный черновик без сети. Мобильные unit/typecheck/lint и JS export проходят.
+Native builds, два устройства, визуальная приёмка и глобальный coverage остаются открыты.
+
+### Локальное ядро исходящих чата
+Создан и unit-проверен scoped immutable reducer для очереди/ACK/retry/удаления.
+Это подготовка Этапа 3, не его закрытие: серверная проверка пары, доставка, история и receipts отсутствуют.
+
+### SQL-backed срез, не завершение auth/чата
+services/api выполняет send/history/close в SQL-транзакциях; тесты PGlite проверяют
+изоляцию двух пар, ограничения, idempotency, rollback и persistence. Auth/HTTP/worker не подключены.
+До настоящего сервера обязательны multi-session PostgreSQL race tests, RLS/roles и независимая приёмка.
+
+### Transport prototype, не запуск сервиса
+Добавлен in-process Request/Response handler с обязательным verifier interface и клиентский adapter.
+Synthetic tokens существуют только в тестах. Нет auth provider, listener, UI-соединения или prod deploy.
+Временный протокол отличается от v1; см. services/api/TRANSPORT.md.
+
+### Signed synthetic auth prototype
+Проверка jose/ES256 и SQL session/identity добавляются без provider/login/token issuance.
+Повторная проверка session/user в usecase transaction закрывает lookup→write gap;
+реальные PostgreSQL concurrency, auth lifecycle и независимая приёмка остаются открыты.
