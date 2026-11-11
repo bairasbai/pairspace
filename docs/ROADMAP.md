@@ -229,3 +229,11 @@ RU/EN, сохранение черновика и смена generation/pair/epo
 остаются в плане. Файлы, редактирование/удаление, поиск, export и production
 retention/архив не закрыты. Native/device и независимая приёмка остаются открыты.
 [Контракт](SHARED_MEMORIES.md), [проверки](SHARED_MEMORIES_EVIDENCE.md).
+
+### Наши песни с объяснениями: bounded synthetic-кандидат
+Отдельная title/explanation коллекция, явная публикация партнёру, latest50,
+immutable retry/lostACK и scope cleanup реализованы для synthetic mobile→HTTP→PG.
+Не закрывает всю строку P1: безопасные внешние ссылки, редактирование и ручной
+порядок остаются планом. Нет streaming/downloads/lyrics/import/private playlists.
+После полного frozen checkpoint требуется независимая приёмка; native/two-device
+и production gates остаются открыты. [Контракт](SHARED_SONGS.md).

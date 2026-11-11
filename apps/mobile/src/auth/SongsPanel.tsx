@@ -1,0 +1,34 @@
+import { Pressable, Text, TextInput, View } from 'react-native';
+import { songsCopy } from './songsCopy';
+import type { SongsView } from './songs';
+export function SongsPanel({ locale, view, onDraft, onExplanation, onCreate, onRetry, onList, onConsent, onCancel }: {
+  locale: 'ru' | 'en'; view: SongsView; onDraft(text: string): void; onExplanation(text: string): void;
+  onCreate(): void; onRetry(): void; onList(): void; onConsent(value: boolean): void; onCancel(): void;
+}) {
+  if (!view.available) return null;
+  const t = songsCopy[locale];
+  const button = (label: string, action: () => void, disabled: boolean) => <Pressable accessibilityRole="button"
+    accessibilityState={{ disabled, busy: view.busy }} disabled={disabled} onPress={action}
+    style={{ minHeight: 48, justifyContent: 'center' }}><Text>{label}</Text></Pressable>;
+  return <View style={{ padding: 16, gap: 8 }}>
+    <Text accessibilityRole="header">{t.title}</Text><Text>{t.notice}</Text><Text>{t.limits}</Text>
+    <TextInput accessibilityLabel={t.draft} value={view.draft} onChangeText={onDraft}
+      maxLength={800} style={{ minHeight: 48, borderWidth: 1, padding: 8 }} />
+    <TextInput accessibilityLabel={t.explanation} value={view.explanation} onChangeText={onExplanation} multiline
+      maxLength={8000} style={{ minHeight: 96, borderWidth: 1, padding: 8 }} />
+    <Pressable accessibilityRole="checkbox" accessibilityLabel={t.consent} accessibilityState={{ checked: view.consent }}
+      onPress={() => onConsent(!view.consent)} style={{ minHeight: 48, justifyContent: 'center' }}><Text>{view.consent ? '☑ ' : '☐ '}{t.consent}</Text></Pressable>
+    {button(t.create, onCreate, view.busy || view.requiresRefresh || view.pending !== null || !view.consent)}
+    {button(t.cancel, onCancel, false)}<Text>{t.cancelHint}</Text>
+    {view.pending && <Text selectable>{t.pending} {view.pending.title}{'\n'}{view.pending.explanation}</Text>}
+    {view.status === 'retry' && button(t.again, onRetry, view.busy)}
+    <Text accessibilityLiveRegion="polite">{t[view.status]}</Text>
+    {button(t.list, onList, view.busy)}{view.error && <Text>{t.error}</Text>}
+    <Text>{t.bound}</Text>{view.checked && view.songs.length === 0 && <Text>{t.none}</Text>}
+    {view.songs.map(song => <View key={song.id} style={{ paddingVertical: 8 }}>
+      <Text selectable>{song.title}</Text><Text selectable>{song.explanation}</Text>
+      <Text>{t.recorded} {song.createdAt}</Text>
+      <Text>{t.author} {song.creatorId}</Text>
+    </View>)}
+  </View>;
+}

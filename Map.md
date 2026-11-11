@@ -175,3 +175,12 @@ Mobile выбирает существующую дату, явно сохран
 на календарный день и bounded чтение текущей активной пары/epoch.
 [Контракт](docs/SHARED_MEMORIES.md), [проверки](docs/SHARED_MEMORIES_EVIDENCE.md).
 Это первый срез общей хроники, не дневник слепых ответов «День за днём».
+
+## 2026-11-11 — наши песни, отдельный bounded synthetic-срез
+- `packages/domain/songs/text.ts`: Unicode-нормализация личного объяснения.
+- `services/api/src/shared-songs*.ts`, migration016: отдельная коллекция title +
+  explanation, immutable command/replay и latest50 с текущей pair/session/epoch.
+- `apps/mobile/src/auth/songs*.ts`, `SongsPanel.tsx`: RU/EN, RAM-черновик,
+  явная видимость партнёру, retry исходной команды и защита новых черновиков.
+- `docs/SHARED_SONGS.md` и `SHARED_SONGS_EVIDENCE.md`: контракт и точная граница.
+- Нет ссылок/плеера/загрузок; editing/order остаются планом. Независимая приёмка ожидается.

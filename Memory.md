@@ -285,3 +285,14 @@ RAM-черновик приватен до подтверждения; серв�
 Никаких автоматических записей, AI, tracking, удаления или решения об архиве.
 Точный frozen SHA, full gate и независимая приёмка фиксируются отдельно.
 См. docs/SHARED_MEMORIES.md и docs/SHARED_MEMORIES_EVIDENCE.md.
+
+## 2026-11-11 — наши песни с объяснениями
+Поверх локального 9b8bd83 добавлен отдельный synthetic-срез title + explanation
+с подтверждением видимости партнёру, immutable retry и bounded latest50.
+Данные песен не смешиваются с memories; черновики только RAM. Сервер plaintext.
+Внешние ссылки сознательно оставлены следующему срезу вместе с editing/order:
+нет URL-поля, автозагрузки preview, плеера, lyrics или копирования плейлиста.
+Тесты охватывают actual mobile→HTTP→PG lostACK, изоляцию и lifecycle; фактический
+результат all-eleven gate привязан к frozen SHA во внешнем report.
+Статус: кандидат, независимая приёмка ожидается; не весь Tan Ata и не native-ready.
+Контракт/границы: [SHARED_SONGS](docs/SHARED_SONGS.md).
