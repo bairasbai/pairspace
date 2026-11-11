@@ -168,3 +168,10 @@ PATCH shared dates добавляет optimistic version и immutable command re
 Mobile выбирает существующую дату, явно сохраняет для обоих, сохраняет черновик
 при конфликте и повторяет неизменную команду при неизвестном исходе.
 См. docs/DATE_EDITING_EVIDENCE.md и apps/mobile/SHARED_DATES.md.
+
+## Общие текстовые воспоминания
+`packages/domain/memories`, `services/api/src/shared-memories*`, migration 015 и
+`apps/mobile/src/auth/memories*` / `MemoriesPanel.tsx`: явная неизменяемая запись
+на календарный день и bounded чтение текущей активной пары/epoch.
+[Контракт](docs/SHARED_MEMORIES.md), [проверки](docs/SHARED_MEMORIES_EVIDENCE.md).
+Это первый срез общей хроники, не дневник слепых ответов «День за днём».

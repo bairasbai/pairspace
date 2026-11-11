@@ -321,3 +321,19 @@ it('date PATCH passes only the enabled item route and preserves origin, media ty
   expect((await app.handle(patch(item, {}, 'x'.repeat(17)))).status).toBe(413);
   expect((await app.handle(patch('/api/auth/get-session'))).status).toBe(405);
 });
+
+it('shared memories are independently loopback-only and default disabled with bounded origin-checked mutations', async () => {
+  const path = '/v1/couples/00000000-0000-4000-8000-000000000001/memories';
+  for (const flag of [undefined, false]) expect((await createApiApplication({ ...config(), enableSyntheticSharedMemories: flag }).handle(request(path))).status).toBe(404);
+  for (const flag of [true, 'true', null]) expect(() => createApiApplication({ ...config(), enableSyntheticSharedMemories: flag } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin = 'http://127.0.0.1:1234';
+  const app = createApiApplication({ ...config(), baseURL: origin, trustedOrigins: [origin], enableSyntheticSharedMemories: true });
+  expect((await app.handle(new Request(origin + path + '?membership_epoch=1', { headers: { origin } }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { headers: { origin: 'https://attacker.invalid' } }))).status).toBe(403);
+  for (const method of ['PATCH', 'DELETE', 'PUT']) expect((await app.handle(new Request(origin + path, { method, headers: { origin } }))).status).toBe(405);
+  expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'text/plain' }, body: '{}' }))).status).toBe(415);
+  expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: 'x'.repeat(17) }))).status).toBe(413);
+  expect((await app.handle(new Request(origin + path + '/item', { headers: { origin } }))).status).toBe(404);
+
+});

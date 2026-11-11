@@ -1,3 +1,4 @@
+import { emptyMemories } from '../src/auth/memories-state';
 import { emptyDates } from '../src/auth/dates-state';
 import { emptyBlind } from '../src/auth/blind-state';
 import { emptyTasks } from '../src/auth/tasks-state';
@@ -20,6 +21,7 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
   const leaveView = { available: false, status: 'idle' as const };
   const controller: SessionController = {
     blind: { listRounds: jest.fn(), selectRound: jest.fn(), next: jest.fn(), getSnapshot: () => emptyBlind, subscribe: () => () => {}, setDraft: jest.fn(), setConsent: jest.fn(), open: jest.fn(), read: jest.fn(), submit: jest.fn(), retry: jest.fn() },
+    memories: { getSnapshot: () => emptyMemories, subscribe: () => () => {}, setDraft: jest.fn(), setBody: jest.fn(), setLocalDate: jest.fn(), setConsent: jest.fn(), cancel: jest.fn(), create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}) },
     dates: { beginEdit: jest.fn(), setRecurrence: jest.fn(), setLeapDayPolicy: jest.fn(), getSnapshot: () => emptyDates, subscribe: () => () => {}, setDraft: jest.fn(), setLocalDate: jest.fn(), setTimezone: jest.fn(), cancel: jest.fn(), create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}) },
     tasks: { getSnapshot: () => emptyTasks, subscribe: () => () => {}, setDraft: jest.fn(), cancel: jest.fn(),
       create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}),

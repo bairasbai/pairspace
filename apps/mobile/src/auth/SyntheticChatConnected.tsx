@@ -1,3 +1,4 @@
+import { MemoriesPanel } from './MemoriesPanel';
 import { DatesPanel } from './DatesPanel';
 import { BlindPanel } from './BlindPanel';
 import { TasksPanel } from './TasksPanel';
@@ -16,6 +17,8 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   const blindView = useSyncExternalStore(blind.subscribe, blind.getSnapshot);
   const leave = controller.leave;
   const leaveView = useSyncExternalStore(leave.subscribe, leave.getSnapshot);
+  const memories = controller.memories;
+  const memoriesView = useSyncExternalStore(memories.subscribe, memories.getSnapshot);
   const dates = controller.dates;
   const datesView = useSyncExternalStore(dates.subscribe, dates.getSnapshot);
   const tasks = controller.tasks;
@@ -34,6 +37,9 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
       onNext={(id, version, confirm) => { void blind.next(id, version, confirm); }}
       onOpen={() => { void blind.open(); }} onRead={() => { void blind.read(); }}
       onSubmit={() => { void blind.submit(); }} onRetry={() => { void blind.retry(); }} />
+    <MemoriesPanel locale={locale} view={memoriesView} onDraft={memories.setDraft} onBody={memories.setBody}
+      onLocalDate={memories.setLocalDate} onConsent={memories.setConsent} onCancel={memories.cancel}
+      onCreate={() => { void memories.create(); }} onRetry={() => { void memories.retry(); }} onList={() => { void memories.list(); }} />
     <DatesPanel onEdit={dates.beginEdit} locale={locale} view={datesView} onDraft={dates.setDraft} onLocalDate={dates.setLocalDate}
       onRecurrence={dates.setRecurrence} onLeapDayPolicy={dates.setLeapDayPolicy} onTimezone={dates.setTimezone} onCancel={dates.cancel} onCreate={() => { void dates.create(); }}
       onRetry={() => { void dates.retry(); }} onList={() => { void dates.list(); }} />

@@ -1,0 +1,28 @@
+export const memoriesCopy = {
+  ru: {
+    limits: 'Название: 1–200 символов. Текст: 1–2000 символов.', title: 'Общие воспоминания', notice: 'Личный черновик хранится только в памяти приложения. Публикация сделает текст видимым партнёру тестовой пары. Сервер хранит текст без E2EE.',
+    draft: 'Название воспоминания', body: 'Текст воспоминания', localDate: 'День события YYYY-MM-DD',
+    consent: 'Подтверждаю: опубликовать этот текст для партнёра', create: 'Опубликовать воспоминание для обоих', cancel: 'Очистить черновик воспоминания',
+    cancelHint: 'Очистка не отменяет уже отправленную команду. Изменение и удаление опубликованного текста пока недоступны.',
+    list: 'Обновить воспоминания', idle: 'Укажите день события. Он не меняется между часовыми поясами.',
+    saving: 'Публикуем воспоминание…', retry: 'Результат неизвестен. Повторите ту же команду, не создавая копию.', again: 'Повторить публикацию воспоминания',
+    saved: 'Воспоминание доступно обоим партнёрам.', invalid: 'Нужны название 1–200 символов, текст 1–2000 символов, существующий день YYYY-MM-DD и подтверждение публикации.',
+    conflict: 'Команда конфликтует. Обновите список перед новой публикацией.', unavailable: 'Воспоминания сейчас недоступны.',
+    error: 'Не удалось подтвердить воспоминания.', none: 'Общих воспоминаний пока нет.',
+    bound: 'До 50 последних опубликованных записей. Это не полный архив и не дневник слепых ответов.', pending: 'Неизменяемая запись, ожидающая подтверждения:',
+    event: 'День события:', recorded: 'Записано:', author: 'Автор (ID):',
+  },
+  en: {
+    limits: 'Title: 1–200 characters. Text: 1–2000 characters.', title: 'Shared memories', notice: 'Your private draft stays only in app memory. Publishing makes this text visible to your test partner. The server stores plaintext without E2EE.',
+    draft: 'Memory title', body: 'Memory text', localDate: 'Event day YYYY-MM-DD',
+    consent: 'I confirm: publish this text for my partner', create: 'Publish memory for both partners', cancel: 'Clear memory draft',
+    cancelHint: 'Clearing does not undo a submitted command. Editing and deleting published text are not available yet.',
+    list: 'Refresh memories', idle: 'Enter the event day. It does not shift between time zones.',
+    saving: 'Publishing memory…', retry: 'Outcome unknown. Retry the same command without creating a copy.', again: 'Retry memory publication',
+    saved: 'Memory shared with both partners.', invalid: 'Enter a 1–200 character title, 1–2000 character text, a real YYYY-MM-DD day, and confirm publication.',
+    conflict: 'Command conflict. Refresh before publishing again.', unavailable: 'Memories are currently unavailable.',
+    error: 'Could not confirm memories.', none: 'No shared memories yet.',
+    bound: 'Up to 50 most recently published entries. Not a full archive or a blind-answer diary.', pending: 'Unchanged entry awaiting confirmation:',
+    event: 'Event day:', recorded: 'Recorded:', author: 'Author (ID):',
+  },
+};
