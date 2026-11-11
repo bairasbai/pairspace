@@ -1,8 +1,9 @@
+import { SongLink } from './SongLink';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { songsCopy } from './songsCopy';
 import type { SongsView } from './songs';
-export function SongsPanel({ locale, view, onDraft, onExplanation, onCreate, onRetry, onList, onConsent, onCancel }: {
-  locale: 'ru' | 'en'; view: SongsView; onDraft(text: string): void; onExplanation(text: string): void;
+export function SongsPanel({ locale, view, onDraft, onExplanation, onMusicUrl, onCreate, onRetry, onList, onConsent, onCancel }: {
+  locale: 'ru' | 'en'; view: SongsView; onDraft(text: string): void; onExplanation(text: string): void; onMusicUrl(text: string): void;
   onCreate(): void; onRetry(): void; onList(): void; onConsent(value: boolean): void; onCancel(): void;
 }) {
   if (!view.available) return null;
@@ -16,17 +17,21 @@ export function SongsPanel({ locale, view, onDraft, onExplanation, onCreate, onR
       maxLength={800} style={{ minHeight: 48, borderWidth: 1, padding: 8 }} />
     <TextInput accessibilityLabel={t.explanation} value={view.explanation} onChangeText={onExplanation} multiline
       maxLength={8000} style={{ minHeight: 96, borderWidth: 1, padding: 8 }} />
+    <TextInput accessibilityLabel={t.musicUrl} value={view.musicUrl} onChangeText={onMusicUrl}
+      autoCapitalize="none" autoCorrect={false} maxLength={513} keyboardType="url"
+      style={{ minHeight: 48, borderWidth: 1, padding: 8 }} /><Text>{t.linkHelp}</Text>
     <Pressable accessibilityRole="checkbox" accessibilityLabel={t.consent} accessibilityState={{ checked: view.consent }}
       onPress={() => onConsent(!view.consent)} style={{ minHeight: 48, justifyContent: 'center' }}><Text>{view.consent ? '☑ ' : '☐ '}{t.consent}</Text></Pressable>
     {button(t.create, onCreate, view.busy || view.requiresRefresh || view.pending !== null || !view.consent)}
     {button(t.cancel, onCancel, false)}<Text>{t.cancelHint}</Text>
-    {view.pending && <Text selectable>{t.pending} {view.pending.title}{'\n'}{view.pending.explanation}</Text>}
+    {view.pending && <Text selectable>{t.pending} {view.pending.title}{'\n'}{view.pending.explanation}{view.pending.musicUrl ? '\n' + view.pending.musicUrl : ''}</Text>}
     {view.status === 'retry' && button(t.again, onRetry, view.busy)}
     <Text accessibilityLiveRegion="polite">{t[view.status]}</Text>
     {button(t.list, onList, view.busy)}{view.error && <Text>{t.error}</Text>}
     <Text>{t.bound}</Text>{view.checked && view.songs.length === 0 && <Text>{t.none}</Text>}
     {view.songs.map(song => <View key={song.id} style={{ paddingVertical: 8 }}>
       <Text selectable>{song.title}</Text><Text selectable>{song.explanation}</Text>
+      {song.musicUrl && <SongLink key={song.musicUrl} url={song.musicUrl} locale={locale} />}
       <Text>{t.recorded} {song.createdAt}</Text>
       <Text>{t.author} {song.creatorId}</Text>
     </View>)}

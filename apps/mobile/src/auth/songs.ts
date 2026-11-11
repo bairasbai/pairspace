@@ -1,3 +1,4 @@
+import { normalizeSongLink } from '../../../../packages/domain/songs/link';
 import { normalizeSongExplanation } from '../../../../packages/domain/songs/text';
 import { normalizeTaskTitle } from '../../../../packages/domain/tasks/title';
 import { readBoundedJson } from '../chat/transport';
@@ -6,7 +7,7 @@ import { validateSyntheticConfig, type SyntheticConfig } from './config';
 import type { InvitationHost, InvitationHostSnapshot } from './invitations-controller';
 import { emptySongs, record, sameSongContext, songOrder, uuid, validSong, type SongsView } from './songs-state';
 export type { SharedSong, SongsView } from './songs-state';
-type Pending = Readonly<{ id: string; title: string; explanation: string; revision: number }>;
+type Pending = Readonly<{ id: string; title: string; explanation: string; musicUrl?: string; revision: number }>;
 /** Drafts and unresolved immutable commands exist only in RAM, scoped to the verified session/pair. */
 export function createSongsController(config: SyntheticConfig, host: InvitationHost,
   request: (input: Request) => Promise<Response>, commandId: () => string) {
@@ -57,7 +58,7 @@ export function createSongsController(config: SyntheticConfig, host: InvitationH
         method: save ? 'POST' : 'GET', headers: { Cookie: cookie, Origin: settings.baseURL,
           ...(save ? { 'Content-Type': 'application/json', 'Idempotency-Key': command!.id } : {}) },
         ...(save ? { body: JSON.stringify({ command_id: command!.id, membership_epoch: context.membershipEpoch,
-          title: command!.title, explanation: command!.explanation }) } : {}),
+          title: command!.title, explanation: command!.explanation, ...(command!.musicUrl ? { music_url: command!.musicUrl } : {}) }) } : {}),
         credentials: 'omit', redirect: 'error', cache: 'no-store',
       }));
       if (!current()) return;
@@ -86,10 +87,10 @@ export function createSongsController(config: SyntheticConfig, host: InvitationH
         const song = value.song;
         if (!validSong(song, context) || typeof value.replay !== 'boolean' || value.commandId !== command!.id
           || song.creatorId !== context.userId || song.title !== command!.title
-          || song.explanation !== command!.explanation) throw new Error('retry');
+          || song.explanation !== command!.explanation || song.musicUrl !== command!.musicUrl) throw new Error('retry');
         pending = null;
         publish({ ...view, pending: null, status: 'saved',
-          ...(revision === command!.revision ? { draft: '', explanation: '', consent: false } : {}),
+          ...(revision === command!.revision ? { draft: '', explanation: '', musicUrl: '', consent: false } : {}),
           songs: [song, ...view.songs.filter(item => item.id !== song.id)].sort(songOrder).slice(0, 50) });
       } else {
         const songs = value.songs;
@@ -105,11 +106,12 @@ export function createSongsController(config: SyntheticConfig, host: InvitationH
     if (!view.available || view.busy || pending || view.requiresRefresh) return Promise.resolve();
     if (!view.consent) { publish({ ...view, status: 'invalid' }); return Promise.resolve(); }
     const title = normalizeTaskTitle(view.draft), body = normalizeSongExplanation(view.explanation), id = commandId().toLowerCase();
-    if (!title.ok || !body.ok || !uuid(id)) {
+    const link = normalizeSongLink(view.musicUrl === '' ? undefined : view.musicUrl);
+    if (!title.ok || !body.ok || !link.ok || !uuid(id)) {
       publish({ ...view, status: 'invalid' }); return Promise.resolve();
     }
-    pending = Object.freeze({ id, title: title.text, explanation: body.text, revision });
-    publish({ ...view, pending: { title: title.text, explanation: body.text }, consent: false });
+    pending = Object.freeze({ id, title: title.text, explanation: body.text, ...(link.url ? { musicUrl: link.url } : {}), revision });
+    publish({ ...view, pending: { title: title.text, explanation: body.text, ...(link.url ? { musicUrl: link.url } : {}) }, consent: false });
     return run('save');
   }
   return { reset, sync, actions: {
@@ -117,6 +119,7 @@ export function createSongsController(config: SyntheticConfig, host: InvitationH
     subscribe(notify: () => void) { listeners.add(notify); return () => { listeners.delete(notify); }; },
     setDraft(draft: string) { if (view.available) { revision++; publish({ ...view, draft: draft.slice(0, 800), consent: false }); } },
     setExplanation(explanation: string) { if (view.available) { revision++; publish({ ...view, explanation: explanation.slice(0, 8000), consent: false }); } },
+    setMusicUrl(musicUrl: string) { if (view.available) { revision++; publish({ ...view, musicUrl: musicUrl.slice(0, 513), consent: false }); } },
     setConsent(consent: boolean) { if (view.available) publish({ ...view, consent }); },
     create: prepare,
     retry: () => run('save'), list: () => run('list'),
@@ -124,7 +127,7 @@ export function createSongsController(config: SyntheticConfig, host: InvitationH
       revision++;
       // Cancel only the unsent draft/read. An already submitted command may have committed.
       if (activeAction === 'list') { sequence++; activeAction = null; publish({ ...view, busy: false }); }
-      publish({ ...view, draft: '', explanation: '', consent: false });
+      publish({ ...view, draft: '', explanation: '', musicUrl: '', consent: false });
     },
   } };
 }

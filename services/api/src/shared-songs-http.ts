@@ -21,11 +21,11 @@ export function createSharedSongsHandler(db: AuthorizedDatabase) {
         if (request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') return error(415, 'unsupported_media_type');
         let body: unknown;
         try { body = await readJson(request); } catch { return error(400, 'invalid_request'); }
-        if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).sort().join(',') !== 'command_id,explanation,membership_epoch,title') return error(400, 'invalid_request');
+        if (!body || typeof body !== 'object' || Array.isArray(body) || !['command_id,explanation,membership_epoch,title', 'command_id,explanation,membership_epoch,music_url,title'].includes(Object.keys(body).sort().join(','))) return error(400, 'invalid_request');
         const fields = body as Record<string, unknown>;
         if (!isUuid(fields.command_id) || request.headers.get('idempotency-key') !== fields.command_id) return error(400, 'invalid_request');
         input = { coupleId: route[1], commandId: fields.command_id, membershipEpoch: fields.membership_epoch,
-          title: fields.title, explanation: fields.explanation };
+          title: fields.title, explanation: fields.explanation, ...('music_url' in fields ? { musicUrl: fields.music_url } : {}) };
       } else {
         if (request.body || [...url.searchParams.keys()].join(',') !== 'membership_epoch'
           || !/^[1-9][0-9]*$/.test(url.searchParams.get('membership_epoch') ?? '')) return error(400, 'invalid_request');

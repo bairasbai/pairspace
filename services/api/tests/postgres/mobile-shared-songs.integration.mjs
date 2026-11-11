@@ -35,23 +35,26 @@ test('real PostgreSQL: shared-song mobile immutable unknown ACK, separate new dr
     const [a, b, foreign] = accounts.map(account => account.controller);
     assert.equal(accounts.every(account => !account.requests.some(r => r.path.includes('/songs'))), true);
     a.songs.setDraft('Synthetic shared song'); a.songs.setExplanation('Synthetic shared explanation');
+    const musicUrl = 'https://youtu.be/Synthetic123'; a.songs.setMusicUrl(musicUrl);
     await a.songs.create(); assert.equal(commands.length, 0, 'explicit sharing consent required');
     a.songs.setConsent(true);
     await b.songs.list(); assert.equal(b.songs.getSnapshot().songs.length, 0, 'private RAM draft not auto-shared');
     await a.songs.create(); assert.equal(a.songs.getSnapshot().status, 'retry');
     a.songs.setDraft('Synthetic new draft'); a.songs.setExplanation('Synthetic new explanation');
+    a.songs.setMusicUrl('https://open.spotify.com/track/NewSynthetic');
     await a.songs.retry(); assert.equal(a.songs.getSnapshot().status, 'saved');
     assert.equal(a.songs.getSnapshot().draft, 'Synthetic new draft');
     assert.equal(a.songs.getSnapshot().explanation, 'Synthetic new explanation');
-    assert.deepEqual(commands[0], commands[1]);
-    const song = a.songs.getSnapshot().songs[0]; assert.equal(song.explanation, 'Synthetic shared explanation');
+    assert.equal(a.songs.getSnapshot().musicUrl, 'https://open.spotify.com/track/NewSynthetic');
+    assert.equal(commands[0].music_url, musicUrl); assert.deepEqual(commands[0], commands[1]);
+    const song = a.songs.getSnapshot().songs[0]; assert.equal(song.musicUrl, musicUrl); assert.equal(song.explanation, 'Synthetic shared explanation');
     await b.songs.list(); assert.deepEqual(b.songs.getSnapshot().songs, [song]);
     await foreign.songs.list(); assert.equal(foreign.songs.getSnapshot().songs.length, 0);
     const cookie = await accounts[2].connection.getCookie();
     assert.equal((await fetch(`${f.baseURL}/v1/couples/${pairA}/songs?membership_epoch=1`,
       { headers: { cookie, origin: f.baseURL } })).status, 403);
-    const persisted = (await f.domainPool.query('SELECT explanation,title FROM shared_songs')).rows;
-    assert.deepEqual(persisted, [{ explanation: 'Synthetic shared explanation', title: 'Synthetic shared song' }]);
+    const persisted = (await f.domainPool.query('SELECT explanation,title,music_url FROM shared_songs')).rows;
+    assert.deepEqual(persisted, [{ explanation: 'Synthetic shared explanation', title: 'Synthetic shared song', music_url: musicUrl }]);
     const ownerCookie = await accounts[0].connection.getCookie();
     const leave = await fetch(`${f.baseURL}/v1/pair/leave`, { method: 'POST',
       headers: { cookie: ownerCookie, origin: f.baseURL, 'content-type': 'application/json' },
@@ -59,6 +62,7 @@ test('real PostgreSQL: shared-song mobile immutable unknown ACK, separate new dr
     assert.equal(leave.status, 200);
     await a.songs.list(); assert.equal(a.songs.getSnapshot().available, false);
     assert.deepEqual(a.songs.getSnapshot().songs, []); assert.equal(a.songs.getSnapshot().draft, '');
+    assert.equal(a.songs.getSnapshot().musicUrl, '');
     await b.refresh(); assert.deepEqual(b.songs.getSnapshot().songs, []);
     await foreign.songs.list(); assert.equal(foreign.songs.getSnapshot().available, true);
     assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM shared_songs')).rows[0].n, 1, 'rows retained without deciding archive or retention policy');

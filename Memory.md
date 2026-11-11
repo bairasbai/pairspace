@@ -296,3 +296,11 @@ RAM-черновик приватен до подтверждения; серв�
 результат all-eleven gate привязан к frozen SHA во внешнем report.
 Статус: кандидат, независимая приёмка ожидается; не весь Tan Ata и не native-ready.
 Контракт/границы: [SHARED_SONGS](docs/SHARED_SONGS.md).
+
+## 2026-11-11 — bounded song-link candidate
+Добавлена необязательная музыкальная ссылка с пятью точными HTTPS хостами,
+без query/fragment/URI схем, сетевых запросов и новых зависимостей.
+Явная кнопка передаёт URL Linking.openURL после видимого предупреждения;
+не гарантирует содержимое, редиректы или права. Старые no-link receipts совместимы.
+Полный frozen checkpoint и независимая приёмка обязательны; native, two-device,
+legacy Next и production readiness не подтверждены.

@@ -5,7 +5,7 @@ import { emptySongs } from '../src/auth/songs-state';
 import { song } from './songs-fixtures';
 const initial = { ...emptySongs, available: true, consent: true };
 function props(locale: 'ru' | 'en') {
-  return { locale, view: initial, onConsent: jest.fn(), onDraft: jest.fn(), onExplanation: jest.fn(), onCreate: jest.fn(), onRetry: jest.fn(), onList: jest.fn(), onCancel: jest.fn() };
+  return { locale, view: initial, onConsent: jest.fn(), onDraft: jest.fn(), onExplanation: jest.fn(), onMusicUrl: jest.fn(), onCreate: jest.fn(), onRetry: jest.fn(), onList: jest.fn(), onCancel: jest.fn() };
 }
 it.each(['ru', 'en'] as const)('explicit share/list/retry and honest one-off cap UI %s', locale => {
   const p = props(locale), t = songsCopy[locale]; const ui = render(<SongsPanel {...p} />);

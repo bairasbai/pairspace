@@ -74,3 +74,32 @@ test('shared songs PostgreSQL: fifty latest entries, stable author-independent o
     assert.equal((await x.f.domainPool.query('SELECT count(*)::int n FROM shared_memories')).rows[0].n, 0);
   } finally { await x.f.close(); }
 });
+
+test('shared songs PostgreSQL: optional public link is immutable and absent legacy receipts remain replayable', async () => {
+  const x = await songsFixture();
+  try {
+    const music_url = 'https://music.apple.com/us/song/Synthetic123';
+    const commandId = randomUUID();
+    const create = extra => x.create(0, 'Synthetic linked song', commandId, x.pairA, 1, extra);
+    const first = await create({ music_url }); assert.equal(first.status, 201);
+    const song = (await value(first)).song; assert.equal(song.musicUrl, music_url);
+    assert.deepEqual((await value(await create({ music_url }))).song, song);
+    assert.equal((await create({})).status, 409);
+    assert.equal((await create({ music_url: 'https://youtu.be/Synthetic123' })).status, 409);
+    assert.deepEqual((await value(await x.list(1))).songs, [song]);
+    const legacyId = randomUUID();
+    const legacy = await x.create(0, 'Synthetic no link', legacyId);
+    assert.equal(legacy.status, 201); assert.equal('musicUrl' in (await value(legacy)).song, false);
+    assert.equal((await x.create(0, 'Synthetic no link', legacyId)).status, 200);
+    assert.equal((await x.create(0, 'Synthetic no link', legacyId, x.pairA, 1, { music_url })).status, 409);
+    for (const music_url of [null, '', 'https://localhost/x', 'https://youtu.be/x?token=x', 'https://youtu.be/x\n']) {
+      assert.equal((await x.create(0, 'Synthetic invalid link', randomUUID(), x.pairA, 1, { music_url })).status, 400);
+    }
+    for (const url of ['', 'https://localhost/x', 'https://youtu.be/x?x', 'https://youtu.be/x\n', 'https://youtu.be/' + 'x'.repeat(513)]) {
+      await assert.rejects(x.f.domainPool.query('INSERT INTO shared_songs(couple_id,creator_id,membership_epoch,command_id,title,explanation,created_at,music_url) VALUES($1,$2,1,$3,$4,$5,$6,$7)',
+        [x.pairA, x.usersA[0], randomUUID(), 'Synthetic', 'Reason', '2026-11-10T00:00:00Z', url]), { code: '23514' });
+    }
+    assert.equal((await x.leave(1)).status, 200);
+    assert.equal((await create({ music_url })).status, 403);
+  } finally { await x.f.close(); }
+});

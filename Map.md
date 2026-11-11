@@ -184,3 +184,10 @@ Mobile выбирает существующую дату, явно сохран
   явная видимость партнёру, retry исходной команды и защита новых черновиков.
 - `docs/SHARED_SONGS.md` и `SHARED_SONGS_EVIDENCE.md`: контракт и точная граница.
 - Нет ссылок/плеера/загрузок; editing/order остаются планом. Независимая приёмка ожидается.
+
+## 2026-11-11 — необязательные ссылки песен
+- `packages/domain/songs/link.ts`: единый строгий HTTPS allowlist, без fetch.
+- migration017 + shared-songs API: nullable music_url, совместимые старые receipts.
+- `SongLink.tsx`, songs controller/panel: явное открытие ОС после предупреждения,
+  RAM-ссылка и immutable retry; RU/EN. Native пока NOT_RUN.
+- [Контракт](docs/SHARED_SONGS.md), [проверки](docs/SONG_LINKS_EVIDENCE.md).

@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, expect, it } from 'vitest';
 import type { PGlite } from '@electric-sql/pglite';
-import { createSharedSong, listSharedSongs } from '../src/shared-songs.ts';
+import { createSharedSong, listSharedSongs, type SharedSong } from '../src/shared-songs.ts';
 import { createSharedSongsHandler } from '../src/shared-songs-http.ts';
 import { bindSessionAuthority } from '../src/auth-authority.ts';
 import { createSyntheticAuthority } from '../src/synthetic-authority.ts';
@@ -11,7 +11,7 @@ let pg: PGlite;
 const scope = { coupleId: c1, membershipEpoch: 1 };
 const command = { ...scope, commandId: id(801), title: ' Synthetic e\u0301\r\n song ', explanation: 'Synthetic explanation' };
 const db = () => adapter(pg);
-beforeAll(async () => { pg = await createFixture(); for (const file of ['016_shared_songs.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8')); });
+beforeAll(async () => { pg = await createFixture(); for (const file of ['016_shared_songs.sql', '017_shared_song_links.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8')); });
 afterAll(async () => { await pg.close(); });
 it('creates once, shares with both partners, binds all normalized fields', async () => {
   expect(await listSharedSongs(db(), principal, scope)).toEqual({ ok: true, value: { songs: [], limit: 50 } });
@@ -96,6 +96,35 @@ it('database forbids mutations and invalid explanation/title/foreign author', as
   }
   await expect(pg.query("INSERT INTO shared_songs(couple_id,creator_id,membership_epoch,command_id,title,explanation,created_at) VALUES($1,$2,1,$3,'synthetic','text','2026-01-01Z')", [c2, principal.userId, id(890)])).rejects.toMatchObject({ code: '23503' });
 });
+it('stores strict optional music links, preserves absent receipts and conflicts on any link change', async () => {
+  const handler = createSharedSongsHandler(bindSessionAuthority(db(), createSyntheticAuthority(async () => principal)));
+  const musicUrl = 'https://open.spotify.com/track/Synthetic123';
+  const input = { ...explanation, command_id: id(870), music_url: musicUrl };
+  const send = (body: unknown) => handler(make('POST', body, '', { 'idempotency-key': id(870) }));
+  const first = await send(input);
+  expect(first.status).toBe(201);
+  const payload = await first.json() as { value: { song: SharedSong } };
+  expect(payload.value.song.musicUrl).toBe(musicUrl);
+  expect(await (await send(input)).json()).toMatchObject({ ok: true, value: { replay: true, song: payload.value.song } });
+  const { music_url: omitted, ...noLink } = input;
+  expect(omitted).toBe(musicUrl);
+  expect((await send(noLink)).status).toBe(409);
+  expect((await send({ ...input, music_url: 'https://youtu.be/Synthetic123' })).status).toBe(409);
+  expect(await createSharedSong(db(), principal, { ...command, musicUrl })).toEqual({ ok: false, error: 'idempotency_conflict' });
+  expect((await createSharedSong(db(), principal, command))).toMatchObject({ ok: true, value: { replay: true } });
+  const read = await listSharedSongs(db(), identityPrincipal(u2), scope);
+  expect(read).toMatchObject({ ok: true, value: { songs: expect.arrayContaining([payload.value.song]) } });
+  for (const music_url of [null, 1, '', 'https://open.spotify.com@localhost/track/x', 'http://youtu.be/x',
+    'https://youtu.be/x?secret=x', 'https://youtu.be/x#x', 'https://youtu.be/../x', 'https://youtu.be/%78',
+    'https://youtu.be:443/x', 'https://youtu.be/x\n', 'https://youtu.be/' + 'x'.repeat(513)]) {
+    expect((await send({ ...input, music_url })).status).toBe(400);
+  }
+  for (const music_url of ['', 'https://localhost/x', 'https://youtu.be/x?x', 'https://youtu.be/x\n',
+    'https://youtu.be/' + 'x'.repeat(513)]) {
+    await expect(pg.query("INSERT INTO shared_songs(couple_id,creator_id,membership_epoch,command_id,title,explanation,created_at,music_url) VALUES($1,$2,1,$3,'synthetic','reason','2026-01-01Z',$4)",
+      [c1, principal.userId, id(871), music_url])).rejects.toMatchObject({ code: '23514' });
+  }
+});
 it('caps stable latest-created lists at fifty, not a complete archive', async () => {
   for (let n = 0; n < 51; n++) await createSharedSong(db(), principal, { ...command, commandId: id(900 + n) });
   const result = await listSharedSongs(db(), principal, scope);
@@ -106,4 +135,20 @@ it('caps stable latest-created lists at fifty, not a complete archive', async ()
   await pg.query("UPDATE couples SET status='closed' WHERE id=$1", [c1]);
   expect(await listSharedSongs(db(), principal, scope)).toEqual({ ok: false, error: 'unavailable' });
   expect(await createSharedSong(db(), principal, command)).toEqual({ ok: false, error: 'unavailable' });
+});
+
+it('additive link migration preserves an existing immutable no-link receipt', async () => {
+  const old = await createFixture();
+  try {
+    await old.exec(await readFile(new URL('../migrations/016_shared_songs.sql', import.meta.url), 'utf8'));
+    await old.query("INSERT INTO shared_songs(couple_id,creator_id,membership_epoch,command_id,title,explanation,created_at) VALUES($1,$2,1,$3,'Synthetic é song','Synthetic explanation','2026-11-10Z')",
+      [c1, principal.userId, command.commandId]);
+    await old.exec(await readFile(new URL('../migrations/017_shared_song_links.sql', import.meta.url), 'utf8'));
+    const replay = await createSharedSong(adapter(old), principal, command);
+    expect(replay).toMatchObject({ ok: true, value: { replay: true } });
+    if (!replay.ok) throw Error('fixture');
+    expect(Object.keys(replay.value.song).sort()).toEqual(['coupleId', 'createdAt', 'creatorId', 'explanation', 'id', 'membershipEpoch', 'title']);
+    expect(await createSharedSong(adapter(old), principal, { ...command, musicUrl: 'https://youtu.be/Synthetic123' }))
+      .toEqual({ ok: false, error: 'idempotency_conflict' });
+  } finally { await old.close(); }
 });

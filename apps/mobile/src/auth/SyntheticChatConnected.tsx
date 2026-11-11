@@ -43,7 +43,7 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
     <MemoriesPanel locale={locale} view={memoriesView} onDraft={memories.setDraft} onBody={memories.setBody}
       onLocalDate={memories.setLocalDate} onConsent={memories.setConsent} onCancel={memories.cancel}
       onCreate={() => { void memories.create(); }} onRetry={() => { void memories.retry(); }} onList={() => { void memories.list(); }} />
-    <SongsPanel locale={locale} view={songsView} onDraft={songs.setDraft} onExplanation={songs.setExplanation}
+    <SongsPanel locale={locale} view={songsView} onDraft={songs.setDraft} onExplanation={songs.setExplanation} onMusicUrl={songs.setMusicUrl}
       onConsent={songs.setConsent} onCancel={songs.cancel}
       onCreate={() => { void songs.create(); }} onRetry={() => { void songs.retry(); }} onList={() => { void songs.list(); }} />
     <DatesPanel onEdit={dates.beginEdit} locale={locale} view={datesView} onDraft={dates.setDraft} onLocalDate={dates.setLocalDate}

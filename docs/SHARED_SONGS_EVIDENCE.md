@@ -1,4 +1,7 @@
-# Shared songs: verification candidate
+# Shared songs: baseline verification candidate
+
+Historical title/explanation-only scope. Optional links are now covered by
+[the song-link candidate](SONG_LINKS_EVIDENCE.md); this report describes its baseline.
 
 ## Scope and provenance
 Baseline local 9b8bd83c038b6a17d10c0b01de99556097ea067e, tree
