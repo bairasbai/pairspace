@@ -196,3 +196,11 @@ Mobile выбирает существующую дату, явно сохран
 - services/api/tests/postgres/letters-fixture.mjs: bounded parallel synthetic signup, без reuse состояния.
 - services/api/tests/postgres/fixture-lifecycle.integration.mjs: порядок, изоляция и failure cleanup на real PG.
 - docs/POSTGRES_VERIFICATION_RELIABILITY.md: измерения, сохранённые неуспехи и границы frozen приёмки.
+
+## 2026-11-11 — исправление своей песни
+- migration018: version и независимые immutable create/edit receipts с backfill.
+- shared-songs API: author-only PATCH, version conflict, canonical historical replay.
+- songs controller/panel: явная RU/EN правка с подтверждением, retained RAM draft,
+  неизменяемый pending retry и изоляция выбранной записи/сессии/пары/epoch.
+- [Контракт](docs/SHARED_SONGS.md), [проверки](docs/SONG_EDITING_EVIDENCE.md).
+- URL-opening, default demo и latest50 сохранены; удаления/undo/playback нет.

@@ -233,7 +233,9 @@ retention/архив не закрыты. Native/device и независима�
 ### Наши песни с объяснениями: bounded synthetic-кандидат
 Отдельная title/explanation коллекция, явная публикация партнёру, latest50,
 immutable retry/lostACK и scope cleanup реализованы для synthetic mobile→HTTP→PG.
-Не закрывает всю строку P1: редактирование и ручной порядок остаются планом.
+Не закрывает всю строку P1: удаление и ручной порядок остаются планом.
+Редактирование автором с подтверждением, version CAS и immutable receipts
+добавлено как bounded synthetic-кандидат; [проверки](SONG_EDITING_EVIDENCE.md).
 Необязательная HTTPS-ссылка с узким allowlist и явным открытием ОС реализована
 как synthetic-кандидат; нет проверки содержимого/редиректов/лицензии. Нет streaming/downloads/lyrics/import/private playlists.
 После полного frozen checkpoint требуется независимая приёмка; native/two-device

@@ -13,7 +13,7 @@ test('shared songs PostgreSQL: explicit immutable title and explanation is share
       const song = (await value(response)).song;
       assert.equal(song.title, 'Synthetic é'); assert.equal(song.explanation, 'é\nSynthetic 😀');
       assert.equal(song.creatorId, x.usersA[index]);
-      assert.deepEqual(Object.keys(song).sort(), ['coupleId', 'createdAt', 'creatorId', 'explanation', 'id', 'membershipEpoch', 'title']);
+      assert.deepEqual(Object.keys(song).sort(), ['coupleId', 'createdAt', 'creatorId', 'explanation', 'id', 'membershipEpoch', 'title', 'version']);
     }
     const a = await value(await x.list(0)); assert.equal(a.songs.length, 2); assert.equal(a.limit, 50);
     assert.deepEqual(await value(await x.list(1)), a);

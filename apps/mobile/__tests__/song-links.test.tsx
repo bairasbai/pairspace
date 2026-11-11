@@ -63,7 +63,7 @@ it('lists validated link without opening it', async () => {
 });
 it.each(['ru', 'en'] as const)('form and pending summary expose link with explicit disclosure in %s', locale => {
   const f = fixture(), t = songsCopy[locale]; f.api.setMusicUrl(url);
-  render(<SongsPanel locale={locale} view={{ ...f.api.getSnapshot(), pending: { title: song.title, explanation: song.explanation, musicUrl: url }, songs: [{ ...song, musicUrl: url }] }}
+  render(<SongsPanel onEdit={f.api.beginEdit} locale={locale} view={{ ...f.api.getSnapshot(), pending: { title: song.title, explanation: song.explanation, musicUrl: url }, songs: [{ ...song, musicUrl: url }] }}
     onDraft={f.api.setDraft} onExplanation={f.api.setExplanation} onMusicUrl={f.api.setMusicUrl}
     onConsent={f.api.setConsent} onCreate={f.api.create} onCancel={f.api.cancel} onRetry={f.api.retry} onList={f.api.list} />);
   expect(screen.getByText(t.leaving)).toBeTruthy(); expect(screen.getByText(t.linkHelp)).toBeTruthy();

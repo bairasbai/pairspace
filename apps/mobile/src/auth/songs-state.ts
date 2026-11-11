@@ -3,12 +3,12 @@ import { normalizeTaskTitle } from '../../../../packages/domain/tasks/title';
 import { normalizeSongExplanation } from '../../../../packages/domain/songs/text';
 import type { SessionContext } from './context';
 export type SharedSong = Readonly<{ id: string; coupleId: string; creatorId: string;
-  membershipEpoch: number; title: string; explanation: string; musicUrl?: string; createdAt: string }>;
-export type SongsView = Readonly<{ available: boolean; busy: boolean; draft: string; explanation: string; musicUrl: string; consent: boolean;
+  membershipEpoch: number; title: string; explanation: string; musicUrl?: string; createdAt: string; version: number }>;
+export type SongsView = Readonly<{ userId: string | null; editing: Readonly<{ id: string; version: number }> | null; available: boolean; busy: boolean; draft: string; explanation: string; musicUrl: string; consent: boolean;
   status: 'idle' | 'saving' | 'retry' | 'saved' | 'invalid' | 'conflict' | 'unavailable';
   songs: readonly SharedSong[]; checked: boolean; error: boolean; requiresRefresh: boolean;
-  pending: Readonly<{ title: string; explanation: string; musicUrl?: string }> | null }>;
-export const emptySongs: SongsView = { available: false, busy: false, draft: '', explanation: '', musicUrl: '', consent: false,
+  pending: Readonly<{ editing?: Readonly<{ id: string; version: number }> | null; title: string; explanation: string; musicUrl?: string }> | null }>;
+export const emptySongs: SongsView = { userId: null, editing: null, available: false, busy: false, draft: '', explanation: '', musicUrl: '', consent: false,
   status: 'idle', songs: [], checked: false, error: false, requiresRefresh: false, pending: null };
 export const uuid = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 export const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
@@ -23,10 +23,10 @@ function instant(v: unknown): v is string {
 }
 export function validSong(v: unknown, context: SessionContext): v is SharedSong {
   if (!record(v) || context.state !== 'ready'
-    || Object.keys(v).filter(key => key !== 'musicUrl').sort().join(',') !== 'coupleId,createdAt,creatorId,explanation,id,membershipEpoch,title') return false;
+    || Object.keys(v).filter(key => key !== 'musicUrl').sort().join(',') !== 'coupleId,createdAt,creatorId,explanation,id,membershipEpoch,title,version') return false;
   if ('musicUrl' in v && (typeof v.musicUrl !== 'string' || !normalizeSongLink(v.musicUrl).ok)) return false;
   const title = normalizeTaskTitle(v.title), body = normalizeSongExplanation(v.explanation);
-  return uuid(v.id) && uuid(v.creatorId) && v.coupleId === context.coupleId
+  return Number.isInteger(v.version) && (v.version as number) >= 1 && (v.version as number) <= 2147483647 && uuid(v.id) && uuid(v.creatorId) && v.coupleId === context.coupleId
     && v.membershipEpoch === context.membershipEpoch && title.ok && title.text === v.title
     && body.ok && body.text === v.explanation && instant(v.createdAt);
 }

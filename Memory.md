@@ -312,3 +312,12 @@ allSettled завершает все запросы до cleanup, порядок
 Production auth/миграции/clock/guards неизменны; schema, cookies и state не reuse.
 Focused lifecycle 2/2 PASS после исправления ошибочной проверки separate authority.
 Полный frozen gate и независимая приёмка отдельно; см. POSTGRES_VERIFICATION_RELIABILITY.
+
+## 2026-11-11 — исправление своей песни, кандидат
+Продолжен перенос сценария песен Tan Ata: автор может явно исправить название,
+объяснение и ссылку. Партнёр не редактирует чужое объяснение. Version CAS
+защищает новые изменения; immutable receipts сохраняют старый create/retry.
+Неизвестный ACK не теряет новый черновик; refresh не перезаписывает ввод.
+Сервер plaintext, latest50, synthetic loopback и default demo сохранены.
+Не реализованы удаление/undo/history/ручной порядок. Frozen gate и независимая
+приёмка отдельно: docs/SONG_EDITING_EVIDENCE.md. Native/two-device NOT_RUN.

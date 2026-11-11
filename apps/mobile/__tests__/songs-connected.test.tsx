@@ -22,6 +22,13 @@ it.each(['ru', 'en'] as const)('connected shared songs use one controller and cl
   expect(screen.getByText(t.saved)).toBeTruthy(); expect(controller.songs.getSnapshot().draft).toBe('');
   await act(async () => { fireEvent.press(screen.getByText(t.list)); });
   expect(screen.getByText(song.explanation)).toBeTruthy();
+  fireEvent.press(screen.getByText(t.edit));
+  fireEvent.changeText(screen.getByLabelText(t.draft), 'Corrected title');
+  fireEvent.press(screen.getByLabelText(t.consent));
+  songs.mockResolvedValueOnce(ack({ ...song, title: 'Corrected title', version: 2 }));
+  await act(async () => { fireEvent.press(screen.getByText(t.saveEdit)); });
+  expect(songs.mock.calls.at(-1)![0].method).toBe('PATCH');
+  expect(controller.songs.getSnapshot()).toMatchObject({ editing: null, songs: [{ title: 'Corrected title', version: 2 }] });
   fireEvent.changeText(screen.getByLabelText(t.draft), 'Unsent private draft'); fireEvent.press(screen.getByText(t.cancel));
   expect(controller.songs.getSnapshot().draft).toBe('');
   fireEvent.changeText(screen.getByLabelText(t.draft), 'Unsent private draft');

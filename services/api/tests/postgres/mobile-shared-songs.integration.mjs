@@ -16,9 +16,10 @@ test('real PostgreSQL: shared-song mobile immutable unknown ACK, separate new dr
     }
     const pairA = randomUUID(), pairB = randomUUID();
     await f.provision(identities.slice(0, 2), pairA); await f.provision(identities.slice(2), pairB);
-    let drop = true; const commands = [];
+    let drop = true, dropEdit = true; const commands = [], edits = [];
     accounts.push(await mobile(f, 0, { email: 'song-mobile-0@example.test', signup: false,
       beforeRequest: async (record, request) => {
+        if (record.path.includes('/songs/') && record.method === 'PATCH') edits.push(await request.clone().json());
         if (record.path.includes('/songs') && record.method === 'POST') {
           const body = await request.clone().json(); commands.push(body);
           assert.equal(request.headers.get('idempotency-key'), body.command_id);
@@ -26,6 +27,9 @@ test('real PostgreSQL: shared-song mobile immutable unknown ACK, separate new dr
         }
       },
       afterResponse: async (record, response) => {
+        if (record.path.includes('/songs/') && record.method === 'PATCH' && dropEdit) {
+          assert.equal(response.status, 200); dropEdit = false; throw new Error('Synthetic lost committed edit ACK');
+        }
         if (record.path.includes('/songs') && record.method === 'POST' && drop) {
           assert.equal(response.status, 201); drop = false; throw new Error('Synthetic lost committed ACK');
         }
@@ -56,6 +60,40 @@ test('real PostgreSQL: shared-song mobile immutable unknown ACK, separate new dr
     const persisted = (await f.domainPool.query('SELECT explanation,title,music_url FROM shared_songs')).rows;
     assert.deepEqual(persisted, [{ explanation: 'Synthetic shared explanation', title: 'Synthetic shared song', music_url: musicUrl }]);
     const ownerCookie = await accounts[0].connection.getCookie();
+    a.songs.cancel(); a.songs.beginEdit(song.id); a.songs.setDraft('Synthetic first correction');
+    a.songs.setExplanation('Synthetic corrected reason'); a.songs.setMusicUrl('');
+    await a.songs.create(); assert.equal(edits.length, 0, 'editing requires renewed sharing consent');
+    a.songs.setConsent(true); await a.songs.create(); assert.equal(a.songs.getSnapshot().status, 'retry');
+    a.songs.setDraft('Synthetic preserved unsent correction');
+    a.songs.setExplanation('Synthetic unsent explanation'); a.songs.setMusicUrl('https://youtu.be/Unsent');
+    await b.songs.list(); assert.equal(b.songs.getSnapshot().songs[0].version, 2);
+    assert.equal('musicUrl' in b.songs.getSnapshot().songs[0], false);
+    b.songs.beginEdit(song.id); assert.equal(b.songs.getSnapshot().editing, null, 'partner cannot rewrite author content');
+    const patchBody = { command_id: randomUUID(), membership_epoch: 1, expected_version: 2,
+      title: 'Synthetic latest same-author correction', explanation: 'Synthetic latest reason', music_url: 'https://youtu.be/Latest' };
+    const patch = async (sessionCookie, body) => fetch(`${f.baseURL}/v1/couples/${pairA}/songs/${song.id}`, {
+      method: 'PATCH', headers: { cookie: sessionCookie, origin: f.baseURL, 'content-type': 'application/json', 'idempotency-key': body.command_id },
+      body: JSON.stringify(body),
+    });
+    assert.equal((await patch(await accounts[1].connection.getCookie(), patchBody)).status, 403);
+    assert.equal((await patch(cookie, patchBody)).status, 403);
+    const newer = await patch(ownerCookie, patchBody); assert.equal(newer.status, 200);
+    const canonical = (await newer.json()).value.song; assert.equal(canonical.version, 3);
+    await a.songs.retry(); assert.equal(a.songs.getSnapshot().status, 'saved');
+    assert.deepEqual(edits[0], edits[1]); assert.equal(edits.length, 2);
+    assert.equal(a.songs.getSnapshot().draft, 'Synthetic preserved unsent correction');
+    assert.equal(a.songs.getSnapshot().explanation, 'Synthetic unsent explanation');
+    assert.equal(a.songs.getSnapshot().musicUrl, 'https://youtu.be/Unsent');
+    assert.deepEqual(a.songs.getSnapshot().songs[0], canonical);
+    const originalReplay = await fetch(`${f.baseURL}/v1/couples/${pairA}/songs`, { method: 'POST',
+      headers: { cookie: ownerCookie, origin: f.baseURL, 'content-type': 'application/json', 'idempotency-key': commands[0].command_id },
+      body: JSON.stringify(commands[0]) });
+    assert.equal(originalReplay.status, 200); assert.deepEqual((await originalReplay.json()).value.song, canonical);
+    a.songs.setConsent(true); await a.songs.create();
+    assert.equal(a.songs.getSnapshot().status, 'conflict');
+    assert.equal(a.songs.getSnapshot().draft, 'Synthetic preserved unsent correction');
+    await b.songs.list(); assert.deepEqual(b.songs.getSnapshot().songs[0], canonical);
+
     const leave = await fetch(`${f.baseURL}/v1/pair/leave`, { method: 'POST',
       headers: { cookie: ownerCookie, origin: f.baseURL, 'content-type': 'application/json' },
       body: JSON.stringify({ commandId: randomUUID(), coupleId: pairA, membershipEpoch: 1, confirm: true }) });
