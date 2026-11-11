@@ -191,3 +191,8 @@ Mobile выбирает существующую дату, явно сохран
 - `SongLink.tsx`, songs controller/panel: явное открытие ОС после предупреждения,
   RAM-ссылка и immutable retry; RU/EN. Native пока NOT_RUN.
 - [Контракт](docs/SHARED_SONGS.md), [проверки](docs/SONG_LINKS_EVIDENCE.md).
+
+## Надёжность PostgreSQL checkpoint
+- services/api/tests/postgres/letters-fixture.mjs: bounded parallel synthetic signup, без reuse состояния.
+- services/api/tests/postgres/fixture-lifecycle.integration.mjs: порядок, изоляция и failure cleanup на real PG.
+- docs/POSTGRES_VERIFICATION_RELIABILITY.md: измерения, сохранённые неуспехи и границы frozen приёмки.

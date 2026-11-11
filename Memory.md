@@ -304,3 +304,11 @@ RAM-черновик приватен до подтверждения; серв�
 не гарантирует содержимое, редиректы или права. Старые no-link receipts совместимы.
 Полный frozen checkpoint и независимая приёмка обязательны; native, two-device,
 legacy Next и production readiness не подтверждены.
+
+## 2026-11-11 — запас времени PostgreSQL checkpoint
+Диагностический baseline 215/215 PASS занял 239.744s при guard 240s.
+Четыре независимых official signup в общем letters fixture стали bounded parallel;
+allSettled завершает все запросы до cleanup, порядок identities сохраняется.
+Production auth/миграции/clock/guards неизменны; schema, cookies и state не reuse.
+Focused lifecycle 2/2 PASS после исправления ошибочной проверки separate authority.
+Полный frozen gate и независимая приёмка отдельно; см. POSTGRES_VERIFICATION_RELIABILITY.

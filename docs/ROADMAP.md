@@ -238,3 +238,10 @@ immutable retry/lostACK и scope cleanup реализованы для synthetic
 как synthetic-кандидат; нет проверки содержимого/редиректов/лицензии. Нет streaming/downloads/lyrics/import/private playlists.
 После полного frozen checkpoint требуется независимая приёмка; native/two-device
 и production gates остаются открыты. [Контракт](SHARED_SONGS.md).
+
+## Надёжность локального PostgreSQL gate, 2026-11-11
+- [x] Измерен baseline: 239.744s при неизменном guard 240s, 215/215 tests PASS.
+- [x] Ускорена только подготовка четырёх независимых synthetic accounts; добавлены order/isolation/failure-cleanup regression tests.
+- [ ] Полный all-eleven frozen checkpoint и независимая приёмка точного SHA.
+- [ ] Native/two-device/production gates остаются открыты; JS export их не закрывает.
+Подробности и история неуспехов: POSTGRES_VERIFICATION_RELIABILITY.md.

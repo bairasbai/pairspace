@@ -55,3 +55,9 @@ API dependencies должны быть физически внутри checkout 
 SHA/tree внутри report, а не автоматически к последующему коммиту документации.
 Перед передачей сверить trackedHash с tested source, полный diff с base и checksums
 артефактов. Независимый reviewer должен повторно проверить frozen commit.
+
+## Запас времени PostgreSQL
+Подготовка четырёх независимых accounts общего letters fixture ограниченно
+параллельна; allSettled завершает запросы до cleanup. Тестовые процессы,
+изоляция schemas, реальный release clock и timeout guards неизменны.
+Диагноз и lifecycle regression tests: POSTGRES_VERIFICATION_RELIABILITY.md.

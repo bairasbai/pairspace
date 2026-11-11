@@ -6,12 +6,19 @@ import { password } from './profile-fixture.mjs';
 export async function lettersFixture(options = {}) {
   const f = await createComposedFixture({ enableSyntheticLetters: true, ...options });
   try {
-    const connections = []; const identities = [];
-    for (let n = 0; n < 4; n++) {
+    // These four synthetic identities are independent; keep real provider hashing/HTTP.
+    // Settle every signup before failure cleanup, so no request can race closed pools.
+    const accounts = await Promise.allSettled(Array.from({ length: 4 }, async (_, n) => {
       const connection = client(f.baseURL);
       const result = await connection.auth.signUp.email({ email: `letters-${n}@example.test`, password, name: 'Synthetic' });
-      assert.equal(result.error, null); connections.push(connection); identities.push(result.data.user.id);
-    }
+      assert.equal(result.error, null);
+      return { connection, identity: result.data.user.id };
+    }));
+    const failure = accounts.find(account => account.status === 'rejected');
+    if (failure) throw failure.reason;
+    // allSettled preserves input order, not network completion order (pair A: 0/1).
+    const connections = accounts.map(account => account.value.connection);
+    const identities = accounts.map(account => account.value.identity);
     const pairA = randomUUID(); const pairB = randomUUID();
     const usersA = await f.provision(identities.slice(0, 2), pairA);
     const usersB = await f.provision(identities.slice(2), pairB);
