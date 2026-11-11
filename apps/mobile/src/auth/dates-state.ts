@@ -3,15 +3,16 @@ import { isDateSchedule, nextOccurrence, type Recurrence, type LeapDayPolicy } f
 import { normalizeTaskTitle } from '../../../../packages/domain/tasks/title';
 import type { SessionContext } from './context';
 export type SharedDate = Readonly<{ id: string; coupleId: string; creatorId: string;
-  membershipEpoch: number; title: string; localDate: string; timezone: string; recurrence: Recurrence; leapDayPolicy: LeapDayPolicy | null;
+  membershipEpoch: number; version: number; title: string; localDate: string; timezone: string; recurrence: Recurrence; leapDayPolicy: LeapDayPolicy | null;
   asOfLocalDate: string | null; nextOccurrence: string | null; createdAt: string }>;
 export type DatesView = Readonly<{ available: boolean; busy: boolean; draft: string; localDate: string; timezone: string;
   recurrence: Recurrence; leapDayPolicy: LeapDayPolicy | null;
+  editing: Readonly<{ id: string; version: number }> | null;
   status: 'idle' | 'saving' | 'retry' | 'saved' | 'invalid' | 'conflict' | 'unavailable';
   dates: readonly SharedDate[]; checked: boolean; error: boolean; requiresRefresh: boolean;
   pending: Readonly<{ title: string; localDate: string; timezone: string; recurrence: Recurrence; leapDayPolicy: LeapDayPolicy | null }> | null }>;
 export const emptyDates: DatesView = { available: false, busy: false, draft: '', localDate: '', timezone: '', recurrence: 'once', leapDayPolicy: null, status: 'idle',
-  dates: [], checked: false, error: false, requiresRefresh: false, pending: null };
+  editing: null, dates: [], checked: false, error: false, requiresRefresh: false, pending: null };
 export const uuid = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 export const record = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v);
 export function sameDateContext(a: SessionContext, b: SessionContext) {
@@ -25,9 +26,10 @@ function instant(v: unknown): v is string {
 }
 export function validDate(v: unknown, context: SessionContext): v is SharedDate {
   if (!record(v) || context.state !== 'ready'
-    || Object.keys(v).sort().join(',') !== 'asOfLocalDate,coupleId,createdAt,creatorId,id,leapDayPolicy,localDate,membershipEpoch,nextOccurrence,recurrence,timezone,title') return false;
+    || Object.keys(v).sort().join(',') !== 'asOfLocalDate,coupleId,createdAt,creatorId,id,leapDayPolicy,localDate,membershipEpoch,nextOccurrence,recurrence,timezone,title,version') return false;
   const title = normalizeTaskTitle(v.title);
   return uuid(v.id) && uuid(v.creatorId) && v.coupleId === context.coupleId
+    && Number.isSafeInteger(v.version) && (v.version as number) > 0 && (v.version as number) <= 2147483647
     && v.membershipEpoch === context.membershipEpoch && title.ok && title.text === v.title
     && isLocalDate(v.localDate) && validatedTimezone(v.timezone) !== null
     && instant(v.createdAt) && isDateSchedule(v.localDate, v.recurrence, v.leapDayPolicy)

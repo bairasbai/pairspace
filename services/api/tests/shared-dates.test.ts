@@ -11,7 +11,7 @@ let pg: PGlite;
 const scope = { coupleId: c1, membershipEpoch: 1 };
 const command = { ...scope, commandId: id(801), title: ' Synthetic e\u0301\r\n date ', localDate: '2028-02-29', timezone: 'Asia/Tokyo' };
 const db = () => adapter(pg);
-beforeAll(async () => { pg = await createFixture(); for (const file of ['012_shared_dates.sql', '013_annual_shared_dates.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8')); });
+beforeAll(async () => { pg = await createFixture(); for (const file of ['012_shared_dates.sql', '013_annual_shared_dates.sql', '014_edit_shared_dates.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8')); });
 afterAll(async () => { await pg.close(); });
 it('validates real bounded Gregorian days and IANA aliases without converting to instants', () => {
   for (const value of ['0001-01-01', '9999-12-31', '2028-02-29', '2000-02-29', '2026-04-30']) expect(isLocalDate(value)).toBe(true);
@@ -66,7 +66,7 @@ const make = (method = 'POST', input: unknown = body, suffix = '', headers: Reco
 it('enforces HTTP methods/schema/auth and keeps errors redacted', async () => {
   const handler = createSharedDatesHandler(bindSessionAuthority(db(), createSyntheticAuthority(async () => principal)));
   expect((await handler(new Request('http://localhost/unknown'))).status).toBe(404);
-  expect((await handler(make('DELETE'))).headers.get('allow')).toBe('GET, POST');
+  expect((await handler(make('DELETE'))).headers.get('allow')).toBe('GET, POST, PATCH');
   expect((await handler(make('GET', null, '?membership_epoch=1'))).status).toBe(200);
   for (const suffix of ['', '?membership_epoch=0', '?membership_epoch=1&membership_epoch=1', '?membership_epoch=1&actor=x']) expect((await handler(make('GET', null, suffix))).status).toBe(400);
   expect((await handler(make('POST', body, '?x=1'))).status).toBe(400);

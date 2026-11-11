@@ -2,7 +2,8 @@ import { Pressable, Text, TextInput, View } from 'react-native';
 import type { Recurrence, LeapDayPolicy } from '../../../../packages/domain/dates/recurrence';
 import { datesCopy } from './datesCopy';
 import type { DatesView } from './dates';
-export function DatesPanel({ locale, view, onDraft, onCreate, onRetry, onList, onLocalDate, onTimezone, onCancel, onRecurrence, onLeapDayPolicy }: {
+export function DatesPanel({ locale, view, onDraft, onCreate, onRetry, onList, onLocalDate, onTimezone, onCancel, onRecurrence, onLeapDayPolicy, onEdit }: {
+  onEdit(id: string): void;
   onRecurrence(value: Recurrence): void; onLeapDayPolicy(value: LeapDayPolicy): void;
   locale: 'ru' | 'en'; view: DatesView; onDraft(text: string): void; onCreate(): void;
   onRetry(): void; onList(): void; onLocalDate(value: string): void; onTimezone(value: string): void; onCancel(): void;
@@ -32,7 +33,8 @@ export function DatesPanel({ locale, view, onDraft, onCreate, onRetry, onList, o
         accessibilityState={{ checked: view.leapDayPolicy === value }} onPress={() => onLeapDayPolicy(value)}
         style={{ minHeight: 48, justifyContent: 'center' }}><Text>{t[value]}</Text></Pressable>)}
     </View>}
-    {button(t.create, onCreate, blocked)}
+    {view.editing && <Text>{t.editNotice}</Text>}
+    {button(view.editing ? t.saveEdit : t.create, onCreate, blocked)}
     {button(t.cancel, onCancel, false)}<Text>{t.cancelHint}</Text>
     {view.pending && <Text>{t.pending} {view.pending.title} · {view.pending.localDate} · {view.pending.timezone} · {t[view.pending.recurrence]}
       {view.pending.leapDayPolicy && ` · ${t[view.pending.leapDayPolicy]}`}</Text>}
@@ -43,7 +45,8 @@ export function DatesPanel({ locale, view, onDraft, onCreate, onRetry, onList, o
     <Text>{t.bound}</Text><Text>{t.manualRefresh}</Text>
     {view.checked && view.dates.length === 0 && <Text>{t.none}</Text>}
     {view.dates.map(date => <View key={date.id} style={{ paddingVertical: 8 }}>
-      <Text selectable>{date.title}</Text><Text selectable>{date.localDate} · {date.timezone}</Text>
+      <Text selectable>{date.title}</Text>
+      {button(t.edit, () => onEdit(date.id), blocked)}<Text selectable>{date.localDate} · {date.timezone}</Text>
       <Text>{t[date.recurrence]}{date.leapDayPolicy && ` · ${t[date.leapDayPolicy]}`}</Text>
       <Text>{date.asOfLocalDate === null ? t.unknownToday : `${t.asOf} ${date.asOfLocalDate} · ${date.timezone}`}</Text>
       <Text>{date.nextOccurrence === null ? (date.asOfLocalDate === null ? t.unknownNext : t.noNext)

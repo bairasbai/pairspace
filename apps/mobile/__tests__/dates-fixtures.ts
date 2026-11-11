@@ -2,7 +2,7 @@ import { createDatesController } from '../src/auth/dates';
 import type { InvitationHostSnapshot } from '../src/auth/invitations-controller';
 export const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 export const context = { state: 'ready' as const, sessionId: 'session', userId: uuid(1), coupleId: uuid(2), membershipEpoch: 1 };
-export const date = { id: uuid(9), creatorId: uuid(1), coupleId: uuid(2), membershipEpoch: 1,
+export const date = { version: 1, id: uuid(9), creatorId: uuid(1), coupleId: uuid(2), membershipEpoch: 1,
   recurrence: 'once' as const, leapDayPolicy: null, asOfLocalDate: '2026-11-10', nextOccurrence: '2028-02-29',
   title: 'Shared date', localDate: '2028-02-29', timezone: 'Asia/Tokyo', createdAt: '2026-11-10T00:00:00.000Z' };
 export const envelope = (value: unknown, status = 200) => new Response(JSON.stringify({ ok: true, value }), { status });

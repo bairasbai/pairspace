@@ -301,3 +301,23 @@ it('shared dates are independently loopback-only and default disabled with bound
   expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
   expect((await app.handle(new Request(origin + path, { headers: { origin: 'https://attacker.invalid' } }))).status).toBe(403);
 });
+
+it('date PATCH passes only the enabled item route and preserves origin, media type and body limits', async () => {
+  const origin = 'http://127.0.0.1:1234';
+  const path = '/v1/couples/00000000-0000-4000-8000-000000000001/dates';
+  const item = path + '/00000000-0000-4000-8000-000000000002';
+  const settings = { ...config(), baseURL: origin, trustedOrigins: [origin] };
+  const app = createApiApplication({ ...settings, enableSyntheticSharedDates: true });
+  const patch = (target = item, headers: Record<string, string> = {}, body = '{}') => new Request(origin + target,
+    { method: 'PATCH', headers: { origin, 'content-type': 'application/json', ...headers }, body });
+  expect((await app.handle(patch())).status).toBe(401);
+  for (const flag of [undefined, false]) {
+    const disabled = createApiApplication({ ...settings, enableSyntheticSharedDates: flag });
+    expect((await disabled.handle(patch())).status).toBe(404);
+  }
+  expect((await app.handle(patch(path))).status).toBe(405);
+  expect((await app.handle(patch(item, { origin: 'https://attacker.invalid' }))).status).toBe(403);
+  expect((await app.handle(patch(item, { 'content-type': 'text/plain' }))).status).toBe(415);
+  expect((await app.handle(patch(item, {}, 'x'.repeat(17)))).status).toBe(413);
+  expect((await app.handle(patch('/api/auth/get-session'))).status).toBe(405);
+});

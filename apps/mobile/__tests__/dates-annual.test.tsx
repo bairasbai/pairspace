@@ -68,7 +68,7 @@ it.each([1900, 2000, 2100])('validates Gregorian policy results in year %s', yea
 });
 it.each(['ru', 'en'] as const)('exposes neutral explicit recurrence/policy choices and honest manual metadata in %s', locale => {
   const f = fixture(), t = datesCopy[locale];
-  const p = { locale, onDraft: f.api.setDraft, onLocalDate: f.api.setLocalDate, onTimezone: f.api.setTimezone,
+  const p = { locale, onEdit: f.api.beginEdit, onDraft: f.api.setDraft, onLocalDate: f.api.setLocalDate, onTimezone: f.api.setTimezone,
     onRecurrence: f.api.setRecurrence, onLeapDayPolicy: f.api.setLeapDayPolicy, onCreate: f.api.create,
     onRetry: f.api.retry, onList: f.api.list, onCancel: f.api.cancel };
   const ui = render(<DatesPanel {...p} view={f.api.getSnapshot()} />);

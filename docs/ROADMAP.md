@@ -213,3 +213,10 @@ calendar ещё не реализованы. Независимая провер
 Exit gate: чистый frozen source, полный machine-readable report, coverage >=90
 по четырём метрикам, отсутствие обязательных FAIL/NOT_RUN, независимый reviewer.
 Локальный PASS не закрывает native/E2E/production/security exit gates продукта.
+
+## Следующий срез: редактирование общих дат
+Реализован локальный кандидат synthetic connected PATCH с version-конфликтами,
+immutable retry и каноническим текущим ответом. Явное сохранение для обоих,
+RU/EN, сохранение черновика и смена generation/pair/epoch.
+Статус: не принято до точного frozen SHA и независимой проверки.
+См. DATE_EDITING_EVIDENCE.md. Native/two-device и production не подтверждены.

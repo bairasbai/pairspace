@@ -16,9 +16,10 @@ test('real PostgreSQL: shared-date mobile immutable unknown ACK, separate new dr
     }
     const pairA = randomUUID(), pairB = randomUUID();
     await f.provision(identities.slice(0, 2), pairA); await f.provision(identities.slice(2), pairB);
-    let drop = true; const commands = [];
+    let drop = true, dropEdit = true; const commands = [], edits = [];
     accounts.push(await mobile(f, 0, { email: 'date-mobile-0@example.test', signup: false,
       beforeRequest: async (record, request) => {
+        if (record.path.includes('/dates/') && record.method === 'PATCH') edits.push(await request.clone().json());
         if (record.path.includes('/dates') && record.method === 'POST') {
           const body = await request.clone().json(); commands.push(body);
           assert.equal(request.headers.get('idempotency-key'), body.command_id);
@@ -26,6 +27,9 @@ test('real PostgreSQL: shared-date mobile immutable unknown ACK, separate new dr
         }
       },
       afterResponse: async (record, response) => {
+        if (record.path.includes('/dates/') && record.method === 'PATCH' && dropEdit) {
+          assert.equal(response.status, 200); dropEdit = false; throw new Error('Synthetic lost edit ACK');
+        }
         if (record.path.includes('/dates') && record.method === 'POST' && drop) {
           assert.equal(response.status, 201); drop = false; throw new Error('Synthetic lost committed ACK');
         }
@@ -54,6 +58,19 @@ test('real PostgreSQL: shared-date mobile immutable unknown ACK, separate new dr
       { headers: { cookie, origin: f.baseURL } })).status, 403);
     const persisted = (await f.domainPool.query('SELECT local_date::text,timezone,title FROM shared_dates')).rows;
     assert.deepEqual(persisted, [{ local_date: '2028-02-29', timezone: 'Asia/Tokyo', title: 'Synthetic shared date' }]);
+    a.dates.cancel(); a.dates.beginEdit(date.id); a.dates.setDraft('Synthetic first edit');
+    await a.dates.create(); assert.equal(a.dates.getSnapshot().status, 'retry');
+    a.dates.setDraft('Synthetic preserved unsent draft');
+    await b.dates.list(); assert.equal(b.dates.getSnapshot().dates[0].version, 2);
+    b.dates.beginEdit(date.id); b.dates.setDraft('Synthetic latest partner edit');
+    b.dates.setRecurrence('once'); await b.dates.create();
+    assert.equal(b.dates.getSnapshot().status, 'saved'); assert.equal(b.dates.getSnapshot().dates[0].version, 3);
+    await a.dates.retry(); assert.equal(a.dates.getSnapshot().status, 'saved');
+    assert.deepEqual(edits[0], edits[1]); assert.equal(edits.length, 2);
+    assert.equal(a.dates.getSnapshot().draft, 'Synthetic preserved unsent draft');
+    assert.equal(a.dates.getSnapshot().dates[0].title, 'Synthetic latest partner edit');
+    assert.equal(a.dates.getSnapshot().dates[0].version, 3);
+    assert.equal(a.dates.getSnapshot().dates[0].recurrence, 'once');
     const ownerCookie = await accounts[0].connection.getCookie();
     const leave = await fetch(`${f.baseURL}/v1/pair/leave`, { method: 'POST',
       headers: { cookie: ownerCookie, origin: f.baseURL, 'content-type': 'application/json' },

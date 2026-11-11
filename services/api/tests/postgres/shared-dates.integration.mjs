@@ -13,7 +13,7 @@ test('shared dates PostgreSQL: both partners explicitly create; Tokyo/Los Angele
       assert.equal(response.status, 201); const date = (await value(response)).date;
       assert.equal(date.title, 'Synthetic é'); assert.equal(date.localDate, '2028-02-29'); assert.equal(date.timezone, zone);
       assert.equal(date.creatorId, x.usersA[index]);
-      assert.deepEqual(Object.keys(date).sort(), ['asOfLocalDate', 'coupleId', 'createdAt', 'creatorId', 'id', 'leapDayPolicy', 'localDate', 'membershipEpoch', 'nextOccurrence', 'recurrence', 'timezone', 'title']);
+      assert.deepEqual(Object.keys(date).sort(), ['asOfLocalDate', 'coupleId', 'createdAt', 'creatorId', 'id', 'leapDayPolicy', 'localDate', 'membershipEpoch', 'nextOccurrence', 'recurrence', 'timezone', 'title', 'version']);
     }
     const a = await value(await x.list(0)); assert.equal(a.dates.length, 2); assert.equal(a.limit, 50);
     assert.deepEqual(await value(await x.list(1)), a);

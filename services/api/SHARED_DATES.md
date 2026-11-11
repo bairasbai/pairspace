@@ -13,11 +13,15 @@ is not an invitation or an agreed appointment. Unsent drafts remain client RAM.
   Optional `recurrence` (`once`/`annual`) and `leap_day_policy` (null or an explicit
   Feb29 policy) extend this legacy body. Omitted fields mean once/null.
   JSON content type and `Idempotency-Key` equal to command_id are required.
+- PATCH `/v1/couples/:coupleId/dates/:dateId` replaces the editable schedule.
+  Body requires all create fields, explicit recurrence/leap_day_policy and
+  `expected_version` (integer 1–2147483646). Either current partner may edit.
+  Same JSON/idempotency headers apply; successful edits and replays return 200.
 - Mutation: `{ok:true,value:{date,commandId,replay}}`; new creation 201, replay 200.
 - Date fields: `id,coupleId,creatorId,membershipEpoch,title,localDate,timezone,createdAt`,
-  `recurrence,leapDayPolicy,asOfLocalDate,nextOccurrence`.
+  `recurrence,leapDayPolicy,asOfLocalDate,nextOccurrence,version` (initial version 1).
 - Invalid input 400; absent authority 401; unavailable scope 403;
-  stale membership or changed command body 409; transient failures generic 503.
+  stale membership, version conflict or changed command body 409; transient failures generic 503.
 - Responses are no-store. No title appears in a URL, analytics, push or app log.
 
 ## Calendar semantics
@@ -51,8 +55,8 @@ is pure Gregorian calendar math, never UTC midnight conversion or device time.
 Years 0001–9999 are supported; an out-of-range zoned today produces null as-of and
 next fields, while no remaining occurrence before year 10000 produces null next.
 An invalid server clock fails closed. Replay recalculates metadata without changing
-the immutable schedule or creation timestamp. Refresh is manual, not a reminder.
-No countdown, local time, notification, invitation, edit/delete or calendar write.
+the receipt or creation timestamp, returning the current canonical schedule/version. Refresh is manual, not a reminder.
+No countdown, local time, notification, invitation, deletion or calendar write.
 
 ## Authorization, persistence and bounds
 
@@ -63,15 +67,22 @@ active members of an active pair are required. Pair/epoch parameters are not ACL
 Closed pairs and former members cannot list or replay; moving to another pair
 never grants access to an earlier pair's dates or receipts.
 
-The immutable receipt key is actor plus command ID. Its body binds pair, epoch,
-normalized title, exact local date, exact validated zone, recurrence and leap-day
-policy. Changing a bound field
-conflicts. Distinct commands may intentionally create identical entries.
-A composite SQL foreign key binds the receipt to its exact immutable date body,
-creator, scope and schedule. The additional schedule FK uses a non-null generated
-policy key so a null leap-day policy cannot bypass relational validation. Migration
-013 adds default once/null fields without rewriting earlier dates or receipts. SQL validates dates, zones, title bounds and millisecond server
-timestamps; UPDATE/DELETE triggers prohibit changes to entries and receipts.
+The immutable receipt key is actor plus command ID. Its body binds operation,
+resource (for edit), expected version, pair, epoch, normalized title, exact local
+date, exact validated zone, recurrence and leap-day policy. Changed commands
+conflict; distinct create commands may intentionally create identical entries.
+Authorization precedes receipt lookup. Exact historical retries return the current
+resource rather than the old snapshot, including create retries after later edits.
+New edits check expected version under the existing pair/user lock transaction;
+one same-version concurrent edit wins and the other returns version_conflict.
+
+Migration 014 preserves old create receipts, adds version 1 to existing resources,
+and replaces mutable-content FKs with stable pair/date/epoch identity references.
+An INSERT trigger checks each receipt against the then-current full schedule and
+operation/version; receipts remain immutable afterward. Resource guards retain
+id, pair, creator, epoch and creation time, and require exactly one version step.
+Calendar/title/schedule constraints and zone validation also apply on UPDATE.
+DELETE remains prohibited. SQL permissions are not a substitute for application ACL.
 Records are retained at pair closure under the existing retention policy.
 
 List shows the latest 50 by created_at DESC, UUID DESC, including past and future

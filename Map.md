@@ -162,3 +162,9 @@ Migration `013_annual_shared_dates.sql` расширяет immutable запис�
   coverage-summary verification и adversarial tests; без GitHub Actions/deploy/install.
 - docs/VERIFICATION_RUNNER.md: команды, scope, artifact contract и ограничения.
 - docs/evidence/VERIFICATION_GATE.md: baseline и протокол независимой приёмки.
+
+## Редактирование общей даты
+PATCH shared dates добавляет optimistic version и immutable command receipts.
+Mobile выбирает существующую дату, явно сохраняет для обоих, сохраняет черновик
+при конфликте и повторяет неизменную команду при неизвестном исходе.
+См. docs/DATE_EDITING_EVIDENCE.md и apps/mobile/SHARED_DATES.md.

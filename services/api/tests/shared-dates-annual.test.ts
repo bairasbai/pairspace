@@ -16,7 +16,7 @@ function db(now = '2027-02-28T00:30:00Z') {
 }
 beforeAll(async () => {
   pg = await createFixture();
-  for (const file of ['012_shared_dates.sql', '013_annual_shared_dates.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8'));
+  for (const file of ['012_shared_dates.sql', '013_annual_shared_dates.sql', '014_edit_shared_dates.sql']) await pg.exec(await readFile(new URL('../migrations/' + file, import.meta.url), 'utf8'));
 });
 afterAll(async () => { await pg.close(); });
 it('requires explicit Feb29 choices and disallows meaningless/unknown policies', async () => {

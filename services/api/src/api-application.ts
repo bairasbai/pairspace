@@ -132,7 +132,8 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isChat = /^\/v1\/couples\/[^/]+\/chat\/messages$/.test(path);
         const isCare = /^\/v1\/couples\/[^/]+\/care-signals$/.test(path) && care !== null;
         const isLetters = /^\/v1\/couples\/[^/]+\/letters(?:\/[^/]+)?$/.test(path) && letters !== null;
-        const isDates = /^\/v1\/couples\/[^/]+\/dates$/.test(path) && dates !== null;
+        const isDates = /^\/v1\/couples\/[^/]+\/dates(?:\/[^/]+)?$/.test(path) && dates !== null;
+        const isDateEdit = isDates && /^\/v1\/couples\/[^/]+\/dates\/[^/]+$/.test(path) && request.method === 'PATCH';
         const isTasks = /^\/v1\/couples\/[^/]+\/tasks(?:\/[^/]+)?$/.test(path) && tasks !== null;
         const isBlind = /^\/v1\/couples\/[^/]+\/(?:blind-round(?:\/[^/]+\/answer)?|blind-rounds(?:\/[^/]+)?)$/.test(path) && blind !== null;
         const isContext = path === '/v1/session/context';
@@ -143,12 +144,12 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isLeave = path === '/v1/pair/leave' && leave !== null;
         const mutation = isLeave ? leave : isAcceptance ? acceptance : isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
         if (!isAuth && !isChat && !isCare && !isLetters && !isTasks && !isDates && !isBlind && !isContext && !mutation) return failure(404, 'not_found');
-        if (!isContext && !mutation && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
+        if (!isContext && !mutation && !isDateEdit && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');
         if (!origin || !origins.has(origin)) return failure(403, 'forbidden');
         if (isContext) return context(request);
         if (mutation && !isInvitation && request.method !== 'POST') return mutation(request);
-        if ((request.method === 'POST' || (isInvitation && request.method === 'DELETE'))
+        if ((request.method === 'POST' || isDateEdit || (isInvitation && request.method === 'DELETE'))
           && request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
           return failure(415, 'unsupported_media_type');
         }

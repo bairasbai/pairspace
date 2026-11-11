@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { test } from 'node:test';
 import { datesFixture } from './shared-dates-fixture.mjs';
-import { createSharedDate, listSharedDates } from '../../src/shared-dates.ts';
+import { createSharedDate, editSharedDate, listSharedDates } from '../../src/shared-dates.ts';
 import { leaveHarness, assertClosed, pairAgain } from './pair-leave-fixture.mjs';
 import { observedDatabase } from './invitation-fixture.mjs';
 import { gate, waitForQueryLock } from './profile-fixture.mjs';
@@ -12,13 +12,14 @@ const scope = x => ({ coupleId: x.pairA, membershipEpoch: 1 });
 const createCommand = x => ({ ...scope(x), commandId: randomUUID(), title: 'Synthetic race date', localDate: '2028-02-29', timezone: 'Asia/Tokyo', recurrence: 'annual', leapDayPolicy: 'leap_years_only' });
 const leaveCommand = x => ({ ...scope(x), commandId: randomUUID(), confirm: true });
 
-for (const firstOperation of ['leave', 'create', 'list']) {
+for (const firstOperation of ['leave', 'create', 'list', 'edit']) {
   test(`shared dates PostgreSQL: ${firstOperation} first serializes with leave and denies closed resources`, async () => {
     const x = await datesFixture(); const barrier = gate(); const pending = []; let server; let held = false;
     try {
       const db = x.f.database(); const principal = await x.principal(0); const partner = await x.principal(1);
       const original = await createSharedDate(db, principal, createCommand(x)); assert.equal(original.ok, true);
-      const command = createCommand(x);
+      const command = { ...createCommand(x), dateId: original.value.date.id, expectedVersion: 1 };
+      const createOnly = createCommand(x);
       const observer = async sql => {
         if (!held && sql.includes('FROM couples') && /FOR (UPDATE|SHARE)/.test(sql)) { held = true; await barrier.hook(); }
       };
@@ -28,17 +29,17 @@ for (const firstOperation of ['leave', 'create', 'list']) {
       server = await leaveHarness(x.f, { db: firstOperation === 'leave' ? observedDatabase(x.f, observer) : undefined });
       const cookie = await x.connections[0].getCookie();
       const first = observeTask(firstOperation === 'leave' ? server.request(cookie, leaveCommand(x))
-        : firstOperation === 'create' ? createSharedDate(traced, partner, command)
-          : listSharedDates(traced, partner, scope(x)));
+        : firstOperation === 'create' ? createSharedDate(traced, partner, createOnly)
+          : firstOperation === 'edit' ? editSharedDate(traced, partner, command) : listSharedDates(traced, partner, scope(x)));
       pending.push(first); await barrierOrCompletion(barrier.ready, first);
-      const second = observeTask(firstOperation === 'leave' ? createSharedDate(db, partner, command)
+      const second = observeTask(firstOperation === 'leave' ? editSharedDate(db, partner, command)
         : server.request(cookie, leaveCommand(x))); pending.push(second);
       await waitForQueryLock(x.f, '%FROM users%FOR %'); barrier.release();
       const [a, b] = await Promise.all(pending);
       assert.equal(firstOperation === 'leave' ? a.status : b.status, 200);
       assert.equal(firstOperation === 'leave' ? b.ok : a.ok, firstOperation !== 'leave');
       await assertClosed(x.f, x.pairA);
-      assert.deepEqual(await createSharedDate(db, principal, command), { ok: false, error: 'unavailable' });
+      assert.deepEqual(await editSharedDate(db, principal, command), { ok: false, error: 'unavailable' });
       assert.deepEqual(await listSharedDates(db, partner, scope(x)), { ok: false, error: 'unavailable' });
     } finally { barrier.release(); await settleBounded(pending); await server?.close(); await x.f.close(); }
   });
@@ -54,7 +55,8 @@ test('shared dates PostgreSQL: create, exact replay and list recheck expired ses
     await held.query('SELECT id FROM couples WHERE id=$1 FOR UPDATE', [x.pairA]);
     pending.push(observeTask(createSharedDate(db, principal, command)),
       observeTask(createSharedDate(db, principal, createCommand(x))),
-      observeTask(listSharedDates(db, partner, scope(x))));
+      observeTask(listSharedDates(db, partner, scope(x))),
+      observeTask(editSharedDate(db, partner, { ...command, commandId: randomUUID(), dateId: created.value.date.id, expectedVersion: 1 })));
     await waitForQueryLock(x.f, '%FROM couples%FOR %');
     await new Promise(resolve => setTimeout(resolve, 1200));
     await held.query('COMMIT'); held.release(); held = null;
@@ -150,3 +152,25 @@ for (const operation of ['create', 'replay', 'list']) {
     } finally { if (held) { await held.query('ROLLBACK'); held.release(); } await settleBounded(pending); await x.f.close(); }
   });
 }
+
+test('shared date edits PostgreSQL: simultaneous same-version edits have exactly one winner; exact replay is stable', async () => {
+  const x = await datesFixture();
+  try {
+    const db = x.f.database(), actor = await x.principal(0), partner = await x.principal(1);
+    const original = await createSharedDate(db, actor, createCommand(x)); assert.equal(original.ok, true);
+    const first = { ...createCommand(x), dateId: original.value.date.id, expectedVersion: 1, title: 'Synthetic first' };
+    const second = { ...first, commandId: randomUUID(), title: 'Synthetic second' };
+    const results = await Promise.all([editSharedDate(db, actor, first), editSharedDate(db, partner, second)]);
+    assert.equal(results.filter(r => r.ok).length, 1);
+    assert.deepEqual(results.find(r => !r.ok), { ok: false, error: 'version_conflict' });
+    const winner = results[0].ok ? actor : partner, command = results[0].ok ? first : second;
+    const replays = await Promise.all([editSharedDate(db, winner, command), editSharedDate(db, winner, command)]);
+    assert.ok(replays.every(r => r.ok && r.value.replay && r.value.date.version === 2));
+    assert.equal((await x.f.domainPool.query('SELECT count(*)::int n FROM shared_date_commands')).rows[0].n, 2);
+    const foreign = await x.principal(2);
+    assert.deepEqual(await editSharedDate(db, foreign, command), { ok: false, error: 'unavailable' });
+    await x.f.domainPool.query('UPDATE couples SET membership_epoch=2 WHERE id=$1', [x.pairA]);
+    assert.deepEqual(await editSharedDate(db, winner, command), { ok: false, error: 'stale_membership' });
+    assert.deepEqual(await editSharedDate(db, winner, { ...command, membershipEpoch: 2 }), { ok: false, error: 'idempotency_conflict' });
+  } finally { await x.f.close(); }
+});

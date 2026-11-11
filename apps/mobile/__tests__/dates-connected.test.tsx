@@ -6,7 +6,8 @@ import { datesCopy } from '../src/auth/datesCopy';
 import { ack, envelope, error, context, date, uuid } from './dates-fixtures';
 it.each(['ru', 'en'] as const)('connected shared dates use one controller and clear session data in %s', async locale => {
   const client = { getCookie: jest.fn(async () => 'test=cookie'), signIn: jest.fn(async () => ({ sessionId: 'session', userId: 'provider' })), signOut: jest.fn(async () => true) };
-  const dates = jest.fn(async (r: Request) => r.method === 'GET' ? envelope({ dates: [date], limit: 50 }) : ack());
+  const dates = jest.fn(async (r: Request) => r.method === 'GET' ? envelope({ dates: [date], limit: 50 })
+    : r.method === 'PATCH' ? ack({ ...date, title: 'Edited together', version: 2 }) : ack());
   const controller = createSessionController({ mode: 'synthetic-loopback', baseURL: 'http://127.0.0.1:8787' }, client,
     r => r.url.includes('/context') ? Promise.resolve(envelope(context)) : r.url.includes('/dates') ? dates(r)
       : Promise.resolve(envelope({ messages: [], nextBeforeSeq: null })), () => uuid(3));
@@ -22,6 +23,12 @@ it.each(['ru', 'en'] as const)('connected shared dates use one controller and cl
   expect(screen.getByText(t.saved)).toBeTruthy(); expect(controller.dates.getSnapshot().draft).toBe('');
   await act(async () => { fireEvent.press(screen.getByText(t.list)); });
   expect(screen.getByText(date.localDate + ' · ' + date.timezone)).toBeTruthy();
+  fireEvent.press(screen.getByText(t.edit));
+  fireEvent.changeText(screen.getByLabelText(t.draft), 'Edited together');
+  expect(screen.getByText(t.editNotice)).toBeTruthy();
+  await act(async () => { fireEvent.press(screen.getByText(t.saveEdit)); });
+  expect(screen.getByText('Edited together')).toBeTruthy();
+  expect(controller.dates.getSnapshot().editing).toBeNull();
   fireEvent.changeText(screen.getByLabelText(t.draft), 'Unsent private draft'); fireEvent.press(screen.getByText(t.cancel));
   expect(controller.dates.getSnapshot().draft).toBe('');
   fireEvent.changeText(screen.getByLabelText(t.draft), 'Unsent private draft');

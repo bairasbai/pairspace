@@ -1,5 +1,7 @@
 export const datesCopy = {
   ru: {
+    edit: 'Изменить дату', saveEdit: 'Сохранить изменения для обоих',
+    editNotice: 'Редактируете общую дату. Сохранение изменит её для обоих партнёров. При конфликте обновите список и выберите дату заново; черновик остаётся до выбора.',
     recurrence: 'Повторение', once: 'Один раз', annual: 'Ежегодно',
     leapChoice: 'Для 29 февраля выберите правило невисокосного года:',
     leap_years_only: 'Только в високосные годы', feb28: '28 февраля в невисокосный год', mar1: '1 марта в невисокосный год',
@@ -19,6 +21,8 @@ export const datesCopy = {
     bound: 'До 50 последних добавленных дат, не ближайших событий. Это не полный архив.', pending: 'Неизменяемая дата, ожидающая подтверждения:',
   },
   en: {
+    edit: 'Edit date', saveEdit: 'Save changes for both partners',
+    editNotice: 'Editing a shared date. Saving changes it for both partners. After a conflict, refresh and select the date again; your draft remains until selection.',
     recurrence: 'Repeat', once: 'Once', annual: 'Annually',
     leapChoice: 'For February 29, choose a non-leap-year rule:',
     leap_years_only: 'Leap years only', feb28: 'February 28 in non-leap years', mar1: 'March 1 in non-leap years',

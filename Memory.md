@@ -267,3 +267,11 @@ tsconfig для .ts imports. Приёмка требует отдельных ex
 уникальный report с точным source SHA/tree/hash и отдельным статусом каждого шага.
 Подробности и ограничения: docs/VERIFICATION_RUNNER.md. Предварительные тесты
 runner пройдены; full checkpoint и независимая приёмка требуют frozen SHA/report.
+
+## 2026-11-10 — редактирование общей даты
+Продолжен synthetic connected сценарий: название, календарная дата, IANA пояс,
+повторение и явная политика 29 февраля. Optimistic version не допускает тихой
+перезаписи партнёра; исторический retry возвращает актуальную запись.
+Default App остаётся demo, production/deploy/push не входят в этот срез.
+Нет reminders/E2EE и решения об архиве после расставания. Приёмка отдельно
+от реализации: docs/DATE_EDITING_EVIDENCE.md.

@@ -7,7 +7,7 @@ import { validateSyntheticConfig, type SyntheticConfig } from './config';
 import type { InvitationHost, InvitationHostSnapshot } from './invitations-controller';
 import { emptyDates, record, sameDateContext, dateOrder, uuid, validDate, type DatesView } from './dates-state';
 export type { SharedDate, DatesView } from './dates-state';
-type Pending = Readonly<{ id: string; title: string; localDate: string; timezone: string; recurrence: Recurrence; leapDayPolicy: LeapDayPolicy | null; revision: number }>;
+type Pending = Readonly<{ editing: DatesView['editing']; id: string; title: string; localDate: string; timezone: string; recurrence: Recurrence; leapDayPolicy: LeapDayPolicy | null; revision: number }>;
 /** Drafts and unresolved immutable commands exist only in RAM, scoped to the verified session/pair. */
 export function createDatesController(config: SyntheticConfig, host: InvitationHost,
   request: (input: Request) => Promise<Response>, commandId: () => string) {
@@ -54,10 +54,11 @@ export function createDatesController(config: SyntheticConfig, host: InvitationH
       if (context.state !== 'ready') return;
       const save = action === 'save';
       const response = await request(new Request(settings.baseURL + '/v1/couples/' + context.coupleId + '/dates'
-        + (save ? '' : '?membership_epoch=' + context.membershipEpoch), {
-        method: save ? 'POST' : 'GET', headers: { Cookie: cookie, Origin: settings.baseURL,
+        + (save ? (command!.editing ? '/' + command!.editing.id : '') : '?membership_epoch=' + context.membershipEpoch), {
+        method: save ? (command!.editing ? 'PATCH' : 'POST') : 'GET', headers: { Cookie: cookie, Origin: settings.baseURL,
           ...(save ? { 'Content-Type': 'application/json', 'Idempotency-Key': command!.id } : {}) },
         ...(save ? { body: JSON.stringify({ command_id: command!.id, membership_epoch: context.membershipEpoch,
+          ...(command!.editing ? { expected_version: command!.editing.version } : {}),
           title: command!.title, local_date: command!.localDate, timezone: command!.timezone, recurrence: command!.recurrence, leap_day_policy: command!.leapDayPolicy }) } : {}),
         credentials: 'omit', redirect: 'error', cache: 'no-store',
       }));
@@ -85,13 +86,17 @@ export function createDatesController(config: SyntheticConfig, host: InvitationH
       if (save) {
         const date = value.date;
         if (!validDate(date, context) || typeof value.replay !== 'boolean' || value.commandId !== command!.id
-          || date.title !== command!.title || date.localDate !== command!.localDate
-          || date.recurrence !== command!.recurrence || date.leapDayPolicy !== command!.leapDayPolicy
-          || date.timezone !== command!.timezone || date.creatorId !== context.userId) throw new Error('retry');
+          || (command!.editing ? date.id !== command!.editing.id || date.version <= command!.editing.version
+            : date.creatorId !== context.userId)
+          || ((!value.replay || date.version === 1) && (date.title !== command!.title || date.localDate !== command!.localDate
+            || date.recurrence !== command!.recurrence || date.leapDayPolicy !== command!.leapDayPolicy
+            || date.timezone !== command!.timezone || date.version !== (command!.editing ? command!.editing.version + 1 : 1)))) throw new Error('retry');
+        const known = view.dates.find(item => item.id === date.id);
+        const canonical = known && known.version > date.version ? known : date;
         pending = null;
         publish({ ...view, pending: null, status: 'saved',
-          ...(revision === command!.revision ? { draft: '', localDate: '', timezone: '', recurrence: 'once' as const, leapDayPolicy: null } : {}),
-          dates: [date, ...view.dates.filter(item => item.id !== date.id)].sort(dateOrder).slice(0, 50) });
+          ...(revision === command!.revision ? { editing: null, draft: '', localDate: '', timezone: '', recurrence: 'once' as const, leapDayPolicy: null } : {}),
+          dates: [canonical, ...view.dates.filter(item => item.id !== date.id)].sort(dateOrder).slice(0, 50) });
       } else {
         const dates = value.dates;
         if (value.limit !== 50 || !Array.isArray(dates) || dates.length > 50
@@ -104,12 +109,15 @@ export function createDatesController(config: SyntheticConfig, host: InvitationH
   }
   function prepare() {
     if (!view.available || view.busy || pending || view.requiresRefresh) return Promise.resolve();
+    if (view.editing && !view.dates.some(item => item.id === view.editing!.id && item.version === view.editing!.version)) {
+      publish({ ...view, status: 'conflict', requiresRefresh: true, error: true }); return Promise.resolve();
+    }
     const title = normalizeTaskTitle(view.draft), timezone = validatedTimezone(view.timezone), id = commandId();
     if (!title.ok || !isLocalDate(view.localDate) || !timezone || !uuid(id)
       || !isDateSchedule(view.localDate, view.recurrence, view.leapDayPolicy)) {
       publish({ ...view, status: 'invalid' }); return Promise.resolve();
     }
-    pending = Object.freeze({ id, title: title.text, localDate: view.localDate, timezone, recurrence: view.recurrence, leapDayPolicy: view.leapDayPolicy, revision });
+    pending = Object.freeze({ editing: view.editing, id, title: title.text, localDate: view.localDate, timezone, recurrence: view.recurrence, leapDayPolicy: view.leapDayPolicy, revision });
     publish({ ...view, pending: { title: title.text, localDate: view.localDate, timezone, recurrence: view.recurrence, leapDayPolicy: view.leapDayPolicy } });
     return run('save');
   }
@@ -125,13 +133,22 @@ export function createDatesController(config: SyntheticConfig, host: InvitationH
     setLeapDayPolicy(leapDayPolicy: LeapDayPolicy) { if (view.available && view.recurrence === 'annual' && view.localDate.endsWith('-02-29')) {
       revision++; publish({ ...view, leapDayPolicy });
     } },
+    beginEdit(id: string) {
+      if (!view.available || view.busy || pending || view.requiresRefresh) return;
+      const date = view.dates.find(item => item.id === id);
+      if (!date) return;
+      revision++;
+      publish({ ...view, editing: Object.freeze({ id: date.id, version: date.version }), draft: date.title,
+        localDate: date.localDate, timezone: date.timezone, recurrence: date.recurrence,
+        leapDayPolicy: date.leapDayPolicy, status: 'idle', error: false });
+    },
     create: prepare,
     retry: () => run('save'), list: () => run('list'),
     cancel() {
       revision++;
       // Cancel only the unsent draft/read. An already submitted command may have committed.
       if (activeAction === 'list') { sequence++; activeAction = null; publish({ ...view, busy: false }); }
-      publish({ ...view, draft: '', localDate: '', timezone: '', recurrence: 'once', leapDayPolicy: null });
+      publish({ ...view, editing: null, draft: '', localDate: '', timezone: '', recurrence: 'once', leapDayPolicy: null });
     },
   } };
 }

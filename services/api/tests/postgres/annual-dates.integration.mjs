@@ -158,6 +158,7 @@ test('annual dates PostgreSQL: additive migration preserves legacy rows, receipt
     const session = (await f.domainPool.query('SELECT id,"expiresAt" FROM "session" WHERE "userId"=$1', [identities[0].user.id])).rows[0];
     const principal = { source: 'better-auth', userId: users[0], authUserId: identities[0].user.id,
       sessionId: session.id, tokenExpiresAt: Math.floor(session.expiresAt.getTime() / 1000) };
+    await f.domainPool.query(await readFile(new URL('../../migrations/014_edit_shared_dates.sql', import.meta.url), 'utf8'));
     const replay = await createSharedDate(f.database(), principal, { coupleId: pair, membershipEpoch: 1,
       commandId, title: 'Synthetic legacy', localDate: '2028-02-29', timezone: 'UTC' });
     assert.equal(replay.ok, true); assert.equal(replay.value.replay, true); assert.equal(replay.value.date.id, id);

@@ -11,7 +11,7 @@ Choose once or annual explicitly. Once remains the initial choice for compatibil
 Annual February 29 requires a separate explicit choice: leap years only, February 28
 in non-leap years, or March 1 in non-leap years. There is no default leap policy.
 Other schedules use null policy; changing recurrence/date clears the prior policy.
-There are no reminders, countdown, editing, deletion, invitations, or calendar writes.
+There are no reminders, countdown, deletion, invitations, or calendar writes.
 
 ## Timezone and response contract
 
@@ -22,7 +22,7 @@ The mobile runtime validates that the supplied IANA identifier is recognized, bu
 preserves the exact original spelling in the immutable command and response.
 Aliases are distinct payload identities: `US/Pacific` is not interchangeable with
 `America/Los_Angeles` for command replay. No client or server canonical rewrite is
-performed. The ACK zone must match the pending string exactly. ICU canonical
+performed. A fresh ACK zone must match the pending string exactly. Historical replays return the current resource after later edits. ICU canonical
 spelling differences cannot rewrite a pending command. An unrecognized identifier
 fails closed as unsupported; native ICU/Hermes acceptance remains unverified.
 A validation failure is not a reason to guess or replace the user's selected zone.
@@ -46,7 +46,7 @@ at response/body boundaries. Session generation, identity, user, pair and epoch
 changes invalidate late replies. Auth/access/stale-membership denial clears data.
 A conflicting command requires explicit list refresh before another creation.
 Server responses must match the authorized scope, known schema, calendar validity,
-zone identity, pending content and command ID. Lists must be bounded, sorted and
+zone identity, version, fresh pending content and command ID. Lists must be bounded, sorted and
 unique. Old-pair dates cannot be exposed through a late response or retried command.
 
 ## Annual metadata and manual refresh
@@ -71,3 +71,21 @@ exact alias identity, immutable recovery, both languages, partner reads, respons
 validation, credential drift and late reply guards. The client makes no relative
 day/countdown claim, so device clock skew cannot change an event label. JS exports
 are bundling evidence only, not a native build or device/two-device acceptance.
+
+## Editing existing shared dates
+
+Edit date copies an existing item into the RAM draft without writing. The explicit
+Save changes for both partners action submits PATCH `/v1/couples/:coupleId/dates/:id`
+with all schedule fields and `expected_version`, preserving the observed version.
+Either current active partner can edit. Resource version starts at 1 and increments
+once per accepted edit. Creation identity/order does not change.
+
+An unresolved command freezes target ID, expected version and full payload. Editing
+or clearing the draft cannot change that command; retry sends it unchanged. A version
+or idempotency conflict keeps the draft and requires refresh and explicit selection
+again, never silent rebase. Selection intentionally replaces the current draft.
+Historical successful create/edit retries return the canonical current resource, not
+the old command payload. The client validates target/scope/schema/version, and an ACK
+cannot replace a higher version already observed. Non-replay ACKs must match the full
+submitted content and exact next version. Session/pair/epoch invalidation still clears
+all edits and ignores late callbacks. Server plaintext remains visible; this is not E2EE.
