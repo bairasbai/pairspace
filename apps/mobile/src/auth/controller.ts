@@ -1,3 +1,4 @@
+import { createWishesController } from './wishes';
 import { createSongsController } from './songs';
 import { createMemoriesController } from './memories';
 import { createDatesController } from './dates';
@@ -49,7 +50,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   const invalidate = (preserveLeave = false) => {
     generation++; historyBusy = false; abort.abort(); abort = new AbortController();
     if (!preserveLeave) leaveController.reset();
-    verifiedContext = null; invitationController.reset(); careController.reset(); lettersController.reset(); tasksController.reset(); datesController.reset(); memoriesController.reset(); songsController.reset(); blindController.reset();
+    verifiedContext = null; invitationController.reset(); careController.reset(); lettersController.reset(); tasksController.reset(); wishesController.reset(); datesController.reset(); memoriesController.reset(); songsController.reset(); blindController.reset();
     session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending = null; draftRevision++;
     publish({ ...empty, phase: 'busy' });
     return generation;
@@ -81,6 +82,11 @@ export function createSessionController(config: SyntheticConfig, client: Session
     getCookie: () => client.getCookie(), block, refresh,
   }, boundedRequest, commandId);
   const tasks = tasksController.actions;
+  const wishesController = createWishesController(contextConfig, {
+    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
+    getCookie: () => client.getCookie(), block, refresh,
+  }, boundedRequest, commandId);
+  const wishes = wishesController.actions;
   const datesController = createDatesController(contextConfig, {
     capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
     getCookie: () => client.getCookie(), block, refresh,
@@ -165,7 +171,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
       if (value.state !== 'ready') {
         block('context_' + value.state);
         authIdentity = expected;
-        verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync(); tasksController.sync(); datesController.sync(); memoriesController.sync(); songsController.sync(); blindController.sync(); leaveController.sync();
+        verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync(); tasksController.sync(); wishesController.sync(); datesController.sync(); memoriesController.sync(); songsController.sync(); blindController.sync(); leaveController.sync();
         if (value.state === 'no_active_pair') waitingUserId = value.userId;
         return null;
       }
@@ -179,7 +185,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
         session = { scope, token: '', credentialGeneration: generation, credentialKind: 'cookie' };
         publish({ ...empty, phase: 'signed_in' });
       }
-      verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync(); tasksController.sync(); datesController.sync(); memoriesController.sync(); songsController.sync(); blindController.sync(); leaveController.sync();
+      verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync(); tasksController.sync(); wishesController.sync(); datesController.sync(); memoriesController.sync(); songsController.sync(); blindController.sync(); leaveController.sync();
       return { credential: { ...session, token: cookie }, changed };
     } catch {
       if (current === generation && sequence === discoverySequence) {
@@ -259,7 +265,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
     invitations,
     care,
     letters,
-    tasks, dates, memories, songs,
+    tasks, wishes, dates, memories, songs,
     blind,
     loadOlder,
     getSnapshot: () => view,

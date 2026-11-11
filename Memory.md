@@ -321,3 +321,13 @@ Focused lifecycle 2/2 PASS после исправления ошибочной 
 Сервер plaintext, latest50, synthetic loopback и default demo сохранены.
 Не реализованы удаление/undo/history/ручной порядок. Frozen gate и независимая
 приёмка отдельно: docs/SONG_EDITING_EVIDENCE.md. Native/two-device NOT_RUN.
+
+## 2026-11-11 — желания, отдельный synthetic-кандидат
+Продолжен P1 перенос Tan Ata: название и необязательное короткое пояснение,
+явное согласие на публикацию обоим, immutable создание и сохранённый автор.
+Оба активных партнёра явно меняют только fulfilled/open через version CAS.
+Отдельная коллекция, не задачи; no links/purchases/assignment/notifications.
+Unknown ACK повторяет исходную команду с canonical current state, новый RAM
+черновик сохраняется. Closed-pair policy и default demo неизменны.
+Полный frozen gate и независимая приёмка отдельно; сервер plaintext,
+native/two-device NOT_RUN. Контракт: docs/SHARED_WISHES.md.

@@ -1,3 +1,4 @@
+import { WishesPanel } from './WishesPanel';
 import { SongsPanel } from './SongsPanel';
 import { MemoriesPanel } from './MemoriesPanel';
 import { DatesPanel } from './DatesPanel';
@@ -24,6 +25,8 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
   const memoriesView = useSyncExternalStore(memories.subscribe, memories.getSnapshot);
   const dates = controller.dates;
   const datesView = useSyncExternalStore(dates.subscribe, dates.getSnapshot);
+  const wishes = controller.wishes;
+  const wishesView = useSyncExternalStore(wishes.subscribe, wishes.getSnapshot);
   const tasks = controller.tasks;
   const tasksView = useSyncExternalStore(tasks.subscribe, tasks.getSnapshot);
   const letters = controller.letters;
@@ -53,6 +56,10 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
       onCreate={() => { void tasks.create(); }} onRetry={() => { void tasks.retry(); }}
       onList={() => { void tasks.list(); }} onComplete={id => { void tasks.complete(id); }}
       onReopen={id => { void tasks.reopen(id); }} />
+    <WishesPanel locale={locale} view={wishesView} onDraft={wishes.setDraft} onCancel={wishes.cancel} onExplanation={wishes.setExplanation} onConsent={wishes.setConsent}
+      onCreate={() => { void wishes.create(); }} onRetry={() => { void wishes.retry(); }}
+      onList={() => { void wishes.list(); }} onFulfill={id => { void wishes.fulfill(id); }}
+      onReopen={id => { void wishes.reopen(id); }} />
     <LettersPanel locale={locale} view={lettersView} onDraft={letters.setDraft}
       onReleaseAt={letters.setReleaseAt} onReleaseTimezone={letters.setReleaseTimezone}
       onSendLater={() => { void letters.sendLater(); }} onSend={() => { void letters.send(); }} onList={() => { void letters.list(); }}

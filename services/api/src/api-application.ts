@@ -1,3 +1,4 @@
+import { createSharedWishesHandler } from './shared-wishes-http.ts';
 import { createSharedSongsHandler } from './shared-songs-http.ts';
 import { createSharedMemoriesHandler } from './shared-memories-http.ts';
 import { createSharedDatesHandler } from './shared-dates-http.ts';
@@ -39,6 +40,8 @@ export type ApiApplicationConfig = Readonly<{
   enableSyntheticLetters?: boolean;
   /** Explicit synthetic active-pair closure; default disabled, loopback only. */
   enableSyntheticPairLeave?: boolean;
+  /** Explicit synthetic wishes; independent loopback-only opt-in. */
+  enableSyntheticSharedWishes?: boolean;
   /** Synthetic shared tasks; independent loopback-only opt-in. */
   enableSyntheticSharedTasks?: boolean;
   /** Immutable all-day synthetic dates; independent loopback-only opt-in. */
@@ -84,6 +87,7 @@ function validate(config: ApiApplicationConfig): void {
     || (config.enableSyntheticSharedSongs !== undefined && typeof config.enableSyntheticSharedSongs !== 'boolean')
     || (config.enableSyntheticSharedMemories !== undefined && typeof config.enableSyntheticSharedMemories !== 'boolean')
     || (config.enableSyntheticSharedDates !== undefined && typeof config.enableSyntheticSharedDates !== 'boolean')
+    || (config.enableSyntheticSharedWishes !== undefined && typeof config.enableSyntheticSharedWishes !== 'boolean')
     || (config.enableSyntheticSharedTasks !== undefined && typeof config.enableSyntheticSharedTasks !== 'boolean')
     || !Array.isArray(config.trustedOrigins) || !config.trustedOrigins.length
     || !config.trustedOrigins.every(validOrigin) || !config.trustedOrigins.includes(config.baseURL)
@@ -93,7 +97,7 @@ function validate(config: ApiApplicationConfig): void {
   }
   const base = new URL(config.baseURL);
   if ((base.protocol === 'http:' || config.enableSyntheticProfileProvisioning === true || config.enableSyntheticWaitingSpaceCreation === true
-    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true || config.enableSyntheticSharedSongs === true || config.enableSyntheticSharedMemories === true || config.enableSyntheticSharedDates === true || config.enableSyntheticSharedTasks === true || config.enableSyntheticBlindAnswers === true)
+    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true || config.enableSyntheticSharedSongs === true || config.enableSyntheticSharedMemories === true || config.enableSyntheticSharedDates === true || config.enableSyntheticSharedWishes === true || config.enableSyntheticSharedTasks === true || config.enableSyntheticBlindAnswers === true)
     && !['127.0.0.1', '[::1]', 'localhost'].includes(base.hostname)) {
     throw new Error('invalid_api_configuration');
   }
@@ -131,6 +135,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
   const songs = config.enableSyntheticSharedSongs === true ? createSharedSongsHandler(bindSessionAuthority(database, authority)) : null;
   const memories = config.enableSyntheticSharedMemories === true ? createSharedMemoriesHandler(bindSessionAuthority(database, authority)) : null;
   const dates = config.enableSyntheticSharedDates === true ? createSharedDatesHandler(bindSessionAuthority(database, authority)) : null;
+  const wishes = config.enableSyntheticSharedWishes === true ? createSharedWishesHandler(bindSessionAuthority(database, authority)) : null;
   const tasks = config.enableSyntheticSharedTasks === true ? createSharedTasksHandler(bindSessionAuthority(database, authority)) : null;
   const blind = config.enableSyntheticBlindAnswers === true ? createBlindAnswersHandler(bindSessionAuthority(database, authority)) : null;
   const chat = createChatHandler(bindSessionAuthority(database, authority));
@@ -147,6 +152,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isDates = /^\/v1\/couples\/[^/]+\/dates(?:\/[^/]+)?$/.test(path) && dates !== null;
         const isSongEdit = isSongs && /^\/v1\/couples\/[^/]+\/songs\/[^/]+$/.test(path) && request.method === 'PATCH';
         const isDateEdit = isDates && /^\/v1\/couples\/[^/]+\/dates\/[^/]+$/.test(path) && request.method === 'PATCH';
+        const isWishes = /^\/v1\/couples\/[^/]+\/wishes(?:\/[^/]+)?$/.test(path) && wishes !== null;
         const isTasks = /^\/v1\/couples\/[^/]+\/tasks(?:\/[^/]+)?$/.test(path) && tasks !== null;
         const isBlind = /^\/v1\/couples\/[^/]+\/(?:blind-round(?:\/[^/]+\/answer)?|blind-rounds(?:\/[^/]+)?)$/.test(path) && blind !== null;
         const isContext = path === '/v1/session/context';
@@ -156,7 +162,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isAcceptance = ['/v1/pair-invitations/preview', '/v1/pair-invitations/accept'].includes(path) && acceptance !== null;
         const isLeave = path === '/v1/pair/leave' && leave !== null;
         const mutation = isLeave ? leave : isAcceptance ? acceptance : isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
-        if (!isAuth && !isChat && !isCare && !isLetters && !isTasks && !isDates && !isSongs && !isMemories && !isBlind && !isContext && !mutation) return failure(404, 'not_found');
+        if (!isAuth && !isChat && !isCare && !isLetters && !isTasks && !isWishes && !isDates && !isSongs && !isMemories && !isBlind && !isContext && !mutation) return failure(404, 'not_found');
         if (!isContext && !mutation && !isDateEdit && !isSongEdit && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');
         if (!origin || !origins.has(origin)) return failure(403, 'forbidden');
@@ -167,7 +173,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
           return failure(415, 'unsupported_media_type');
         }
         const bounded = await limitRequestBody(request, limits);
-        const response = await (mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : isCare ? care!(bounded) : isLetters ? letters!(bounded) : isBlind ? blind!(bounded) : isSongs ? songs!(bounded) : isMemories ? memories!(bounded) : isDates ? dates!(bounded) : isTasks ? tasks!(bounded) : chat(bounded));
+        const response = await (mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : isCare ? care!(bounded) : isLetters ? letters!(bounded) : isBlind ? blind!(bounded) : isSongs ? songs!(bounded) : isMemories ? memories!(bounded) : isDates ? dates!(bounded) : isWishes ? wishes!(bounded) : isTasks ? tasks!(bounded) : chat(bounded));
         if (response.status >= 500) return failure(503, 'temporarily_unavailable');
         const headers = new Headers(response.headers);
         headers.set('cache-control', 'no-store'); headers.set('x-content-type-options', 'nosniff');

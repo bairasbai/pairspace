@@ -356,3 +356,18 @@ it('shared songs are independently loopback-only and default disabled with bound
   expect((await app.handle(new Request(origin + path + '/item', { method: 'PATCH', headers: { origin: 'https://attacker.invalid', 'content-type': 'application/json' }, body: '{}' }))).status).toBe(403);
 
 });
+it('shared wishes are independently loopback-only and default disabled with bounded origin-checked mutations', async () => {
+  const path = '/v1/couples/00000000-0000-4000-8000-000000000001/wishes';
+  for (const flag of [undefined, false]) expect((await createApiApplication({ ...config(), enableSyntheticSharedWishes: flag }).handle(request(path))).status).toBe(404);
+  for (const flag of [true, 'true', null]) expect(() => createApiApplication({ ...config(), enableSyntheticSharedWishes: flag } as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin = 'http://127.0.0.1:1234';
+  const app = createApiApplication({ ...config(), baseURL: origin, trustedOrigins: [origin], enableSyntheticSharedWishes: true });
+  expect((await app.handle(new Request(origin + path + '?membership_epoch=1', { headers: { origin } }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
+  expect((await app.handle(new Request(origin + path, { headers: { origin: 'https://attacker.invalid' } }))).status).toBe(403);
+  for (const method of ['PATCH', 'DELETE', 'PUT']) expect((await app.handle(new Request(origin + path, { method, headers: { origin } }))).status).toBe(405);
+  expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'text/plain' }, body: '{}' }))).status).toBe(415);
+  expect((await app.handle(new Request(origin + path, { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: 'x'.repeat(17) }))).status).toBe(413);
+  expect((await app.handle(new Request(origin + path + '/item', { headers: { origin } }))).status).toBe(405);
+  expect((await app.handle(new Request(origin + path + '/item', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
+});

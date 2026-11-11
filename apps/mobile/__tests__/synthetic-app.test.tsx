@@ -1,3 +1,4 @@
+import { emptyWishes } from '../src/auth/wishes-state';
 import { emptySongs } from '../src/auth/songs-state';
 import { emptyMemories } from '../src/auth/memories-state';
 import { emptyDates } from '../src/auth/dates-state';
@@ -21,6 +22,7 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
   const lettersView = { available: false, busy: false, status: 'idle' as const, draft: '', releaseAtInput: '', releaseTimezoneInput: '', letters: [], opened: null, checked: false, error: false };
   const leaveView = { available: false, status: 'idle' as const };
   const controller: SessionController = {
+    wishes: { getSnapshot: () => emptyWishes, subscribe: () => () => {}, setDraft: jest.fn(), setExplanation: jest.fn(), setConsent: jest.fn(), create: jest.fn(), fulfill: jest.fn(), reopen: jest.fn(), retry: jest.fn(), list: jest.fn(), cancel: jest.fn() },
     songs: { beginEdit: jest.fn(), getSnapshot: () => emptySongs, subscribe: () => () => {}, setDraft: jest.fn(), setExplanation: jest.fn(), setMusicUrl: jest.fn(), setConsent: jest.fn(), cancel: jest.fn(), create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}) },
     blind: { listRounds: jest.fn(), selectRound: jest.fn(), next: jest.fn(), getSnapshot: () => emptyBlind, subscribe: () => () => {}, setDraft: jest.fn(), setConsent: jest.fn(), open: jest.fn(), read: jest.fn(), submit: jest.fn(), retry: jest.fn() },
     memories: { getSnapshot: () => emptyMemories, subscribe: () => () => {}, setDraft: jest.fn(), setBody: jest.fn(), setLocalDate: jest.fn(), setConsent: jest.fn(), cancel: jest.fn(), create: jest.fn(async () => {}), retry: jest.fn(async () => {}), list: jest.fn(async () => {}) },

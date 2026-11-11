@@ -204,3 +204,12 @@ Mobile выбирает существующую дату, явно сохран
   неизменяемый pending retry и изоляция выбранной записи/сессии/пары/epoch.
 - [Контракт](docs/SHARED_SONGS.md), [проверки](docs/SONG_EDITING_EVIDENCE.md).
 - URL-opening, default demo и latest50 сохранены; удаления/undo/playback нет.
+
+## 2026-11-11 — общие желания
+- `packages/domain/wishes/text.ts`: короткое необязательное Unicode-пояснение.
+- `services/api/src/shared-wishes*`, migration019: отдельная коллекция/receipts,
+  immutable title/author/explanation, status CAS и canonical historical replay.
+- `apps/mobile/src/auth/wishes*`, `WishesPanel.tsx`: RU/EN явная публикация для обоих,
+  fulfill/reopen, RAM-черновик и same-command retry. Не задачи и не покупки.
+- [Контракт](docs/SHARED_WISHES.md), [проверки](docs/SHARED_WISHES_EVIDENCE.md).
+  Synthetic-кандидат; native/production и независимая приёмка отдельно.

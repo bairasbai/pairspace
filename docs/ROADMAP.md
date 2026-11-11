@@ -247,3 +247,12 @@ immutable retry/lostACK и scope cleanup реализованы для synthetic
 - [ ] Полный all-eleven frozen checkpoint и независимая приёмка точного SHA.
 - [ ] Native/two-device/production gates остаются открыты; JS export их не закрывает.
 Подробности и история неуспехов: POSTGRES_VERIFICATION_RELIABILITY.md.
+
+## Общие желания: первый bounded synthetic-срез
+Явная публикация названия/необязательного пояснения обоим; автор и текст
+неизменяемые, оба активных участника могут явно отметить исполнение/вернуть.
+Version CAS, immutable retries, canonical current state и latest50 реализованы
+отдельно от задач. [Контракт](SHARED_WISHES.md), [проверки](SHARED_WISHES_EVIDENCE.md).
+Личные желания, редакция/удаление, архив, настройки уведомлений и полный перенос
+исходной страницы остаются планом. Без покупок, ссылок и доставки.
+До независимого review frozen SHA не принято; native/device/production gates открыты.
