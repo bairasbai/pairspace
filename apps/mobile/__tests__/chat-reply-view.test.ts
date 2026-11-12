@@ -17,7 +17,8 @@ it('terminal knowledge survives leaving windows, no body resurrection or identit
   k.reset(); expect(k.accept([live()],[])).toBe(true);
 });
 it('all immutable identity and live-version conflicts fail, terminal version must advance', () => {
-  for (const patch of [{ id: uuid(9) },{coupleId:uuid(9)},{seq:99},{senderId:uuid(9)},{clientId:uuid(9)}, {createdAt:'2026-12-01T00:00:00Z'},{replyToId:uuid(9)},{body:'different'},{version:2}]) expect(consistentReply(live(),{...live(),...patch})).toBe(false);
+  for (const patch of [{ id: uuid(9) },{coupleId:uuid(9)},{seq:99},{senderId:uuid(9)},{clientId:uuid(9)}, {createdAt:'2026-12-01T00:00:00Z'},{replyToId:uuid(9)},{body:'different'}]) expect(consistentReply(live(),{...live(),...patch})).toBe(false);
+  expect(consistentReply(live(),{...live(),version:2,body:'edited'})).toBe(true);
   expect(consistentReply(live(),{...dead(),version:1})).toBe(false);
   const k=createReplyKnowledge(); expect(k.accept([{...row(2),seq:live().seq}],[live()])).toBe(false);
   expect(k.accept([{...row(2),clientId:live().clientId}],[live()])).toBe(false);

@@ -13,13 +13,13 @@ const identity: AuthIdentity = { userId: 'auth-a', sessionId: 'synthetic-session
 const readyContext = { state: 'ready', sessionId: identity.sessionId,
   userId: uuid(1), coupleId: uuid(2), membershipEpoch: 1 };
 const message: ChatMessage = {
-  coupleId: uuid(2), id: uuid(4), senderId: uuid(1), clientId: uuid(3),
+  coupleId: uuid(2), id: uuid(40), senderId: uuid(1), clientId: uuid(30),
   seq: 1, body: 'Synthetic history A', version: 1, createdAt: '2026-11-10T00:00:00.000Z',
 };
 const messageB: ChatMessage = { ...message, id: uuid(14), coupleId: uuid(12), senderId: uuid(11), body: 'Synthetic history B' };
 const envelope = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
 const page = (messages: readonly ChatMessage[] = [message]) => envelope({ ok: true, value: { messages, nextBeforeSeq: null } });
-const ack = (body: string, clientId = uuid(3)) => envelope({ ok: true, value: { message: { ...message, body, clientId }, replay: false } });
+const ack = (body: string, clientId = uuid(3)) => envelope({ ok: true, value: { message: { ...message, id: uuid(4 + Number(clientId.slice(-2))), seq: 2 + Number(clientId.slice(-2)), body, clientId }, replay: false } });
 function deferred<T>() {
   let resolve!: (value: T) => void;
   let reject!: (error?: unknown) => void;

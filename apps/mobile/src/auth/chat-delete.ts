@@ -15,7 +15,7 @@ type Host = {
   cookie(): Promise<string | null>;
   publish(state: DeleteState): void;
   denied(error: string): void;
-  accept(message: DisplayMessage): boolean;
+  accept(message: DisplayMessage, token: string): Promise<boolean>;
 };
 /** A confirmation is not a command. Only explicit confirmation allocates its retry key. */
 export function createChatDelete(baseURL: string, host: Host,
@@ -48,7 +48,9 @@ export function createChatDelete(baseURL: string, host: Host,
       if (cookie !== found.credential.token) { host.denied('auth_required'); return; }
       if (!result.ok) {
         if (result.error === 'message_deleted') {
-          if (!host.accept(displayMessage(result.message))) {
+          const accepted = await host.accept(displayMessage(result.message), found.credential.token);
+          if (!current(command.generation) || pending !== command) return;
+          if (!accepted) {
             publish({ status: 'unknown', pendingId: command.message.id, error: 'invalid_response' }); return;
           }
         }
@@ -59,9 +61,12 @@ export function createChatDelete(baseURL: string, host: Host,
         return;
       }
       if (!current(command.generation) || pending !== command) return;
-      if (!host.accept(displayMessage(result.value.message))) {
+      const accepted = await host.accept(displayMessage(result.value.message), found.credential.token);
+      if (!current(command.generation) || pending !== command) return;
+      if (!accepted) {
         publish({ status: 'unknown', pendingId: command.message.id, error: 'invalid_response' }); return;
       }
+      if (!current(command.generation) || pending !== command) return;
       pending = null;
       publish({ status: 'deleted' });
     } catch {

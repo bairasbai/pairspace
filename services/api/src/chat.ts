@@ -1,10 +1,11 @@
+import { originalChatBodyMatches } from './chat-send-identity.ts';
 import { canClose, lockPair, mutateClosedPair } from './pair-close.ts';
 import type { ApiError, AuthorizedDatabase, Message, Principal, Result, SqlExecutor } from './contracts.ts';
 import { activeSession, validPrincipal } from './session.ts';
 import { isEpoch, isUuid, parseHistory, parseSend } from './validation.ts';
 
-const columns = `to_jsonb(chat_messages)->>'deleted_at' AS deleted_at, to_jsonb(chat_messages)->>'reply_to_id' AS reply_to_id, id, couple_id, sender_id, client_message_id, seq::text AS seq, body, version, created_at::text AS created_at`;
-type Row = { deleted_at?: string | null; reply_to_id?: string | null; id: string; couple_id: string; sender_id: string; client_message_id: string; seq: string; body: string; version: number; created_at: string };
+const columns = `to_jsonb(chat_messages) ? 'original_body_hash' AS has_original_body_hash, to_jsonb(chat_messages)->>'original_body_hash' AS original_body_hash, to_jsonb(chat_messages)->>'deleted_at' AS deleted_at, to_jsonb(chat_messages)->>'reply_to_id' AS reply_to_id, id, couple_id, sender_id, client_message_id, seq::text AS seq, body, version, created_at::text AS created_at`;
+type Row = { has_original_body_hash?: boolean; original_body_hash?: string | null; deleted_at?: string | null; reply_to_id?: string | null; id: string; couple_id: string; sender_id: string; client_message_id: string; seq: string; body: string; version: number; created_at: string };
 const message = (row: Row): Message => ({ id: row.id, coupleId: row.couple_id, senderId: row.sender_id,
   clientId: row.client_message_id, seq: Number(row.seq), body: row.body, version: row.version, createdAt: row.created_at });
 const denied = <T>(error: ApiError): Result<T> => ({ ok: false, error });
@@ -38,7 +39,7 @@ export async function sendMessage(db: AuthorizedDatabase, principal: Principal, 
       WHERE couple_id = $1 AND sender_id = $2 AND client_message_id = $3`, [coupleId, principal.userId, clientId]);
     if (existing.rows.length) {
       if (existing.rows[0].deleted_at) return denied('unavailable');
-      if (existing.rows[0].reply_to_id || existing.rows[0].body !== body) return denied('idempotency_conflict');
+      if (existing.rows[0].reply_to_id || !originalChatBodyMatches(existing.rows[0], body)) return denied('idempotency_conflict');
       return { ok: true, value: { message: message(existing.rows[0]), replay: true } };
     }
     const sequence = await tx.query<{ seq: string }>(`UPDATE couples SET next_chat_seq = next_chat_seq + 1

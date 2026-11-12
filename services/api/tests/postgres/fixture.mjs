@@ -8,7 +8,7 @@ import { getMigrations } from 'better-auth/db/migration';
 import { withDeadline } from './async-bounds.mjs';
 import { localConfiguration, verifyDisposable } from './guard.mjs';
 
-export async function createFixture({ skipChatDeletionMigration = false, skipChatRepliesMigration = false, skipBlindRoundsMigration = false, skipAnnualDatesMigration = false, skipSharedWishesMigration = false, skipSongEditingMigration = false } = {}) {
+export async function createFixture({ skipChatEditingMigration = false, skipChatDeletionMigration = false, skipChatRepliesMigration = false, skipBlindRoundsMigration = false, skipAnnualDatesMigration = false, skipSharedWishesMigration = false, skipSongEditingMigration = false } = {}) {
   const configuration = localConfiguration(process.env);
   const schema = `ps_case_${randomBytes(8).toString('hex')}`;
   const admin = new Pool({ ...configuration.connection, max: 2, application_name: 'pairspace-spike-observer' });
@@ -28,8 +28,19 @@ export async function createFixture({ skipChatDeletionMigration = false, skipCha
       logger: { level: 'error' },
     };
     await (await getMigrations(options)).runMigrations();
-    for (const name of ['001_chat.sql', '002_auth.sql', '003_better_auth_identity.sql', '004_pair_invites.sql', '005_care_signals.sql', '006_letters.sql', '007_scheduled_letters.sql', '008_pair_leave.sql', '009_shared_tasks.sql', '010_blind_answers.sql', ...(skipBlindRoundsMigration ? [] : ['011_repeatable_blind_rounds.sql']), '012_shared_dates.sql', ...(skipAnnualDatesMigration ? [] : ['013_annual_shared_dates.sql', '014_edit_shared_dates.sql']), '015_shared_memories.sql', '016_shared_songs.sql', '017_shared_song_links.sql', ...(skipSongEditingMigration ? [] : ['018_edit_shared_songs.sql']), ...(skipSharedWishesMigration ? [] : ['019_shared_wishes.sql']), ...(skipChatRepliesMigration ? [] : ['020_chat_replies.sql']), ...(skipChatRepliesMigration || skipChatDeletionMigration ? [] : ['021_chat_deletion_receipts.sql'])]) {
-      await domainPool.query(await readFile(new URL(`../../migrations/${name}`, import.meta.url), 'utf8'));
+    for (const name of ['001_chat.sql', '002_auth.sql', '003_better_auth_identity.sql', '004_pair_invites.sql', '005_care_signals.sql', '006_letters.sql', '007_scheduled_letters.sql', '008_pair_leave.sql', '009_shared_tasks.sql', '010_blind_answers.sql', ...(skipBlindRoundsMigration ? [] : ['011_repeatable_blind_rounds.sql']), '012_shared_dates.sql', ...(skipAnnualDatesMigration ? [] : ['013_annual_shared_dates.sql', '014_edit_shared_dates.sql']), '015_shared_memories.sql', '016_shared_songs.sql', '017_shared_song_links.sql', ...(skipSongEditingMigration ? [] : ['018_edit_shared_songs.sql']), ...(skipSharedWishesMigration ? [] : ['019_shared_wishes.sql']), ...(skipChatRepliesMigration ? [] : ['020_chat_replies.sql']), ...(skipChatRepliesMigration || skipChatDeletionMigration ? [] : ['021_chat_deletion_receipts.sql']), ...(skipChatRepliesMigration || skipChatDeletionMigration || skipChatEditingMigration ? [] : ['022_chat_message_edits.sql'])]) {
+      const sql = await readFile(new URL(`../../migrations/${name}`, import.meta.url), 'utf8');
+      if (name === '022_chat_message_edits.sql') {
+        const migrationConnection = await domainPool.connect();
+        try {
+          await migrationConnection.query('BEGIN');
+          await migrationConnection.query(sql);
+          await migrationConnection.query('COMMIT');
+        } catch (error) {
+          await migrationConnection.query('ROLLBACK');
+          throw error;
+        } finally { migrationConnection.release(); }
+      } else await domainPool.query(sql);
     }
     const auth = betterAuth(options);
     async function call(path, body, cookie) {

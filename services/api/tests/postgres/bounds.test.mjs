@@ -30,8 +30,8 @@ test('outer GNU timeout terminates stuck subprocess with nonzero status', () => 
 });
 
 
-test('full PostgreSQL suite retains a fixed 300-second outer limit and ten-second kill grace', () => {
+test('full PostgreSQL suite retains a fixed 360-second outer limit and ten-second kill grace', () => {
   const script = readFileSync(new URL('../../scripts/run-postgres.sh', import.meta.url), 'utf8');
-  assert.match(script, /exec timeout --signal=TERM --kill-after=10s 300s bash scripts\/run-postgres-inner\.sh/);
+  assert.match(script, /exec timeout --signal=TERM --kill-after=10s 360s bash scripts\/run-postgres-inner\.sh/);
   assert.match(script, /source scripts\/sanitize-pg-env\.sh/);
 });

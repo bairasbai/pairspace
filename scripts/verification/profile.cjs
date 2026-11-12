@@ -33,7 +33,7 @@ function plan(root, runtime, profile = 'full') {
     node('postgres-safety', 'services/api', ['--test', ...readdirSync(path.join(root, 'services/api/tests/postgres'))
       .filter(name => name.endsWith('.test.mjs')).sort().map(name => 'tests/postgres/' + name)]),
     { id: 'real-postgres', cwd: 'services/api', command: 'bash', args: ['scripts/run-postgres.sh'],
-      timeoutMs: 330000, graceMs: 15000, required: true },
+      timeoutMs: 390000, graceMs: 15000, required: true },
     node('root-domain', '.', ['--test', ...readdirSync(path.join(root, 'tests'))
       .filter(name => name.endsWith('.test.ts')).sort().map(name => 'tests/' + name)]),
     node('mobile-js-export', 'apps/mobile', ['node_modules/expo/bin/cli', 'export', '--platform', 'ios',

@@ -273,3 +273,15 @@ New candidate from accepted canonical-replies checkpoint54bb956. Explicit confir
 author-only CAS and metadata-only immutable retry receipts, terminal tombstone for both
 participants. Manual refreshed reads, not realtime; no editing or physical retention purge.
 Required full11 and independent acceptance pending: [CHAT_DELETION_EVIDENCE](CHAT_DELETION_EVIDENCE.md).
+
+## User-facing own chat editing
+Candidate from independently accepted f6197f8. Explicit Save/Cancel, author-only CAS,
+immutable original send/reply identity, current-canonical retries and terminal deletion
+priority. Separate edited-version metadata bound500 and existing tombstone bound500
+are safety limits per authenticated generation, not an all-memory or realtime claim.
+Old clients can fail closed on a replay whose current text was edited. Native builds,
+durable queues, sync, delivery/read receipts and retention remain separate unfinished
+work. Exact author/independent gates pending: [CHAT_EDITING_EVIDENCE](CHAT_EDITING_EVIDENCE.md).
+Owner refinement before acceptance: normalized unchanged saves retain version and do
+not mark an untouched message as edited; real edits and restoring original text remain
+marked. No-op receipts still protect retries and CAS. Final revised-SHA gates required.

@@ -11,7 +11,7 @@ type Ready = typeof ready;
 const envelope = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status });
 const contextResponse = (value: unknown = ready) => envelope({ ok: true, value });
 const row = (context: Ready = ready) => ({ id: uuid(4), coupleId: context.coupleId,
-  senderId: context.userId, clientId: uuid(3), seq: 1, body: `History ${context.coupleId}:${context.membershipEpoch}`,
+  senderId: context.userId, clientId: uuid(30), seq: 1, body: `History ${context.coupleId}:${context.membershipEpoch}`,
   version: 1, createdAt: '2026-11-10T00:00:00.000Z' });
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -31,7 +31,7 @@ function setup() {
   const chat = jest.fn(async (input: Request) => {
     if (input.method === 'POST') {
       const body = await input.clone().json();
-      return envelope({ ok: true, value: { message: { ...row(current), body: body.body, clientId: body.client_message_id }, replay: false } });
+      return envelope({ ok: true, value: { message: { ...row(current), id: uuid(90), seq: 90, body: body.body, clientId: body.client_message_id }, replay: false } });
     }
     return envelope({ ok: true, value: { messages: [row(current)], nextBeforeSeq: null } });
   });

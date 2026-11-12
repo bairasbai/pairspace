@@ -1,3 +1,6 @@
+import { reconcileVisible } from '../chat/reconcile-visible';
+import { createChatEdit, type EditState } from './chat-edit';
+import { createEditKnowledge, type BodyDigest } from '../chat/edit-knowledge';
 import { createChatDelete, type DeleteState } from './chat-delete';
 import { createWishesController } from './wishes';
 import { createSongsController } from './songs';
@@ -27,7 +30,7 @@ export type AuthView = Readonly<{
   error: string | null; draft: string; messages: readonly DisplayMessage[];
   replyTarget?: ReplySelection; replyDetail?: DisplayMessage; replyDetailLoading?: boolean; chatSuspended?: boolean;
   history?: HistoryView;
-  currentUserId?: string; deleteState?: DeleteState;
+  currentUserId?: string; deleteState?: DeleteState; editState?: EditState;
   outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent'; replyToId?: string }>;
 }>;
 // Correlation only, never authentication. Independent from mutation command IDs.
@@ -39,7 +42,7 @@ function historyReadId() {
 const empty: AuthView = { phase: 'signed_out', error: null, draft: '', messages: [] };
 /** Ephemeral UI state; never persists credentials, drafts or message bodies. */
 export function createSessionController(config: SyntheticConfig, client: SessionClient,
-  request: (request: Request) => Promise<Response>, commandId: () => string) {
+  request: (request: Request) => Promise<Response>, commandId: () => string, digest?: BodyDigest) {
   const contextConfig: SyntheticConfig = Object.freeze({ mode: config.mode, baseURL: config.baseURL });
   validateSyntheticConfig(contextConfig);
   let view = empty;
@@ -48,6 +51,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   let historyBusy = false;
   let detailSequence = 0;
   const replyKnowledge = createReplyKnowledge();
+  const editKnowledge = createEditKnowledge(digest);
   let discoverySequence = 0;
   let authIdentity: AuthIdentity | null = null;
   let waitingUserId: string | null = null;
@@ -63,7 +67,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
   const listeners = new Set<() => void>();
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
   const invalidate = (preserveLeave = false) => {
-    generation++; detailSequence++; replyKnowledge.reset(); chatDelete.reset(); historyBusy = false; abort.abort(); abort = new AbortController();
+    generation++; detailSequence++; replyKnowledge.reset(); editKnowledge.reset(); chatDelete.reset(); chatEdit.reset(); historyBusy = false; abort.abort(); abort = new AbortController();
     if (!preserveLeave) leaveController.reset();
     verifiedContext = null; invitationController.reset(); careController.reset(); lettersController.reset(); tasksController.reset(); wishesController.reset(); datesController.reset(); memoriesController.reset(); songsController.reset(); blindController.reset();
     session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending = null; outgoingClientId = null; draftRevision++;
@@ -147,6 +151,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
       set(next) { queue = next; },
     },
     request: boundedRequest,
+    acceptCanonicalMessage: (message, token) => acceptMessages([message], token),
   });
   async function boundedRequest(input: Request) {
     const controller = new AbortController();
@@ -264,7 +269,10 @@ export function createSessionController(config: SyntheticConfig, client: Session
       }
       // Validate overlap identities, but retain only the new fifty-row window.
       const messages = result.value.messages.map(displayMessage);
-      if (!acceptMessages(messages)) { if (!view.chatSuspended) denied('invalid_response'); return; }
+      if (!await acceptMessages(messages, credential.token, () => current === generation && sequence === refreshSequence)) {
+        if (current === generation && sequence === refreshSequence && !view.chatSuspended) denied('invalid_response'); return;
+      }
+      if (current !== generation || sequence !== refreshSequence) return;
       publish({ ...view, error: null, messages,
         history: { status: 'ready', nextBeforeSeq: result.value.olderCursor?.seq ?? null,
           nextAfterSeq: result.value.newerCursor?.seq ?? null, boundedWindow: true, windowReset: direction === 'latest' } });
@@ -288,15 +296,35 @@ export function createSessionController(config: SyntheticConfig, client: Session
       if (outgoingClientId === m.clientId) { outgoingClientId = null; publish({ ...view, outgoing: undefined }); }
     }
   }
-  function acceptMessages(messages: readonly DisplayMessage[]) {
+  async function acceptMessages(messages: readonly DisplayMessage[], expectedCookie: string, valid: () => boolean = () => true) {
+    const current = generation;
     try {
+      const transaction = await editKnowledge.prepare(messages);
+      if (!transaction || current !== generation || !valid()) return false;
+      const cookie = await client.getCookie();
+      if (current !== generation || !valid() || !transaction.isCurrent()) return false;
+      if (cookie !== expectedCookie) { block('auth_required'); return false; }
       if (!replyKnowledge.accept(messages, [...view.messages, ...(view.replyDetail ? [view.replyDetail] : [])])) return false;
-    } catch {
+      transaction.commit();
+    } catch (error) {
+      if (current !== generation || !valid()) return false;
+      if (!(error instanceof Error) || !['edit_knowledge_limit', 'tombstone_limit'].includes(error.message)) return false;
       detailSequence++; refreshSequence++; scrubDeletedOutgoing(messages);
       publish({ ...view, messages: [], outgoing: undefined, replyDetail: undefined, replyTarget: undefined,
-        replyDetailLoading: false, chatSuspended: true, error: 'tombstone_limit' });
+        replyDetailLoading: false, chatSuspended: true, error: error instanceof Error && error.message === 'edit_knowledge_limit' ? 'edit_knowledge_limit' : 'tombstone_limit' });
       return false;
     }
+    for (const message of messages) {
+      chatEdit.observe(message);
+      if (queue && session && message.senderId === session.scope.userId && message.body !== null) {
+        const applied = acknowledge(queue, session.scope, { clientId: message.clientId, serverId: message.id,
+          senderId: message.senderId, seq: message.seq, version: message.version, body: message.body, replyToId: message.replyToId });
+        if (applied.ok) queue = applied.state;
+        if (outgoingClientId === message.clientId && view.outgoing) publish({ ...view, outgoing: { ...view.outgoing, body: message.body } });
+      }
+    }
+    const visible = reconcileVisible(view.messages, view.replyDetail, view.replyTarget, messages);
+    if (visible.messages !== view.messages || visible.replyDetail !== view.replyDetail || visible.replyTarget !== view.replyTarget) publish({ ...view, ...visible });
     const tombstones = messages.filter(m => m.deletedAt);
     if (tombstones.length) {
       scrubDeletedOutgoing(tombstones);
@@ -326,7 +354,9 @@ export function createSessionController(config: SyntheticConfig, client: Session
       return result;
     }
     const m = result.value.message;
-    if (!acceptMessages([displayMessage(m)])) return { ok: false as const, error: 'invalid_response' as const };
+    const accepted = await acceptMessages([displayMessage(m)], credential.token);
+    if (current !== generation || !queue) return { ok: false as const, error: 'stale_session' as const };
+    if (!accepted) return { ok: false as const, error: 'invalid_response' as const };
     const ack = acknowledge(queue, credential.scope, { clientId: id, serverId: m.id, senderId: m.senderId,
       seq: m.seq, version: m.version, body: m.body, replyToId: m.replyToId });
     if (!ack.ok) return { ok: false as const, error: 'invalid_response' as const };
@@ -361,7 +391,10 @@ export function createSessionController(config: SyntheticConfig, client: Session
         return;
       }
       const message = displayMessage(result.value);
-      if (!acceptMessages([message])) { if (!view.chatSuspended) denied('invalid_response'); return; }
+      if (!await acceptMessages([message], credential.token, () => current === generation && sequence === detailSequence)) {
+        if (current === generation && sequence === detailSequence && !view.chatSuspended) denied('invalid_response'); return;
+      }
+      if (current !== generation || sequence !== detailSequence) return;
       publish({ ...view, error: null, replyDetail: message });
     } catch { if (current === generation && sequence === detailSequence) publish({ ...view, error: 'transport_error' }); }
     finally { if (current === generation && sequence === detailSequence) publish({ ...view, replyDetailLoading: false }); }
@@ -377,8 +410,14 @@ export function createSessionController(config: SyntheticConfig, client: Session
     find: id => view.messages.find(message => message.id === id) ?? (view.replyDetail?.id === id ? view.replyDetail : undefined),
     credential: discover, cookie: () => client.getCookie(), denied,
     publish: deleteState => publish({ ...view, deleteState }),
-    accept: message => acceptMessages([message]),
+    accept: (message, token) => acceptMessages([message], token),
   }, boundedRequest, commandId);
+  const chatEdit = createChatEdit(contextConfig.baseURL, {
+    capture: () => session && view.phase === 'signed_in' && !view.chatSuspended ? { generation, session } : null,
+    find: id => view.messages.find(message => message.id === id) ?? (view.replyDetail?.id === id ? view.replyDetail : undefined),
+    credential: discover, cookie: () => client.getCookie(), denied,
+    publish: editState => publish({ ...view, editState }), accept: (message, token) => acceptMessages([message], token),
+  }, boundedRequest, commandId, historyReadId);
   const loadOlder = () => readWindow('before');
   return {
     leave,
@@ -388,6 +427,8 @@ export function createSessionController(config: SyntheticConfig, client: Session
     tasks, wishes, dates, memories, songs,
     blind,
     setReplyTarget, openReplyTarget,
+    beginEdit: chatEdit.beginEdit, setEditDraft: chatEdit.setEditDraft, cancelEdit: chatEdit.cancelEdit,
+    saveEdit: chatEdit.saveEdit, retryEdit: chatEdit.retryEdit, reloadEdit: chatEdit.reloadEdit,
     beginDelete: chatDelete.beginDelete, cancelDelete: chatDelete.cancelDelete,
     confirmDelete: chatDelete.confirmDelete, retryDelete: chatDelete.retryDelete,
     cancelReply() { if (view.phase !== 'signed_in') return; draftRevision++; publish({ ...view, replyTarget: undefined }); },
@@ -525,7 +566,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
           pending = null;
           publish({ ...view, error: null, draft: draftRevision === command.revision ? '' : view.draft,
             ...(draftRevision === command.revision ? { replyTarget: undefined } : {}),
-            outgoing: { body: command.body, status: 'sent', ...(command.replyToId ? { replyToId: command.replyToId } : {}) } });
+            outgoing: { body: queue?.messages.find(item => item.clientId === id)?.canonicalBody ?? command.body, status: 'sent', ...(command.replyToId ? { replyToId: command.replyToId } : {}) } });
           // Keep the reader's chosen window. Latest is an explicit action.
         } else if (result.error === 'reply_unavailable') {
           pending = null; publish({ ...view, outgoing: undefined, error: result.error,

@@ -1,3 +1,5 @@
+import { ChatEditPanel, editCopy } from './ChatEditPanel';
+import type { EditState } from './chat-edit';
 import { ChatDeletePanel, deleteCopy } from './ChatDeletePanel';
 import type { DeleteState } from './chat-delete';
 import { ChatReplyPanel, replyCopy } from './ChatReplyPanel';
@@ -12,6 +14,8 @@ export type SyntheticChatPanelProps = {
   locale: 'ru' | 'en';
   phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
   history?: HistoryView;
+  editState?: EditState; onBeginEdit?: (id:string)=>void; onEditDraft?: (text:string)=>void;
+  onSaveEdit?: ()=>void; onCancelEdit?: ()=>void; onRetryEdit?: ()=>void; onReloadEdit?: ()=>void;
   currentUserId?: string; deleteState?: DeleteState;
   onBeginDelete?: (id: string) => void; onConfirmDelete?: (token: string) => void;
   onCancelDelete?: () => void; onRetryDelete?: () => void;
@@ -22,7 +26,7 @@ export type SyntheticChatPanelProps = {
   outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent'; replyToId?: string }>;
   error: string | null;
   draft: string;
-  messages: readonly { id: string; body: string | null; senderId: string; replyToId?: string }[];
+  messages: readonly { id: string; body: string | null; senderId: string; replyToId?: string; version?: number }[];
   replyTarget?: ReplySelection; replyDetail?: DisplayMessage; replyDetailLoading?: boolean; chatSuspended?: boolean;
   onReplyTarget?: (id: string) => void; onOpenReplyTarget?: (id: string) => void;
   onCancelReply?: () => void; onCloseReplyDetail?: () => void;
@@ -182,6 +186,7 @@ function Login({ locale, phase, email, onEmail, onSignIn, onSignOut }: LoginProp
 
 /** Controlled synthetic-only UI. The parent owns requests, session and message state. */
 export function SyntheticChatPanel({
+  editState, onBeginEdit, onEditDraft, onSaveEdit, onCancelEdit, onRetryEdit, onReloadEdit,
   currentUserId, deleteState, onBeginDelete, onConfirmDelete, onCancelDelete, onRetryDelete,
   locale, phase, error, draft, messages, outgoing, replyTarget, replyDetail, replyDetailLoading, chatSuspended, onReplyTarget, onOpenReplyTarget, onCancelReply, onCloseReplyDetail, history, onLoadOlder, onLoadNewer, onLoadLatest, onLoadOldest, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
 }: SyntheticChatPanelProps) {
@@ -234,6 +239,9 @@ export function SyntheticChatPanel({
             <Text selectable style={styles.messageBody}>{message.body === null ? replies.deleted : message.body}</Text>
             {message.replyToId && <Text>{replies.reference}: {message.replyToId}</Text>}
             {message.replyToId && onOpenReplyTarget && <Action label={`${replies.original}: ${message.id}`} disabled={chatSuspended || replyDetailLoading} onPress={() => onOpenReplyTarget(message.id)} />}
+            {message.body !== null && (message.version ?? 1)>1 && <Text>{editCopy[locale].edited}</Text>}
+            {message.body !== null && message.senderId===currentUserId && onBeginEdit &&
+              <Action label={`${editCopy[locale].edit}: ${message.id}`} disabled={chatSuspended} onPress={()=>onBeginEdit(message.id)}/>}
             {message.body !== null && message.senderId === currentUserId && onBeginDelete &&
               <Action label={`${deleteCopy[locale].select}: ${message.id}`} disabled={chatSuspended || !!deleteState?.pendingId}
                 onPress={() => onBeginDelete(message.id)} />}
@@ -241,6 +249,11 @@ export function SyntheticChatPanel({
           </View>)}
         <Action label={t.refresh} onPress={onRefresh} />
       </View>
+      <ChatEditPanel locale={locale} state={editState} onDraft={onEditDraft} onSave={onSaveEdit}
+        onCancel={onCancelEdit} onRetry={onRetryEdit} onReload={onReloadEdit}/>
+      {replyDetail?.body != null && replyDetail.version>1 && <Text>{editCopy[locale].edited}</Text>}
+      {replyDetail?.body != null && replyDetail.senderId===currentUserId && onBeginEdit &&
+        <Action label={`${editCopy[locale].edit}: ${replyDetail.id}`} disabled={chatSuspended} onPress={()=>onBeginEdit(replyDetail.id)}/>}
       <ChatDeletePanel locale={locale} state={deleteState} onConfirm={onConfirmDelete} onCancel={onCancelDelete} onRetry={onRetryDelete} />
       {replyDetail?.body != null && replyDetail.senderId === currentUserId && onBeginDelete &&
         <Action label={`${deleteCopy[locale].select}: ${replyDetail.id}`} disabled={chatSuspended || !!deleteState?.pendingId}

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createFixture } from "./fixture.mjs";
 const origin = "http://localhost:3123";
-export async function replyFixture({ skipChatDeletionMigration = false } = {}) {
-    const f = await createFixture({ skipChatDeletionMigration });
+export async function replyFixture({ skipChatDeletionMigration = false, skipChatEditingMigration = false } = {}) {
+    const f = await createFixture({ skipChatDeletionMigration, skipChatEditingMigration });
     try {
         const accounts = [];
         for (let i = 0; i < 4; i++) {

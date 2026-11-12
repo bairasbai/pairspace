@@ -1,3 +1,4 @@
+import { originalChatBodyMatches } from './chat-send-identity.ts';
 import type { AuthorizedDatabase, Principal, Result, SqlExecutor } from "./contracts.ts";
 import { authorizeChat } from "./chat.ts";
 import { activeSession, validPrincipal } from "./session.ts";
@@ -5,6 +6,8 @@ import { isEpoch, isUuid, parseSend } from "./validation.ts";
 import { readChatWindow, type ReplyMessage, type ReplyWindow } from "./chat-history-window.ts";
 export type { ReplyMessage, ReplyWindow } from "./chat-history-window.ts";
 export type Row = {
+    has_original_body_hash?: boolean;
+    original_body_hash?: string | null;
     id: string;
     couple_id: string;
     sender_id: string;
@@ -16,7 +19,7 @@ export type Row = {
     created_at: string;
     reply_to_id: string | null;
 };
-export const columns = "id,couple_id,sender_id,client_message_id,seq::text AS seq,body,version,created_at::text AS created_at,reply_to_id,deleted_at::text AS deleted_at";
+export const columns = "to_jsonb(chat_messages) ? 'original_body_hash' AS has_original_body_hash, to_jsonb(chat_messages)->>'original_body_hash' AS original_body_hash, id,couple_id,sender_id,client_message_id,seq::text AS seq,body,version,created_at::text AS created_at,reply_to_id,deleted_at::text AS deleted_at";
 export const convert = (r: Row): ReplyMessage => ({
     id: r.id,
     coupleId: r.couple_id,
@@ -30,8 +33,8 @@ export const convert = (r: Row): ReplyMessage => ({
     deletedAt: r.deleted_at ? new Date(r.deleted_at).toISOString() : null
 });
 async function target(tx: SqlExecutor, coupleId: string, id: string) {
-    return (await tx.query<Row>(`SELECT ${columns} FROM chat_messages m WHERE couple_id=$1 AND id=$2
-    AND EXISTS(SELECT 1 FROM couple_members cm WHERE cm.couple_id=m.couple_id AND cm.user_id=m.sender_id AND cm.status='active')`, [coupleId, id])).rows[0];
+    return (await tx.query<Row>(`SELECT ${columns} FROM chat_messages WHERE couple_id=$1 AND id=$2
+    AND EXISTS(SELECT 1 FROM couple_members cm WHERE cm.couple_id=chat_messages.couple_id AND cm.user_id=chat_messages.sender_id AND cm.status='active')`, [coupleId, id])).rows[0];
 }
 function fields(input: unknown, keys: string) {
     if (!input || typeof input !== "object" || Array.isArray(input))
@@ -81,7 +84,7 @@ export async function sendChatReply(db: AuthorizedDatabase, p: Principal, input:
                     ok: false,
                     error: "reply_unavailable"
                 };
-            if (old.body !== body || old.reply_to_id !== replyToId)
+            if (!originalChatBodyMatches(old, body) || old.reply_to_id !== replyToId)
                 return {
                     ok: false,
                     error: "idempotency_conflict"

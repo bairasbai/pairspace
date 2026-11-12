@@ -227,3 +227,10 @@ remain strict; no user DELETE or restored lost-code claim. Exact acceptance pend
 `docs/CHAT_DELETION_EVIDENCE.md`: explicit author-only terminal deletion with CAS,
 metadata receipts, immutable confirmation/retry and existing tombstone-ledger cleanup.
 New standalone stage from accepted54bb956; exact acceptance pending.
+
+## Own chat editing candidate
+`docs/CHAT_EDITING_EVIDENCE.md`: PATCH/CAS, immutable original-send identity,
+current-canonical replay, edit receipts, separate protected edit draft and version-aware
+knowledge. New stage from independently accepted f6197f8; final acceptance pending.
+The revised editing candidate distinguishes unchanged normalized saves (receipt only)
+from actual content revisions, so the Edited label is truthful after fresh reads.

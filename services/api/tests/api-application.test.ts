@@ -409,3 +409,10 @@ it('own deletion is independently opt-in and DELETE bodies obey the perimeter', 
   ] as const)expect((await app.handle(new Request(origin+path,{method:'DELETE',headers,body}))).status).toBe(status);
   expect((await app.handle(new Request(origin+path,{headers:{origin}}))).status).toBe(405);
 });
+it('own editing requires independent loopback opt-in and bounded PATCH bodies', async()=>{
+  const path='/v1/couples/00000000-0000-4000-8000-000000000001/chat/messages/00000000-0000-4000-8000-000000000002';
+  expect((await createApiApplication(config()).handle(request(path,'PATCH'))).status).toBe(404);
+  for(const flag of [true,'true',null])expect(()=>createApiApplication({...config(),enableSyntheticChatEditing:flag} as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin='http://127.0.0.1:1234';const app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticChatEditing:true});
+  for(const [headers,body,status] of [[{origin,'content-type':'application/json'},'{}',401],[{origin,'content-type':'text/plain'},'{}',415],[{origin,'content-type':'application/json'},'x'.repeat(17),413],[{origin:'https://attacker.invalid','content-type':'application/json'},'{}',403]] as const)expect((await app.handle(new Request(origin+path,{method:'PATCH',headers,body}))).status).toBe(status);
+});

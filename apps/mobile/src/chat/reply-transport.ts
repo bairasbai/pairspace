@@ -94,6 +94,6 @@ export async function sendChatReply(baseURL: string, session: TransportSession, 
   if (!keys(result.value, 'message,replay') || typeof result.value.replay !== 'boolean') return fail('invalid_response');
   const parsed = parseReplyMessage(result.value.message, current.scope.coupleId);
   if (!parsed || parsed.senderId !== current.scope.userId || parsed.clientId !== command.clientId
-    || parsed.body !== body.text || parsed.replyToId !== command.replyToId) return fail('invalid_response');
+    || parsed.body === null || (parsed.version === 1 && parsed.body !== body.text) || parsed.replyToId !== command.replyToId) return fail('invalid_response');
   return { ok: true, value: Object.freeze({ message: parsed, replay: result.value.replay }) };
 }

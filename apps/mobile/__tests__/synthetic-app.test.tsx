@@ -39,6 +39,7 @@ it('connects opt-in synthetic chat without changing navigation or the heart', as
       setToken: jest.fn(), preview: jest.fn(async () => {}), setConsent: jest.fn(),
       accept: jest.fn(async () => {}), cancel: jest.fn(),
     },
+    beginEdit: jest.fn(), setEditDraft: jest.fn(), cancelEdit: jest.fn(), saveEdit: jest.fn(async()=>{}), retryEdit: jest.fn(async()=>{}), reloadEdit: jest.fn(async()=>{}),
     beginDelete: jest.fn(), cancelDelete: jest.fn(), confirmDelete: jest.fn(async () => {}), retryDelete: jest.fn(async () => {}),
     dispose: jest.fn(), setReplyTarget: jest.fn(), cancelReply: jest.fn(), openReplyTarget: jest.fn(async () => {}), closeReplyDetail: jest.fn(),
     loadNewer: jest.fn(async () => {}), loadLatest: jest.fn(async () => {}), loadOldest: jest.fn(async () => {}),

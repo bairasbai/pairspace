@@ -76,6 +76,8 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
     onSignOut={() => { void controller.signOut(); }} onSend={() => { void controller.send(); }}
     onCreateWaitingSpace={() => { void controller.createWaitingSpace(); }}
     onCreateProfile={() => { void controller.createProfile(); }}
+    onBeginEdit={controller.beginEdit} onEditDraft={controller.setEditDraft} onCancelEdit={controller.cancelEdit}
+    onSaveEdit={()=>{void controller.saveEdit();}} onRetryEdit={()=>{void controller.retryEdit();}} onReloadEdit={()=>{void controller.reloadEdit();}}
     onBeginDelete={controller.beginDelete} onCancelDelete={controller.cancelDelete}
     onConfirmDelete={token => { void controller.confirmDelete(token); }} onRetryDelete={() => { void controller.retryDelete(); }}
     onReplyTarget={controller.setReplyTarget} onCancelReply={controller.cancelReply}

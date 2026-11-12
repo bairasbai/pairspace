@@ -74,7 +74,7 @@ export function retry(state: QueueState, scope: Scope, clientId: string): QueueR
   return replace(state, { ...message, status: 'queued', error: null });
 }
 
-/** Initial-send ACK only. Editing/history hydration use a later separate protocol. */
+/** Canonical ACK preserves the original send command while accepting edited replays. */
 export function acknowledge(state: QueueState, scope: Scope, input: unknown): QueueResult {
   const denied = guard(state, scope);
   if (denied) return fail(state, denied);
@@ -90,11 +90,12 @@ export function acknowledge(state: QueueState, scope: Scope, input: unknown): Qu
   if (message.deleted) return success(state);
   if (message.attempt === 0) return fail(state, 'invalid_transition');
   const normalized = normalizeMessageText(ack.body);
-  if (!normalized.ok || normalized.text !== message.body) return fail(state, 'invalid_ack');
+  if (!normalized.ok || normalized.text !== ack.body || (ack.version === 1 && normalized.text !== message.body)) return fail(state, 'invalid_ack');
   if (message.serverId !== null && (message.serverId !== ack.serverId || message.seq !== ack.seq)) return fail(state, 'invalid_ack');
   if (state.messages.some(item => item.clientId !== ack.clientId && (item.serverId === ack.serverId || item.seq === ack.seq))) return fail(state, 'invalid_ack');
   if (ack.version < message.version) return success(state);
-  return replace(state, { ...message, status: 'accepted', error: null, serverId: ack.serverId, seq: ack.seq, version: ack.version });
+  if (ack.version === message.version && (message.canonicalBody ?? message.body) !== ack.body) return fail(state, 'invalid_ack');
+  return replace(state, { ...message, status: 'accepted', error: null, serverId: ack.serverId, seq: ack.seq, version: ack.version, ...(ack.version > 1 ? { canonicalBody: normalized.text } : {}) });
 }
 
 /** Call only for an authorized canonical deletion event, never for a local delete tap. */
@@ -107,7 +108,7 @@ export function deleteConfirmed(state: QueueState, scope: Scope, clientId: strin
     || (message.serverId !== null && message.serverId !== serverId)
     || state.messages.some(item => item.clientId !== clientId && item.serverId === serverId)) return fail(state, 'invalid_ack');
   if (version <= message.version) return success(state);
-  return replace(state, { ...message, body: null, deleted: true, status: 'accepted', error: null, serverId, version });
+  return replace(state, { ...message, body: null, canonicalBody: undefined, deleted: true, status: 'accepted', error: null, serverId, version });
 }
 
 export function pause(state: QueueState, scope: Scope): QueueResult {

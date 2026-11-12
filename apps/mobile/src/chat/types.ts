@@ -11,6 +11,8 @@ export type Outgoing = Readonly<{
   /** Immutable target ID only, never a copied source body. */
   replyToId?: string;
   body: string | null;
+  /** Canonical display only; body remains the immutable original send command. */
+  canonicalBody?: string;
   status: SendStatus;
   attempt: number;
   error: 'rejected' | null;

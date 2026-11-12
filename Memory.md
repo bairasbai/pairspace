@@ -348,3 +348,19 @@ Cancel is meaningful only before DELETE dispatch; unknown results retain an exac
 A confirmation captures ID/version/session, never follows a changed selection. Server
 receipts retain no body; canonical tombstones reuse observed-deletion barriers and preserve
 unrelated drafts. No realtime update or account-retention purge is implied.
+
+## Own-message editing stage
+Accepted deletion checkpoint f6197f8 is preserved in its own checkout and archives.
+Editing must never compare an original send command with a mutable current body.
+An immutable original digest plus immutable identity protects retries; receipts store
+hashes rather than historical plaintext. Hashes are not encryption. Version 1 ACKs
+retain exact body matching; edited replays require exact immutable identity and return
+current content only. Tombstones dominate all subsequent live ACKs. A separate edit
+form protects unsaved text on conflict and requires explicit save; unknown outcomes
+retain one original command. No realtime or durable offline draft claim.
+
+Owner clarification after author997c12b: an unchanged normalized save must not create
+an Edited label. New no-op receipt records applied_version/intent without updating
+message version. Actual edits and restoration of original text remain marked. Stored
+or delivered notifications are not automatically rewritten. 997c12b is preserved as
+an author-tested but superseded candidate, not independently accepted.

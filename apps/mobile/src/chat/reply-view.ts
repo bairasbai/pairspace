@@ -17,7 +17,7 @@ export function consistentReply(old: DisplayMessage, next: DisplayMessage) {
   if (!sameIdentity(old, next) || next.version < old.version) return false;
   if (old.deletedAt) return next.body === null && next.deletedAt === old.deletedAt;
   if (next.deletedAt) return next.body === null && next.version > old.version;
-  return old.version === next.version && old.body === next.body;
+  return next.version > old.version || old.body === next.body;
 }
 export function selectReply(message: DisplayMessage): ReplySelection {
   if (message.body === null) throw Error('deleted_target');

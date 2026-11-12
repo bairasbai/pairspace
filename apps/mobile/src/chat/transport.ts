@@ -34,6 +34,7 @@ export type ChatTransportOptions = Readonly<{
   request(request: Request): Promise<Response>;
   /** A synchronous, trusted store. There must be no async gap between get and set. */
   store: QueueStore;
+  acceptCanonicalMessage?(message: ChatMessage, token: string): Promise<boolean>;
 }>;
 
 type JsonRecord = Record<string, unknown>;
@@ -118,7 +119,7 @@ export async function readBoundedJson(response: Response, maxBytes: number): Pro
 }
 
 /** Test-only client boundary. The trusted caller supplies authentication; this does not implement it. */
-export function createChatTransport({ baseUrl, request, store, getCredentialGeneration, allowHttpLoopbackForTests = false, cookieOrigin }: ChatTransportOptions) {
+export function createChatTransport({ baseUrl, request, store, getCredentialGeneration, allowHttpLoopbackForTests = false, cookieOrigin, acceptCanonicalMessage }: ChatTransportOptions) {
   const origin = new URL(baseUrl);
   const testLoopback = allowHttpLoopbackForTests && origin.protocol === 'http:'
     && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
@@ -217,7 +218,11 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
     if (!result.ok) return reject(result.error);
     const message = parseMessage(result.value.message, scope);
     if (!message || message.senderId !== scope.userId || message.clientId !== clientId
-      || message.body !== outgoing.body || typeof result.value.replay !== 'boolean') return reject('invalid_response');
+      || (message.version === 1 && message.body !== outgoing.body) || typeof result.value.replay !== 'boolean') return reject('invalid_response');
+    const accepted = acceptCanonicalMessage ? await acceptCanonicalMessage(message, captured.value.token) : true;
+    const afterCanonical = currentError(captured.value);
+    if (afterCanonical) return failure(afterCanonical);
+    if (!accepted) return reject('invalid_response');
     const acknowledged = acknowledge(store.get(), scope, { clientId, serverId: message.id,
       senderId: message.senderId, seq: message.seq, version: message.version, body: message.body });
     if (!acknowledged.ok) return reject('invalid_response');

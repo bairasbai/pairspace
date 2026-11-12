@@ -6,7 +6,7 @@ const remove = jest.mocked(deleteChatMessage);
 function fixture() {
  let generation=1, available=true, cookie:string|null='cookie', live=true;
  const session={scope:{userId:uuid(1),coupleId:uuid(2),membershipEpoch:1,sessionId:'local'},token:'cookie',credentialGeneration:1};
- const publish=jest.fn<void,[DeleteState]>(), denied=jest.fn(), accept=jest.fn(()=>true);
+ const publish=jest.fn<void,[DeleteState]>(), denied=jest.fn(), accept=jest.fn(async()=>true);
  const credential=jest.fn(async()=>({credential:session}));
  const controller=createChatDelete('https://example.test',{
    capture:()=>available?{generation,session}:null, find:()=>live?row(1):undefined,
@@ -36,7 +36,7 @@ it('cookie change denies, transport throws retains pending, failed canonical acc
  const f=fixture(); remove.mockRejectedValueOnce(Error());await f.controller.confirmDelete(f.begin());
  expect(f.controller.getSnapshot().status).toBe('unknown');
  remove.mockResolvedValueOnce({ok:false,error:'transport_error'}); f.setCookie('new'); await f.controller.retryDelete();expect(f.denied).toHaveBeenCalledWith('auth_required');
- f.setCookie('cookie');f.accept.mockReturnValue(false);
+ f.setCookie('cookie');f.accept.mockResolvedValue(false);
  remove.mockResolvedValueOnce({ok:true,value:{commandId:uuid(77),replay:true,message:{...row(1),replyToId:null,deletedAt:'2026-11-12T00:00:00.000Z',body:null,version:2}}});
  await f.controller.retryDelete();expect(f.controller.getSnapshot()).toMatchObject({status:'unknown',error:'invalid_response'});
 });
