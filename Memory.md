@@ -331,3 +331,20 @@ Unknown ACK повторяет исходную команду с canonical curr
 черновик сохраняется. Closed-pair policy и default demo неизменны.
 Полный frozen gate и независимая приёмка отдельно; сервер plaintext,
 native/two-device NOT_RUN. Контракт: docs/SHARED_WISHES.md.
+
+### New work after cloud reset
+
+Public5a998162 already contains connected chat/authentication/recovery; do not duplicate that functionality or claim later lost commits were restored. The selected substantive gap is history beyond200 messages. New50-message server windows retain exact scoped ID+seq anchors, pending commands and drafts, with explicit Latest after send rather than surprising navigation. Existing queue500 limit remains. Initial dependency install retried only with a writable cache, exact lockfiles unchanged; production/native gates remain open.
+
+## New chat reply stage after accepted 9c64e64
+Implement canonical message references, not persisted private quote copies. Explicit detail
+must reach a source outside the current 50-message window. Unknown sends retain their
+original target; a late ACK must preserve newer text/selection. Internal tombstone tests
+are deliberately not a user-facing deletion feature. Prior accepted sources stay intact.
+
+## Own-message deletion stage
+Deletion is explicit and terminal for both current participants, not physical row removal.
+Cancel is meaningful only before DELETE dispatch; unknown results retain an exact command.
+A confirmation captures ID/version/session, never follows a changed selection. Server
+receipts retain no body; canonical tombstones reuse observed-deletion barriers and preserve
+unrelated drafts. No realtime update or account-retention purge is implied.

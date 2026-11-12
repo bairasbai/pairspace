@@ -1,3 +1,7 @@
+import { ChatDeletePanel, deleteCopy } from './ChatDeletePanel';
+import type { DeleteState } from './chat-delete';
+import { ChatReplyPanel, replyCopy } from './ChatReplyPanel';
+import type { DisplayMessage, ReplySelection } from '../chat/reply-view';
 import type { HistoryView } from '../chat/history';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -8,11 +12,20 @@ export type SyntheticChatPanelProps = {
   locale: 'ru' | 'en';
   phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
   history?: HistoryView;
+  currentUserId?: string; deleteState?: DeleteState;
+  onBeginDelete?: (id: string) => void; onConfirmDelete?: (token: string) => void;
+  onCancelDelete?: () => void; onRetryDelete?: () => void;
   onLoadOlder?: () => void;
-  outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent' }>;
+  onLoadNewer?: () => void;
+  onLoadLatest?: () => void;
+  onLoadOldest?: () => void;
+  outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent'; replyToId?: string }>;
   error: string | null;
   draft: string;
-  messages: readonly { id: string; body: string; senderId: string }[];
+  messages: readonly { id: string; body: string | null; senderId: string; replyToId?: string }[];
+  replyTarget?: ReplySelection; replyDetail?: DisplayMessage; replyDetailLoading?: boolean; chatSuspended?: boolean;
+  onReplyTarget?: (id: string) => void; onOpenReplyTarget?: (id: string) => void;
+  onCancelReply?: () => void; onCloseReplyDetail?: () => void;
   onDraft: (value: string) => void;
   onSignIn: (email: string, password: string) => void;
   onSignOut: () => void;
@@ -57,7 +70,8 @@ const copy = {
     historyLoading: 'История загружается…',
     historyError: 'Не удалось загрузить историю. Можно повторить запрос.',
     historyEnd: 'Начало истории.',
-    historyCap: 'Показано не более 200 сообщений. Обновите историю, чтобы вернуться к последним.',
+    historyCap: 'Показано одно окно до 50 сообщений. Предыдущие окна не накапливаются.',
+    newer: 'Показать более новые сообщения', latest: 'Последние сообщения', oldest: 'Самые первые сообщения',
     historyWindow: 'После обновления показаны только последние 50 сообщений. Предыдущие можно загрузить снова.',
     empty: 'Тестовых сообщений пока нет.',
     sender: 'Тестовый отправитель',
@@ -66,7 +80,7 @@ const copy = {
     refresh: 'Обновить историю',
     sending: 'Отправляется…',
     retry: 'Подтверждение не получено. Повторите то же сообщение без дубля.',
-    sent: 'Отправлено на сервер. Доставка и прочтение не подтверждены.',
+    sent: 'Отправлено на сервер. Нажмите «Последние сообщения», чтобы обновить окно. Доставка и прочтение не подтверждены.',
     retrySend: 'Повторить то же сообщение',
     network: 'Связь временно недоступна. Черновик сохранён до выхода из экрана.',
   },
@@ -103,7 +117,8 @@ const copy = {
     historyLoading: 'Loading history…',
     historyError: 'Could not load history. You can retry.',
     historyEnd: 'Beginning of history.',
-    historyCap: 'Up to 200 messages shown. Refresh history to return to the latest messages.',
+    historyCap: 'One window of up to 50 messages. Previous windows are not accumulated.',
+    newer: 'Show newer messages', latest: 'Latest messages', oldest: 'Oldest messages',
     historyWindow: 'Refreshing shows only the latest 50 messages. You can load older messages again.',
     empty: 'No test messages yet.',
     sender: 'Test sender',
@@ -112,7 +127,7 @@ const copy = {
     refresh: 'Refresh history',
     sending: 'Sending…',
     retry: 'No confirmation received. Retry the same message without a duplicate.',
-    sent: 'Sent to the server. Delivery and reading are not confirmed.',
+    sent: 'Sent to the server. Use Latest messages to refresh the window. Delivery and reading are not confirmed.',
     retrySend: 'Retry the same message',
     network: 'Connection temporarily unavailable. Draft kept until you leave this screen.',
   },
@@ -167,9 +182,10 @@ function Login({ locale, phase, email, onEmail, onSignIn, onSignOut }: LoginProp
 
 /** Controlled synthetic-only UI. The parent owns requests, session and message state. */
 export function SyntheticChatPanel({
-  locale, phase, error, draft, messages, outgoing, history, onLoadOlder, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
+  currentUserId, deleteState, onBeginDelete, onConfirmDelete, onCancelDelete, onRetryDelete,
+  locale, phase, error, draft, messages, outgoing, replyTarget, replyDetail, replyDetailLoading, chatSuspended, onReplyTarget, onOpenReplyTarget, onCancelReply, onCloseReplyDetail, history, onLoadOlder, onLoadNewer, onLoadLatest, onLoadOldest, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
 }: SyntheticChatPanelProps) {
-  const t = copy[locale];
+  const t = copy[locale], replies = replyCopy[locale];
   const [email, setEmail] = useState('');
   const invitationBusy = invitations !== undefined && (invitations.view.busy !== null
     || invitations.view.recovery === 'accept_uncertain');
@@ -204,28 +220,44 @@ export function SyntheticChatPanel({
           {history.status === 'loading' && <Text accessibilityLiveRegion="polite">{t.historyLoading}</Text>}
           {history.status === 'error' && <Text accessibilityRole="alert">{t.historyError}</Text>}
           {history.status === 'ready' && history.nextBeforeSeq === null && <Text>{t.historyEnd}</Text>}
-          {history.nextBeforeSeq !== null && messages.length >= 200 && <Text>{t.historyCap}</Text>}
-          {history.nextBeforeSeq !== null && messages.length < 200 && onLoadOlder &&
+          {history.boundedWindow && <Text>{t.historyCap}</Text>}
+          {onLoadLatest && <Action label={t.latest} onPress={onLoadLatest} />}
+          {onLoadOldest && <Action label={t.oldest} disabled={history.status === 'loading'} onPress={onLoadOldest} />}
+          {history.nextAfterSeq != null && onLoadNewer && <Action label={t.newer} disabled={history.status === 'loading'} onPress={onLoadNewer} />}
+          {history.nextBeforeSeq !== null && onLoadOlder &&
             <Action label={history.status === 'error' ? t.olderRetry : t.older}
               disabled={history.status === 'loading'} onPress={onLoadOlder} />}
         </View>}
         {messages.length === 0 ? <Text style={styles.body}>{t.empty}</Text> : messages.map(message =>
           <View key={message.id} style={styles.message}>
             <Text style={styles.sender}>{t.sender}: {message.senderId}</Text>
-            <Text selectable style={styles.messageBody}>{message.body}</Text>
+            <Text selectable style={styles.messageBody}>{message.body === null ? replies.deleted : message.body}</Text>
+            {message.replyToId && <Text>{replies.reference}: {message.replyToId}</Text>}
+            {message.replyToId && onOpenReplyTarget && <Action label={`${replies.original}: ${message.id}`} disabled={chatSuspended || replyDetailLoading} onPress={() => onOpenReplyTarget(message.id)} />}
+            {message.body !== null && message.senderId === currentUserId && onBeginDelete &&
+              <Action label={`${deleteCopy[locale].select}: ${message.id}`} disabled={chatSuspended || !!deleteState?.pendingId}
+                onPress={() => onBeginDelete(message.id)} />}
+            {message.body !== null && onReplyTarget && <Action label={`${replies.reply}: ${message.id}`} disabled={chatSuspended} onPress={() => onReplyTarget(message.id)} />}
           </View>)}
         <Action label={t.refresh} onPress={onRefresh} />
       </View>
+      <ChatDeletePanel locale={locale} state={deleteState} onConfirm={onConfirmDelete} onCancel={onCancelDelete} onRetry={onRetryDelete} />
+      {replyDetail?.body != null && replyDetail.senderId === currentUserId && onBeginDelete &&
+        <Action label={`${deleteCopy[locale].select}: ${replyDetail.id}`} disabled={chatSuspended || !!deleteState?.pendingId}
+          onPress={() => onBeginDelete(replyDetail.id)} />}
+      <ChatReplyPanel locale={locale} target={replyTarget} detail={replyDetail} loading={replyDetailLoading} suspended={chatSuspended}
+        onSelect={onReplyTarget} onCancel={onCancelReply} onClose={onCloseReplyDetail} />
       <View style={styles.card}>
         <Text style={styles.label}>{t.draft}</Text>
         <TextInput accessibilityLabel={t.draft} value={draft} onChangeText={onDraft}
           multiline textAlignVertical="top" style={[styles.input, styles.composer]} />
         {outgoing && <View>
           <Text selectable>{outgoing.body}</Text>
+          {outgoing.replyToId && <Text>{replies.reference}: {outgoing.replyToId}. {replies.pending}</Text>}
           <Text accessibilityLiveRegion="polite">{t[outgoing.status]}</Text>
         </View>}
         <Action label={outgoing?.status === 'retry' ? t.retrySend : t.send}
-          disabled={outgoing?.status === 'sending' || (outgoing?.status !== 'retry' && draft.trim().length === 0)} onPress={onSend} />
+          disabled={chatSuspended || outgoing?.status === 'sending' || (outgoing?.status !== 'retry' && draft.trim().length === 0)} onPress={onSend} />
       </View>
       <Action label={t.signOut} onPress={onSignOut} />
     </>}

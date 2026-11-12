@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SyntheticChatConnected } from '../src/auth/SyntheticChatConnected';
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import { BlindPanel } from '../src/auth/BlindPanel';
 import { emptyBlind } from '../src/auth/blind-state';
 import { blindCopy } from '../src/auth/blindCopy';

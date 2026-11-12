@@ -1,3 +1,6 @@
+import { createChatDeletionHandler } from './chat-deletion-http.ts';
+import { createChatRepliesHandler } from './chat-replies-http.ts';
+import { createChatWindowHandler, windowFailure } from './chat-history-window-http.ts';
 import { createSharedWishesHandler } from './shared-wishes-http.ts';
 import { createSharedSongsHandler } from './shared-songs-http.ts';
 import { createSharedMemoriesHandler } from './shared-memories-http.ts';
@@ -52,6 +55,12 @@ export type ApiApplicationConfig = Readonly<{
   enableSyntheticSharedSongs?: boolean;
   /** Repeatable synthetic blind-answer rounds; independent loopback-only opt-in. */
   enableSyntheticBlindAnswers?: boolean;
+  /** Synthetic bounded chat windows; independent loopback-only opt-in. */
+  enableSyntheticChatHistoryWindow?: boolean;
+  /** Synthetic reply-aware chat routes, default disabled, loopback only. */
+  enableSyntheticChatReplies?: boolean;
+  /** Explicit own-message deletion, independent loopback-only opt-in. */
+  enableSyntheticChatDeletion?: boolean;
   limits: BodyLimits & TransactionLimits;
 }>;
 export type ApiApplication = Readonly<{ handle(request: Request): Promise<Response> }>;
@@ -89,6 +98,9 @@ function validate(config: ApiApplicationConfig): void {
     || (config.enableSyntheticSharedDates !== undefined && typeof config.enableSyntheticSharedDates !== 'boolean')
     || (config.enableSyntheticSharedWishes !== undefined && typeof config.enableSyntheticSharedWishes !== 'boolean')
     || (config.enableSyntheticSharedTasks !== undefined && typeof config.enableSyntheticSharedTasks !== 'boolean')
+    || (config.enableSyntheticChatHistoryWindow !== undefined && typeof config.enableSyntheticChatHistoryWindow !== 'boolean')
+    || (config.enableSyntheticChatReplies !== undefined && typeof config.enableSyntheticChatReplies !== 'boolean')
+    || (config.enableSyntheticChatDeletion !== undefined && typeof config.enableSyntheticChatDeletion !== 'boolean')
     || !Array.isArray(config.trustedOrigins) || !config.trustedOrigins.length
     || !config.trustedOrigins.every(validOrigin) || !config.trustedOrigins.includes(config.baseURL)
     || !config.limits || !integer(config.limits.bodyBytes, 65536) || !integer(config.limits.bodyReadMs, 30000)
@@ -97,7 +109,7 @@ function validate(config: ApiApplicationConfig): void {
   }
   const base = new URL(config.baseURL);
   if ((base.protocol === 'http:' || config.enableSyntheticProfileProvisioning === true || config.enableSyntheticWaitingSpaceCreation === true
-    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true || config.enableSyntheticSharedSongs === true || config.enableSyntheticSharedMemories === true || config.enableSyntheticSharedDates === true || config.enableSyntheticSharedWishes === true || config.enableSyntheticSharedTasks === true || config.enableSyntheticBlindAnswers === true)
+    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true || config.enableSyntheticSharedSongs === true || config.enableSyntheticSharedMemories === true || config.enableSyntheticSharedDates === true || config.enableSyntheticSharedWishes === true || config.enableSyntheticSharedTasks === true || config.enableSyntheticBlindAnswers === true || config.enableSyntheticChatHistoryWindow === true || config.enableSyntheticChatReplies === true || config.enableSyntheticChatDeletion === true)
     && !['127.0.0.1', '[::1]', 'localhost'].includes(base.hostname)) {
     throw new Error('invalid_api_configuration');
   }
@@ -138,9 +150,20 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
   const wishes = config.enableSyntheticSharedWishes === true ? createSharedWishesHandler(bindSessionAuthority(database, authority)) : null;
   const tasks = config.enableSyntheticSharedTasks === true ? createSharedTasksHandler(bindSessionAuthority(database, authority)) : null;
   const blind = config.enableSyntheticBlindAnswers === true ? createBlindAnswersHandler(bindSessionAuthority(database, authority)) : null;
+  const chatWindow = config.enableSyntheticChatHistoryWindow === true ? createChatWindowHandler(bindSessionAuthority(database, authority)) : null;
+  const replyWindow = config.enableSyntheticChatReplies === true ? createChatWindowHandler(bindSessionAuthority(database, authority), true) : null;
+  const replies = config.enableSyntheticChatReplies === true ? createChatRepliesHandler(bindSessionAuthority(database, authority)) : null;
+  const deletion = config.enableSyntheticChatDeletion === true ? createChatDeletionHandler(bindSessionAuthority(database, authority)) : null;
   const chat = createChatHandler(bindSessionAuthority(database, authority));
   return {
     async handle(request) {
+      const path = new URL(request.url).pathname;
+      const isDeletion = /^\/v1\/couples\/[^/]+\/chat\/messages\/[^/]+$/.test(path) && deletion !== null;
+      const isReplyWindow = /^\/v1\/couples\/[^/]+\/chat\/reply-window$/.test(path) && replyWindow !== null;
+      const isReply = /^\/v1\/couples\/[^/]+\/chat\/(replies|message-detail)$/.test(path) && replies !== null;
+      const isReplyRead = isReply && path.endsWith('/message-detail');
+      const isWindow = /^\/v1\/couples\/[^/]+\/chat\/history-window$/.test(new URL(request.url).pathname) && chatWindow !== null;
+      const reject = (status: number, error: string) => (isWindow || isReplyWindow || isReplyRead) ? windowFailure(request, status, error) : failure(status, error);
       try {
         const path = new URL(request.url).pathname;
         const isAuth = path.startsWith('/api/auth/');
@@ -162,24 +185,24 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
         const isAcceptance = ['/v1/pair-invitations/preview', '/v1/pair-invitations/accept'].includes(path) && acceptance !== null;
         const isLeave = path === '/v1/pair/leave' && leave !== null;
         const mutation = isLeave ? leave : isAcceptance ? acceptance : isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
-        if (!isAuth && !isChat && !isCare && !isLetters && !isTasks && !isWishes && !isDates && !isSongs && !isMemories && !isBlind && !isContext && !mutation) return failure(404, 'not_found');
-        if (!isContext && !mutation && !isDateEdit && !isSongEdit && request.method !== 'GET' && request.method !== 'POST') return failure(405, 'method_not_allowed');
+        if (!isDeletion && !isReply && !isReplyWindow && !isWindow && !isAuth && !isChat && !isCare && !isLetters && !isTasks && !isWishes && !isDates && !isSongs && !isMemories && !isBlind && !isContext && !mutation) return reject(404, 'not_found');
+        if (!isDeletion && !isContext && !mutation && !isDateEdit && !isSongEdit && request.method !== 'GET' && request.method !== 'POST') return reject(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');
-        if (!origin || !origins.has(origin)) return failure(403, 'forbidden');
+        if (!origin || !origins.has(origin)) return reject(403, 'forbidden');
         if (isContext) return context(request);
         if (mutation && !isInvitation && request.method !== 'POST') return mutation(request);
-        if ((request.method === 'POST' || isDateEdit || isSongEdit || (isInvitation && request.method === 'DELETE'))
+        if ((request.method === 'POST' || (isDeletion && request.method === 'DELETE') || isDateEdit || isSongEdit || (isInvitation && request.method === 'DELETE'))
           && request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
-          return failure(415, 'unsupported_media_type');
+          return reject(415, 'unsupported_media_type');
         }
         const bounded = await limitRequestBody(request, limits);
-        const response = await (mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : isCare ? care!(bounded) : isLetters ? letters!(bounded) : isBlind ? blind!(bounded) : isSongs ? songs!(bounded) : isMemories ? memories!(bounded) : isDates ? dates!(bounded) : isWishes ? wishes!(bounded) : isTasks ? tasks!(bounded) : chat(bounded));
-        if (response.status >= 500) return failure(503, 'temporarily_unavailable');
+        const response = await (isDeletion ? deletion!(bounded) : isReply ? replies!(bounded) : isReplyWindow ? replyWindow!(bounded) : isWindow ? chatWindow!(bounded) : mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : isCare ? care!(bounded) : isLetters ? letters!(bounded) : isBlind ? blind!(bounded) : isSongs ? songs!(bounded) : isMemories ? memories!(bounded) : isDates ? dates!(bounded) : isWishes ? wishes!(bounded) : isTasks ? tasks!(bounded) : chat(bounded));
+        if (response.status >= 500) return reject(503, 'temporarily_unavailable');
         const headers = new Headers(response.headers);
         headers.set('cache-control', 'no-store'); headers.set('x-content-type-options', 'nosniff');
         return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
       } catch (error) {
-        return error instanceof RequestLimitError ? failure(error.status, 'invalid_request') : failure(503, 'temporarily_unavailable');
+        return error instanceof RequestLimitError ? reject(error.status, 'invalid_request') : reject(503, 'temporarily_unavailable');
       }
     },
   };

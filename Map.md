@@ -213,3 +213,17 @@ Mobile выбирает существующую дату, явно сохран
   fulfill/reopen, RAM-черновик и same-command retry. Не задачи и не покупки.
 - [Контракт](docs/SHARED_WISHES.md), [проверки](docs/SHARED_WISHES_EVIDENCE.md).
   Synthetic-кандидат; native/production и независимая приёмка отдельно.
+
+## Connected chat windows rebuild
+
+New work from public5a998162: services/api/src/chat-history-window*.ts and mobile history-window integration implement explicit bounded bidirectional navigation beyond the old200-message UI cap. See docs/CHAT_WINDOWS_EVIDENCE.md. No missing later SHA or its acceptance is reconstructed by this work.
+
+## Chat replies (new candidate)
+`docs/CHAT_REPLIES_EVIDENCE.md`: canonical reply links, separate reply-aware window/detail
+contracts, immutable retries, and internal terminal tombstone read safety. Old DTO shapes
+remain strict; no user DELETE or restored lost-code claim. Exact acceptance pending.
+
+## Own chat deletion candidate
+`docs/CHAT_DELETION_EVIDENCE.md`: explicit author-only terminal deletion with CAS,
+metadata receipts, immutable confirmation/retry and existing tombstone-ledger cleanup.
+New standalone stage from accepted54bb956; exact acceptance pending.

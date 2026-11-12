@@ -1,4 +1,4 @@
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import type { SyntheticConfig } from '../src/auth/config';
 import type { AuthIdentity } from '../src/auth/official-client';
 
@@ -117,7 +117,7 @@ it('loads chat only after successful creation and an independently verified read
   setPostContext(ready);
   await controller.createProfile();
   expect(profile).toHaveBeenCalledTimes(1);
-  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [message] });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, nextAfterSeq: null, boundedWindow: true, windowReset: true }, phase: 'signed_in', currentUserId: uuid(1), error: null, draft: '', messages: [message] });
   expect(chat).toHaveBeenCalledTimes(1);
   await controller.createProfile();
   expect(profile).toHaveBeenCalledTimes(1);
@@ -416,7 +416,7 @@ it('does not derive chat scope from the profile ACK domain userId', async () => 
   profile.mockResolvedValueOnce(ack({ userId: uuid(99) }));
   setPostContext(ready);
   await controller.createProfile();
-  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', messages: [message] });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', currentUserId: uuid(1), messages: [message] });
   expect(chat.mock.calls[0][0].url).toContain(`/couples/${ready.coupleId}/`);
   expect(await profile.mock.calls[0][0].json()).toEqual({});
   expect(JSON.stringify(controller.getSnapshot())).not.toContain(uuid(99));

@@ -4,6 +4,8 @@ export type HistoryView = Readonly<{
   status: 'loading' | 'ready' | 'error';
   nextBeforeSeq: number | null;
   windowReset?: boolean;
+  nextAfterSeq?: number | null;
+  boundedWindow?: boolean;
 }>;
 
 /** A bounded, deterministic union. Reject identity/content conflicts atomically. */

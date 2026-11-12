@@ -371,3 +371,41 @@ it('shared wishes are independently loopback-only and default disabled with boun
   expect((await app.handle(new Request(origin + path + '/item', { headers: { origin } }))).status).toBe(405);
   expect((await app.handle(new Request(origin + path + '/item', { method: 'POST', headers: { origin, 'content-type': 'application/json' }, body: '{}' }))).status).toBe(401);
 });
+it('bounded chat windows are independently opt-in and preserve read nonce on perimeter errors', async () => {
+  const nonce='00000000-0000-4000-8000-000000009999';
+  const path='/v1/couples/00000000-0000-4000-8000-000000000001/chat/history-window?membership_epoch=1&direction=latest&read_id='+nonce;
+  for(const flag of [undefined,false])expect((await createApiApplication({...config(),enableSyntheticChatHistoryWindow:flag}).handle(request(path))).status).toBe(404);
+  for(const flag of [true,'true',null])expect(()=>createApiApplication({...config(),enableSyntheticChatHistoryWindow:flag} as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin='http://127.0.0.1:1234';
+  const app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticChatHistoryWindow:true});
+  for(const [method,headers,status] of [
+    ['GET',{origin},401],['GET',{origin:'https://attacker.invalid'},403],['DELETE',{origin},405],
+  ] as const){const response=await app.handle(new Request(origin+path,{method,headers}));expect(response.status).toBe(status);expect(await response.json()).toHaveProperty('readId',nonce);}
+});
+it('reply-aware routes require their own explicit loopback opt-in', async () => {
+  const origin='http://127.0.0.1:1234',nonce='00000000-0000-4000-8000-000000009999';
+  const prefix='/v1/couples/00000000-0000-4000-8000-000000000001/chat/';
+  for(const path of ['replies','reply-window','message-detail'])expect((await createApiApplication(config()).handle(request(prefix+path))).status).toBe(404);
+  for(const flag of [true,'true',null])expect(()=>createApiApplication({...config(),enableSyntheticChatReplies:flag} as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticChatReplies:true});
+  for(const path of ['reply-window','message-detail']){
+    const response=await app.handle(new Request(origin+prefix+path+'?read_id='+nonce,{headers:{origin}}));
+    expect(response.status).toBe(401);expect(await response.json()).toHaveProperty('readId',nonce);
+    const forbidden=await app.handle(new Request(origin+prefix+path+'?read_id='+nonce));expect(forbidden.status).toBe(403);expect(await forbidden.json()).toHaveProperty('readId',nonce);
+  }
+  expect((await app.handle(new Request(origin+prefix+'replies',{method:'POST',headers:{origin,'content-type':'application/json'},body:'{}'}))).status).toBe(401);
+});
+it('own deletion is independently opt-in and DELETE bodies obey the perimeter', async () => {
+  const path='/v1/couples/00000000-0000-4000-8000-000000000001/chat/messages/00000000-0000-4000-8000-000000000002';
+  expect((await createApiApplication(config()).handle(request(path,'DELETE'))).status).toBe(404);
+  for(const flag of [true,'true',null])expect(()=>createApiApplication({...config(),enableSyntheticChatDeletion:flag} as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin='http://127.0.0.1:1234';
+  const app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticChatDeletion:true});
+  for(const [headers,body,status] of [
+    [{origin,'content-type':'application/json'},'{}',401],
+    [{origin,'content-type':'text/plain'},'{}',415],
+    [{origin,'content-type':'application/json'},'x'.repeat(17),413],
+    [{origin:'https://attacker.invalid','content-type':'application/json'},'{}',403],
+  ] as const)expect((await app.handle(new Request(origin+path,{method:'DELETE',headers,body}))).status).toBe(status);
+  expect((await app.handle(new Request(origin+path,{headers:{origin}}))).status).toBe(405);
+});

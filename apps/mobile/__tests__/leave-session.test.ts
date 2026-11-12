@@ -1,4 +1,4 @@
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const context = { state: 'ready', sessionId: 'session', userId: uuid(1), coupleId: uuid(2), membershipEpoch: 1 };
 const envelope = (value: unknown, status = 200) => new Response(JSON.stringify({ ok: true, value }), { status });

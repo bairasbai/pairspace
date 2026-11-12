@@ -29,17 +29,17 @@ function replace(state: QueueState, message: Outgoing): QueueResult {
   return success(freeze({ ...state, messages: state.messages.map(item => item.clientId === message.clientId ? message : item) }));
 }
 
-export function enqueue(state: QueueState, scope: Scope, clientId: string, input: unknown): QueueResult {
+export function enqueue(state: QueueState, scope: Scope, clientId: string, input: unknown, replyToId?: string): QueueResult {
   const denied = guard(state, scope, true);
   if (denied) return fail(state, denied);
-  if (!validId(clientId)) return fail(state, 'invalid_id');
+  if (!validId(clientId) || (replyToId !== undefined && !validId(replyToId))) return fail(state, 'invalid_id');
   const existing = state.messages.find(item => item.clientId === clientId);
   if (existing?.deleted) return fail(state, 'deleted');
   const normalized = normalizeMessageText(input);
   if (!normalized.ok) return fail(state, normalized.error);
-  if (existing) return existing.body === normalized.text ? success(state) : fail(state, 'id_conflict');
+  if (existing) return existing.body === normalized.text && existing.replyToId === replyToId ? success(state) : fail(state, 'id_conflict');
   if (state.messages.length >= MAX_OUTGOING_RECORDS) return fail(state, 'queue_full');
-  const message: Outgoing = { clientId, body: normalized.text, status: 'queued', attempt: 0,
+  const message: Outgoing = { clientId, ...(replyToId === undefined ? {} : { replyToId }), body: normalized.text, status: 'queued', attempt: 0,
     error: null, serverId: null, seq: null, version: 0, deleted: false };
   return success(freeze({ ...state, messages: [...state.messages, message] }));
 }
@@ -85,6 +85,7 @@ export function acknowledge(state: QueueState, scope: Scope, input: unknown): Qu
     || !positive(ack.seq) || !positive(ack.version)) return fail(state, 'invalid_ack');
   const message = state.messages.find(item => item.clientId === ack.clientId);
   if (!message) return fail(state, 'unknown_message');
+  if (ack.replyToId !== message.replyToId) return fail(state, 'invalid_ack');
   // A tombstone is terminal even if a delayed response claims a higher version.
   if (message.deleted) return success(state);
   if (message.attempt === 0) return fail(state, 'invalid_transition');

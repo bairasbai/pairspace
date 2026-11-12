@@ -8,6 +8,8 @@ export type Scope = Readonly<{
 export type SendStatus = 'queued' | 'sending' | 'accepted' | 'failed';
 export type Outgoing = Readonly<{
   clientId: string;
+  /** Immutable target ID only, never a copied source body. */
+  replyToId?: string;
   body: string | null;
   status: SendStatus;
   attempt: number;
@@ -27,5 +29,6 @@ export type QueueError = 'scope_mismatch' | 'inactive' | 'invalid_id' | 'invalid
   | 'invalid_transition' | 'invalid_ack' | 'queue_full' | 'stale_session';
 export type QueueResult = Readonly<{ ok: true; state: QueueState } | { ok: false; state: QueueState; error: QueueError }>;
 export type Ack = Readonly<{
+  replyToId?: string;
   clientId: string; serverId: string; senderId: string; seq: number; version: number; body: string;
 }>;

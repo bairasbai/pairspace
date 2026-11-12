@@ -1,4 +1,4 @@
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const identity = { userId: 'synthetic-provider', sessionId: 'synthetic-session' };
@@ -63,8 +63,11 @@ it('ACK stays sent when subsequent history fails and refresh never auto-retries'
   const f = fixture(); await f.login(); f.controller.setDraft('fixture');
   f.history.mockRejectedValueOnce(new Error('history unavailable'));
   await f.controller.send();
+  expect(f.controller.getSnapshot()).toMatchObject({ error: null, draft: '', outgoing: { status: 'sent' } });
+  expect(f.history).toHaveBeenCalledTimes(1);
+  await f.controller.refresh();
   expect(f.controller.getSnapshot()).toMatchObject({ error: 'transport_error', draft: '', outgoing: { status: 'sent' } });
-  await f.controller.refresh(); expect(f.send).toHaveBeenCalledTimes(1);
+  expect(f.send).toHaveBeenCalledTimes(1);
 });
 it('superseded discovery leaves explicit retry without generating a command or writing', async () => {
   const f = fixture(); await f.login(); f.controller.setDraft('fixture'); const pending = deferred();

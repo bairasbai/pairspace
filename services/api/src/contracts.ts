@@ -15,7 +15,7 @@ export interface AuthorizedDatabase extends Database {
   readonly sessionAuthority: SessionAuthority;
 }
 export type ApiError = 'unavailable' | 'invalid_request' | 'invalid_text' | 'empty_text'
-  | 'text_too_long' | 'idempotency_conflict' | 'stale_membership';
+  | 'message_unavailable' | 'message_deleted' | 'version_conflict' | 'reply_unavailable' | 'invalid_cursor' | 'text_too_long' | 'idempotency_conflict' | 'stale_membership';
 export type Result<T> = Readonly<{ ok: true; value: T } | { ok: false; error: ApiError }>;
 export type Message = Readonly<{
   id: string; coupleId: string; senderId: string; clientId: string; seq: number;

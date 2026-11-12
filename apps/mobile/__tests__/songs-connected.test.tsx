@@ -1,7 +1,7 @@
 import { leaveCopy } from '../src/auth/LeavePanel';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SyntheticChatConnected } from '../src/auth/SyntheticChatConnected';
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import { songsCopy } from '../src/auth/songsCopy';
 import { ack, envelope, error, context, song, uuid } from './songs-fixtures';
 it.each(['ru', 'en'] as const)('connected shared songs use one controller and clear session data in %s', async locale => {

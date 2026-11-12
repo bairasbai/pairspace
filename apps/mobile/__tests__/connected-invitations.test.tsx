@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SyntheticChatConnected } from '../src/auth/SyntheticChatConnected';
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const identity = { userId: 'synthetic-provider', sessionId: 'synthetic-session' };

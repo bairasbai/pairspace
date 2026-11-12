@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { AccessibilityInfo, Alert } from 'react-native';
 import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
 import { PairspaceApp } from '../App';
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import { copy, type Locale } from '../src/copy';
 
 jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);

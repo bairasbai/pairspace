@@ -76,6 +76,13 @@ export function SyntheticChatConnected({ controller, locale, ownsController = tr
     onSignOut={() => { void controller.signOut(); }} onSend={() => { void controller.send(); }}
     onCreateWaitingSpace={() => { void controller.createWaitingSpace(); }}
     onCreateProfile={() => { void controller.createProfile(); }}
+    onBeginDelete={controller.beginDelete} onCancelDelete={controller.cancelDelete}
+    onConfirmDelete={token => { void controller.confirmDelete(token); }} onRetryDelete={() => { void controller.retryDelete(); }}
+    onReplyTarget={controller.setReplyTarget} onCancelReply={controller.cancelReply}
+    onOpenReplyTarget={id => { void controller.openReplyTarget(id); }} onCloseReplyDetail={controller.closeReplyDetail}
+    onLoadNewer={() => { void controller.loadNewer(); }}
+    onLoadLatest={() => { void controller.loadLatest(); }}
+    onLoadOldest={() => { void controller.loadOldest(); }}
     onLoadOlder={() => { void controller.loadOlder(); }}
     onRefresh={() => { void controller.refresh(); }} />
   </ScrollView>;

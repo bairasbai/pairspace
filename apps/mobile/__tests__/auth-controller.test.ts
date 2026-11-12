@@ -1,4 +1,4 @@
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import { defaultAuthConfig, syntheticStoragePrefix, validateSyntheticConfig, type SyntheticConfig } from '../src/auth/config';
 import type { AuthIdentity } from '../src/auth/official-client';
 import { createChatTransport, type ChatMessage, type TransportSession } from '../src/chat/transport';
@@ -84,9 +84,12 @@ it('cleans old credentials, discovers the verified identity context, and sends c
   expect(client.signOut).toHaveBeenCalledTimes(1);
   expect(client.signIn).toHaveBeenCalledWith('fixture@example.test', 'synthetic-password');
   expect(client.signOut.mock.invocationCallOrder[0]).toBeLessThan(client.signIn.mock.invocationCallOrder[0]);
-  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [message] });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, nextAfterSeq: null, boundedWindow: true, windowReset: true }, phase: 'signed_in', currentUserId: uuid(1), error: null, draft: '', messages: [message] });
   const input = request.mock.calls[0][0];
-  expect(input.url).toBe(`${config.baseURL}/v1/couples/${uuid(2)}/chat/messages?membership_epoch=1&limit=50`);
+  expect(new URL(input.url).pathname).toBe(`/v1/couples/${uuid(2)}/chat/reply-window`);
+  expect(new URL(input.url).searchParams.get('membership_epoch')).toBe('1');
+  expect(new URL(input.url).searchParams.get('direction')).toBe('latest');
+  expect(new URL(input.url).searchParams.get('read_id')).toMatch(/^[0-9a-f-]{36}$/);
   expect(input.method).toBe('GET');
   expect(input.headers.get('cookie')).toBe('better-auth.session_token=synthetic-cookie');
   expect(input.headers.get('origin')).toBe(config.baseURL);
@@ -198,7 +201,7 @@ it.each([false, 'throw'] as const)('scrubs state when logout fails (%s), blocks 
   await controller.signOut();
   expect(controller.getSnapshot().phase).toBe('signed_out');
   await login();
-  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', draft: '', error: null });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', currentUserId: uuid(1), draft: '', error: null });
 });
 it.each([true, false])('only the latest logout may finish the session transition (cleanup succeeds: %s)', async succeeds => {
   const firstCleanup = deferred<boolean>();
@@ -235,9 +238,10 @@ it('isolates history, drafts and request scope between accounts and relogins', a
   } }));
   request.mockResolvedValueOnce(page([messageB]));
   await login();
-  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [messageB] });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, nextAfterSeq: null, boundedWindow: true, windowReset: true }, phase: 'signed_in', currentUserId: uuid(11), error: null, draft: '', messages: [messageB] });
   const input = request.mock.calls[1][0];
-  expect(input.url).toBe(`${config.baseURL}/v1/couples/${uuid(12)}/chat/messages?membership_epoch=2&limit=50`);
+  expect(new URL(input.url).pathname).toBe(`/v1/couples/${uuid(12)}/chat/reply-window`);
+  expect(new URL(input.url).searchParams.get('membership_epoch')).toBe('2');
   expect(input.headers.get('cookie')).toContain('synthetic-cookie-b');
 });
 it.each(['refresh', 'send'] as const)('preserves private draft on transient getCookie failure during %s and rechecks before retry', async operation => {
@@ -247,7 +251,7 @@ it.each(['refresh', 'send'] as const)('preserves private draft on transient getC
   client.getCookie.mockRejectedValueOnce(new Error('cookie secret'));
   await controller[operation]();
   expect(request).toHaveBeenCalledTimes(1);
-  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', error: 'transport_error', draft: 'private draft', messages: [message] });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', currentUserId: uuid(1), error: 'transport_error', draft: 'private draft', messages: [message] });
   await controller.refresh();
   expect(request).toHaveBeenCalledTimes(2);
   await controller.signOut();
@@ -295,7 +299,7 @@ it.each([401, 403])('denial %s on history or send purges state and blocks furthe
     const { controller, request, login } = setup();
     await login();
     controller.setDraft('private draft');
-    request.mockResolvedValueOnce(envelope({ private: 'server text' }, status));
+    request.mockImplementationOnce(async input => envelope({ ok: false, error: 'unavailable', ...(input.method === 'GET' ? { readId: new URL(input.url).searchParams.get('read_id') } : {}) }, status));
     await controller[operation]();
     expect(controller.getSnapshot()).toEqual({ phase: 'blocked', error: status === 401 ? 'auth_required' : 'access_required', draft: '', messages: [] });
     await controller.refresh();
@@ -335,7 +339,7 @@ it.each([['', 'empty_text'], [' \n\t', 'empty_text'], ['bad\u0000text', 'invalid
   await login();
   controller.setDraft(draft);
   await controller.send();
-  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', error, draft });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', currentUserId: uuid(1), error, draft });
   expect(request).toHaveBeenCalledTimes(1);
 });
 it('rejects an invalid command id and recovers from a command generator exception', async () => {
@@ -370,16 +374,16 @@ it('normalizes submitted text, sends one command on repeat taps, and preserves a
   controller.setDraft('new draft while sending');
   pending.resolve(ack('café\nhello'));
   await sending;
-  expect(controller.getSnapshot()).toMatchObject({ draft: 'new draft while sending', error: null, messages: [{ body: 'café\nhello' }] });
-  expect(request).toHaveBeenCalledTimes(3);
+  expect(controller.getSnapshot()).toMatchObject({ draft: 'new draft while sending', error: null, messages: [message], outgoing: { body: 'cafe\u0301\r\nhello', status: 'sent' } });
+  expect(request).toHaveBeenCalledTimes(2);
 });
-it('clears an unchanged draft only after ACK and then refreshes server history', async () => {
+it('clears an unchanged draft only after ACK and leaves history unchanged until explicit navigation', async () => {
   const { controller, request, login } = setup();
   await login();
   controller.setDraft('hello');
   request.mockResolvedValueOnce(ack('hello')).mockResolvedValueOnce(page([{ ...message, body: 'hello' }]));
   await controller.send();
-  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error: null, draft: '', messages: [{ ...message, body: 'hello' }], outgoing: { body: 'hello', status: 'sent' } });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, nextAfterSeq: null, boundedWindow: true, windowReset: true }, phase: 'signed_in', currentUserId: uuid(1), error: null, draft: '', messages: [message], outgoing: { body: 'hello', status: 'sent' } });
 });
 it.each([400, 429, 503, 'lost-ack'] as const)('retries %s using the same command and body without duplicating a committed message', async failure => {
   const { controller, request, commandId, login } = setup();
@@ -396,7 +400,7 @@ it.each([400, 429, 503, 'lost-ack'] as const)('retries %s using the same command
   const retried = request.mock.calls[2][0];
   expect(first.headers.get('idempotency-key')).toBe(retried.headers.get('idempotency-key'));
   expect(await first.json()).toEqual(await retried.json());
-  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', draft: '', error: null });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', currentUserId: uuid(1), draft: '', error: null });
 });
 it('resolves the original command before sending an edited draft with a fresh ID', async () => {
   const { controller, request, commandId, login } = setup();
@@ -436,7 +440,7 @@ it('remembers the original lost-ACK command after another failed draft and edit 
   expect(bodies.map(body => body.body)).toEqual(['draft A', 'draft A', 'draft A']);
   expect(bodies[2]).toEqual(bodies[0]);
   expect(commandId).toHaveBeenCalledTimes(1);
-  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', error: null, draft: 'draft A', messages: [{ body: 'draft A' }] });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', currentUserId: uuid(1), error: null, draft: 'draft A', messages: [message], outgoing: { body: 'draft A', status: 'sent' } });
 });
 it('an old send completion cannot release the new session sending lock', async () => {
   const old = deferred<Response>();
@@ -469,7 +473,7 @@ it.each([[400, 'rejected'], [429, 'rate_limited'], [503, 'transport_error']] as 
   controller.setDraft('hello');
   request.mockResolvedValueOnce(envelope({ private: 'server detail' }, status));
   await controller.send();
-  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, windowReset: true }, phase: 'signed_in', error, draft: 'hello', messages: [message], outgoing: { body: 'hello', status: 'retry' } });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, nextAfterSeq: null, boundedWindow: true, windowReset: true }, phase: 'signed_in', currentUserId: uuid(1), error, draft: 'hello', messages: [message], outgoing: { body: 'hello', status: 'retry' } });
   expect(request).toHaveBeenCalledTimes(2);
 });
 it('reports invalid history responses without replacing the last verified history', async () => {
@@ -488,7 +492,7 @@ it.each(['old-page', 'old-error', 'old-cookie-error'] as const)('does not let %s
   else request.mockReturnValueOnce(pending.promise);
   const old = controller.refresh();
   await settle();
-  const newer = { ...message, body: 'Newer verified history' };
+  const newer = { ...message, id: uuid(98), clientId: uuid(99), seq: 2, body: 'Newer verified history' };
   request.mockResolvedValueOnce(page([newer]));
   await controller.refresh();
   const fresh = controller.getSnapshot();
@@ -506,7 +510,7 @@ it.each([401, 403])('still honors a late same-session %s denial rather than leav
   const old = controller.refresh();
   await settle();
   await controller.refresh();
-  pending.resolve(envelope({}, status));
+  pending.resolve(envelope({ ok: false, error: 'unavailable', readId: new URL(request.mock.calls[1][0].url).searchParams.get('read_id') }, status));
   await old;
   expect(controller.getSnapshot()).toEqual({ phase: 'blocked', error: status === 401 ? 'auth_required' : 'access_required', draft: '', messages: [] });
 });
@@ -523,7 +527,7 @@ it('aborts timed-out requests, reports the opaque failure, and removes timers', 
   expect(jest.getTimerCount()).toBe(1);
   await jest.advanceTimersByTimeAsync(10000);
   await refreshing;
-  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', error: 'transport_error' });
+  expect(controller.getSnapshot()).toMatchObject({ phase: 'signed_in', currentUserId: uuid(1), error: 'transport_error' });
   expect(jest.getTimerCount()).toBe(0);
 });
 

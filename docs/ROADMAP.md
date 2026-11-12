@@ -256,3 +256,20 @@ Version CAS, immutable retries, canonical current state и latest50 реализ
 Личные желания, редакция/удаление, архив, настройки уведомлений и полный перенос
 исходной страницы остаются планом. Без покупок, ссылок и доставки.
 До независимого review frozen SHA не принято; native/device/production gates открыты.
+
+## New connected chat history windows
+
+Implementation from exact public base5a998162, not recovery of lost later source. Replace the mobile200-message history barrier with explicit bounded50-message older/newer/oldest/latest navigation. Keep existing send/retry and old history contracts, scoped ID+seq anchors and session denial precedence. Drafts and unknown sends remain separate; the outgoing500-record queue cap remains an explicit separate limitation. Final focused/full/independent acceptance pending: [CHAT_WINDOWS_EVIDENCE](CHAT_WINDOWS_EVIDENCE.md).
+
+## Reply to a specific chat message
+Candidate scope: canonical source link, explicit scoped detail outside the current page,
+immutable target/body retry, source-unavailable and terminal tombstone handling. No
+persisted quote copy. Internal SQL deletion-state tests do not close the user DELETE P0.
+Native, durable persistence, realtime and receipts remain open. Exact author/independent
+acceptance pending: [CHAT_REPLIES_EVIDENCE](CHAT_REPLIES_EVIDENCE.md).
+
+## User-facing own chat deletion
+New candidate from accepted canonical-replies checkpoint54bb956. Explicit confirmation,
+author-only CAS and metadata-only immutable retry receipts, terminal tombstone for both
+participants. Manual refreshed reads, not realtime; no editing or physical retention purge.
+Required full11 and independent acceptance pending: [CHAT_DELETION_EVIDENCE](CHAT_DELETION_EVIDENCE.md).

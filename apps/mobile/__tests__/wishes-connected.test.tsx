@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SyntheticChatConnected } from '../src/auth/SyntheticChatConnected';
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import { wishesCopy } from '../src/auth/wishesCopy';
 import { ack, envelope, error, context, wish, uuid } from './wishes-fixtures';
 it.each(['ru', 'en'] as const)('connected shared wishes use one controller and clear session data in %s', async locale => {

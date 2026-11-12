@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SyntheticChatConnected } from '../src/auth/SyntheticChatConnected';
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const identity = { userId: 'synthetic-provider', sessionId: 'synthetic-session' };
@@ -24,12 +24,12 @@ async function press(name: string) {
 const labels = {
   en: { draft: 'Test message', send: 'Send test message', retry: 'Retry the same message',
     sending: 'Sending…', uncertain: 'No confirmation received. Retry the same message without a duplicate.',
-    sent: 'Sent to the server. Delivery and reading are not confirmed.',
+    sent: 'Sent to the server. Use Latest messages to refresh the window. Delivery and reading are not confirmed.',
     network: 'Connection temporarily unavailable. Draft kept until you leave this screen.',
     refresh: 'Refresh history', signOut: 'Sign out' },
   ru: { draft: 'Тестовое сообщение', send: 'Отправить тестовое сообщение', retry: 'Повторить то же сообщение',
     sending: 'Отправляется…', uncertain: 'Подтверждение не получено. Повторите то же сообщение без дубля.',
-    sent: 'Отправлено на сервер. Доставка и прочтение не подтверждены.',
+    sent: 'Отправлено на сервер. Нажмите «Последние сообщения», чтобы обновить окно. Доставка и прочтение не подтверждены.',
     network: 'Связь временно недоступна. Черновик сохранён до выхода из экрана.',
     refresh: 'Обновить историю', signOut: 'Выйти' },
 };
@@ -68,6 +68,8 @@ it.each(['ru', 'en'] as const)('shows sending, immutable explicit retry and serv
   expect(requests[0].headers.get('idempotency-key')).toBe(requests[1].headers.get('idempotency-key'));
   expect(await requests[0].json()).toEqual(await requests[1].json());
   expect(screen.getByText(t.sent)).toBeOnTheScreen();
+  expect(f.history).toHaveBeenCalledTimes(1);
+  await press(t.refresh);
   expect(screen.getByText(t.network)).toBeOnTheScreen();
   expect(screen.getByLabelText(t.draft)).toHaveDisplayValue('Synthetic edited');
   expect(screen.queryByRole('button', { name: t.retry })).toBeNull();

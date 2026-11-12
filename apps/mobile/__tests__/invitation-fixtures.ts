@@ -1,4 +1,4 @@
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import type { AuthIdentity } from '../src/auth/official-client';
 import type { SessionContext } from '../src/auth/context';
 import type { InvitationMetadata } from '../src/auth/invitations';

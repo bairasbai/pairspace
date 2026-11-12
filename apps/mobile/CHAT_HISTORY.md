@@ -1,60 +1,56 @@
-# Synthetic chat history window
+# Synthetic chat: bounded bidirectional history
 
-Status: implemented locally, independent acceptance pending. Loopback-only synthetic
-mode; no production endpoint, personal data, persistent history or new dependency.
+Status: local implementation; independent acceptance pending. This checkout starts
+from remote `5a998162`. No earlier unpublished feature acceptance is inherited.
+Opt-in loopback only, synthetic accounts/data, no production publication.
 
-## User path and bound
+## Explicit navigation
 
-Sign-in and explicit Refresh history show the latest 50 server messages in ascending
-numeric sequence order. RU/EN text explicitly says that refresh replaces the current
-window with the latest 50 and older messages can be loaded again. This also applies
-to refresh after a successful send. Never merge an old window with a latest page:
-more than 50 new messages could otherwise hide an unrequested middle interval.
-Sequences need not be contiguous; gaps in sequence numbers are not treated as loss.
+Sign-in, Refresh history and Latest messages request the latest fifty messages.
+Oldest requests the first fifty. Older and Newer replace the current window with
+up to fifty messages before/after its actual boundary. Sequences are ascending
+and may contain gaps. There is no 200-message browsing cutoff and no accumulated
+page stack. The active display retains at most fifty messages; identity checks
+compare only the old and incoming windows before replacement.
 
-Load older messages uses the server cursor with a maximum 50-row request. Loading,
-error/retry, beginning-of-history and the 200-message bound have explicit RU/EN UI.
-At 200 retained messages, further older loads stop with an honest limit notice.
-Refresh returns to the latest 50. This is a bounded window, not an archive browser
-capable of traversing arbitrarily old history. Existing outgoing queue's separate
-500-command bound is unchanged. Draft and unresolved outgoing body are preserved
-through history operations, and no refresh or older load retries a send.
+GET `/v1/couples/:pair/chat/history-window` uses membership_epoch, a fresh read_id,
+direction latest/oldest/before/after, and for relative pages BOTH anchor_id and
+anchor_seq. Server cursors contain `{id,seq}`. An invalid cursor keeps visible
+messages/draft but disables relative paging until explicit Latest or Oldest.
+Empty windows still expose Latest/Oldest escape actions. No navigation sends text.
+The old `/messages` transport and tests remain available with their old contract.
 
-The transport validates page scope, cursor, numeric order, message IDs and command
-identity. The window union rejects any reused sequence, conflicting ID/content or
-sender+client-command identity atomically; identical records deduplicate, numeric
-ordering is deterministic. A rejected page does not alter the current window/cursor.
+Send ACK confirms the outgoing command but never navigates or refreshes history.
+The user explicitly selects Latest to see newly committed messages. A concurrent
+older load can finish normally without being replaced by an ACK. New composer
+edits, immutable unknown-result retries and existing sending locks are unchanged.
+The independent outgoing queue still has a 500-command bound; this is NOT a claim
+that the whole app retains only fifty objects or supports unlimited queued sends.
 
-## Lifecycle and concurrency
+## Validation and lifecycle
 
-Every older request re-reads the cookie and verifies session context with that exact
-snapshot before fetching the page. Account, pair, membership epoch and session
-changes clear private state; an old cursor is never applied to a replacement scope.
-No cached context permits a retry after failed verification. Missing credentials,
-auth denial and malformed context fail closed. Transient failures keep the window
-and provide explicit retry. Same-generation late 401/403 still invalidate, while
-old-generation responses cannot hydrate or clear a replacement lifecycle.
+Strict window DTOs validate nonce, pair, row identity, sequence order, duplicate
+IDs/commands, anchor bounds and exact edge cursors. No arithmetic assumes contiguous
+sequence numbers. JSON is bounded to 4 MiB for fifty maximal messages. The nonce is
+request correlation, not authentication or proof of freshness by itself.
 
-Repeated older taps coalesce while busy. Refresh supersedes an older request and
-its completion cannot append to the reset window. Send may supersede discovery;
-a successful send refreshes and invalidates older-page hydration. Requests obey
-the controller's existing timeout/abort boundary. Sign-out and disposal erase
-history/draft/outgoing and invalidate pending responses. This is no server revocation
-or promise that an already issued external request was cancelled.
+Each request discovers context with a fresh credential snapshot; the cookie is
+checked again before publishing a result. Account/pair/epoch changes scrub private
+state. A valid nonce-bound 401/403 for the same authentication generation still
+invalidates even if navigation was superseded. An old account's denial/success
+cannot affect a replacement login. Incorrect-nonce errors have no auth effects.
+Refresh supersedes an in-flight page. Repeated relative navigation coalesces.
+Timeout/abort and unmount/logout privacy boundaries remain unchanged.
 
-## Verification
+## Tests and limitations
 
-- `__tests__/auth-chat-history.test.ts`: order, cursor, cap, end, duplicate/conflict
-  handling, retry, scope/cookie changes, send/refresh races, late denial and cleanup.
-- `__tests__/connected-chat-history.test.tsx`: connected RU/EN renderer loading,
-  double taps, retry, end, 200-message notice and refresh reset.
-- `services/api/tests/postgres/mobile-chat-history.integration.mjs`: actual controller,
-  official synthetic auth, loopback HTTP and real disposable PostgreSQL; >50 rows,
-  noncontiguous sequences, pair isolation, authorization and >50-new-message reset.
-- Results: `evidence/chat-history/`. Full mobile collection includes unimported
-  own production sources and shared domain modules, with the unchanged 90% gate.
+Dedicated fixtures use strict window responses and 251 messages with sequence gaps.
+Legacy authentication/send suites have a test-only latest-page adapter; it converts
+only existing fixture facts, never supplies relative navigation. Obsolete tests
+expecting 200 accumulated rows or automatic send refresh now explicitly assert
+window replacement and deliberate Latest. Old transport/queue tests are unchanged.
 
-Not verified: physical iOS/Android, native builds, scroll position/keyboard ergonomics,
-SecureStore execution or network transitions on device. Expo exports only bundle JS.
-No deletion, realtime, delivery/read receipts, production deployment or E2EE added.
-The broader CHAT P0 and native acceptance gates remain open.
+Evidence logs are outside the checkout under chat-windows-rebuild-validation.
+Focused tests/type/lint are not native-device or independent acceptance. Physical
+RU/EN iOS/Android scrolling, keyboard, offline transitions and native builds remain
+unverified. No edit/delete, realtime, delivery/read receipt or E2EE is added.

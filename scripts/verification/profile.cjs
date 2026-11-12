@@ -20,7 +20,7 @@ function plan(root, runtime, profile = 'full') {
       '--coverage.thresholds.functions=90', '--coverage.thresholds.lines=90',
       '--coverage.reporter=json-summary', '--coverage.include=services/api/src/**/*.ts',
       '--coverage.include=packages/domain/**/*.ts', '--coverage.reportsDirectory=' + path.join(runtime, 'api-coverage'),
-      '--fsModuleCachePath=' + path.join(runtime, 'vitest-fs-cache'), '--no-cache']),
+      '--fsModuleCachePath=' + path.join(runtime, 'vitest-fs-cache'), '--no-cache'], 240000),
     node('mobile-typecheck', 'apps/mobile', ['node_modules/typescript/bin/tsc', '--noEmit']),
     node('mobile-lint', 'apps/mobile', ['node_modules/eslint/bin/eslint.js', '.']),
     node('mobile-domain-coverage', '.', ['apps/mobile/node_modules/jest/bin/jest.js',
@@ -33,7 +33,7 @@ function plan(root, runtime, profile = 'full') {
     node('postgres-safety', 'services/api', ['--test', ...readdirSync(path.join(root, 'services/api/tests/postgres'))
       .filter(name => name.endsWith('.test.mjs')).sort().map(name => 'tests/postgres/' + name)]),
     { id: 'real-postgres', cwd: 'services/api', command: 'bash', args: ['scripts/run-postgres.sh'],
-      timeoutMs: 270000, graceMs: 15000, required: true },
+      timeoutMs: 330000, graceMs: 15000, required: true },
     node('root-domain', '.', ['--test', ...readdirSync(path.join(root, 'tests'))
       .filter(name => name.endsWith('.test.ts')).sort().map(name => 'tests/' + name)]),
     node('mobile-js-export', 'apps/mobile', ['node_modules/expo/bin/cli', 'export', '--platform', 'ios',

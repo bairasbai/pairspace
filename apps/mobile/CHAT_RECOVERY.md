@@ -16,7 +16,9 @@ The existing queue normalizes the captured text (NFC and line endings) determini
   an error, never success. Refresh does not retry a send.
 - `sent`: a canonical server ACK passed transport validation. It means server
   acceptance, not delivery to or reading by the partner. History failure cannot
-  demote it to retry. A subsequent deliberate Send creates a new command.
+  demote it to retry. ACK leaves the current history window unchanged; Latest
+  messages explicitly reads newly committed messages. A subsequent deliberate Send
+  creates a new command.
 
 The outgoing body remains visible beside its status. The composer is cleared only
 when its revision has not changed since command capture. Editing A→B→A therefore

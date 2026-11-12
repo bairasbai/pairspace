@@ -3,14 +3,14 @@ import type { ApiError, AuthorizedDatabase, Message, Principal, Result, SqlExecu
 import { activeSession, validPrincipal } from './session.ts';
 import { isEpoch, isUuid, parseHistory, parseSend } from './validation.ts';
 
-const columns = `id, couple_id, sender_id, client_message_id, seq::text AS seq, body, version, created_at::text AS created_at`;
-type Row = { id: string; couple_id: string; sender_id: string; client_message_id: string; seq: string; body: string; version: number; created_at: string };
+const columns = `to_jsonb(chat_messages)->>'deleted_at' AS deleted_at, to_jsonb(chat_messages)->>'reply_to_id' AS reply_to_id, id, couple_id, sender_id, client_message_id, seq::text AS seq, body, version, created_at::text AS created_at`;
+type Row = { deleted_at?: string | null; reply_to_id?: string | null; id: string; couple_id: string; sender_id: string; client_message_id: string; seq: string; body: string; version: number; created_at: string };
 const message = (row: Row): Message => ({ id: row.id, coupleId: row.couple_id, senderId: row.sender_id,
   clientId: row.client_message_id, seq: Number(row.seq), body: row.body, version: row.version, createdAt: row.created_at });
 const denied = <T>(error: ApiError): Result<T> => ({ ok: false, error });
 
 /** Same couple lock is used by send and close. Do not replace it with a client-side membership check. */
-async function authorize(tx: SqlExecutor, principal: Principal, coupleId: string, epoch: number, write: boolean): Promise<ApiError | null> {
+export async function authorizeChat(tx: SqlExecutor, principal: Principal, coupleId: string, epoch: number, write: boolean): Promise<'unavailable' | 'stale_membership' | null> {
   const result = await tx.query<{ status: string; membership_epoch: number }>(`
     SELECT status, membership_epoch FROM couples WHERE id = $1
     FOR ${write ? 'UPDATE' : 'SHARE'}`, [coupleId]);
@@ -31,13 +31,14 @@ export async function sendMessage(db: AuthorizedDatabase, principal: Principal, 
   const { coupleId, clientId, membershipEpoch, body } = command.value;
   return db.transaction(async tx => {
     if (!await activeSession(tx, db, principal)) return denied('unavailable');
-    const authorization = await authorize(tx, principal, coupleId, membershipEpoch, true);
+    const authorization = await authorizeChat(tx, principal, coupleId, membershipEpoch, true);
     if (authorization) return denied(authorization);
     if (!await activeSession(tx, db, principal)) return denied('unavailable');
     const existing = await tx.query<Row>(`SELECT ${columns} FROM chat_messages
       WHERE couple_id = $1 AND sender_id = $2 AND client_message_id = $3`, [coupleId, principal.userId, clientId]);
     if (existing.rows.length) {
-      if (existing.rows[0].body !== body) return denied('idempotency_conflict');
+      if (existing.rows[0].deleted_at) return denied('unavailable');
+      if (existing.rows[0].reply_to_id || existing.rows[0].body !== body) return denied('idempotency_conflict');
       return { ok: true, value: { message: message(existing.rows[0]), replay: true } };
     }
     const sequence = await tx.query<{ seq: string }>(`UPDATE couples SET next_chat_seq = next_chat_seq + 1
@@ -57,10 +58,11 @@ export async function readHistory(db: AuthorizedDatabase, principal: Principal, 
   const { coupleId, membershipEpoch, beforeSeq, limit } = command.value;
   return db.transaction(async tx => {
     if (!await activeSession(tx, db, principal)) return denied('unavailable');
-    const authorization = await authorize(tx, principal, coupleId, membershipEpoch, false);
+    const authorization = await authorizeChat(tx, principal, coupleId, membershipEpoch, false);
     if (authorization) return denied(authorization);
     if (!await activeSession(tx, db, principal)) return denied('unavailable');
     const result = await tx.query<Row>(`SELECT ${columns} FROM chat_messages WHERE couple_id = $1
+      AND to_jsonb(chat_messages)->>'deleted_at' IS NULL
       AND ($2::bigint IS NULL OR seq < $2) ORDER BY chat_messages.seq DESC LIMIT $3`, [coupleId, beforeSeq ?? null, limit + 1]);
     const page = result.rows.slice(0, limit).map(message);
     const nextBeforeSeq = result.rows.length > limit ? page[page.length - 1].seq : null;

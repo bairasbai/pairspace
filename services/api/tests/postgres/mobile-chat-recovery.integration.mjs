@@ -81,10 +81,8 @@ test('real PostgreSQL: transient context and history failures preserve draft wit
       if (record.path === '/v1/session/context' && failContext) {
         throw new Error('synthetic context connection interruption');
       }
-      if (record.path.endsWith('/chat/messages')) {
-        if (record.method === 'POST') posts++;
-        else if (failHistory) throw new Error('synthetic history connection interruption');
-      }
+      if (record.path.endsWith('/chat/messages') && record.method === 'POST') posts++;
+      if (record.path.endsWith('/chat/reply-window') && failHistory) throw new Error('synthetic history connection interruption');
     },
   });
   const controller = account.controller;
@@ -106,6 +104,8 @@ test('real PostgreSQL: transient context and history failures preserve draft wit
     await controller.send();
     assert.equal(posts, 1);
     assert.equal(controller.getSnapshot().draft, '');
+    assert.equal(controller.getSnapshot().messages.length, 0, 'sent ACK preserves current empty window');
+    await controller.loadLatest();
     assert.equal(controller.getSnapshot().messages.length, 1);
     await counts(f, 1);
   } finally { await closeMobile(f, [account]); }

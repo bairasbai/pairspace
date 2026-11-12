@@ -59,6 +59,8 @@ test('mobile session controller cookie transport → composed HTTP → real Post
     assert.equal(controller.getSnapshot().draft, 'Synthetic mobile message');
     await controller.send();
     assert.equal(controller.getSnapshot().draft, '');
+    assert.equal(controller.getSnapshot().messages.length, 0, 'ACK does not force history navigation');
+    await controller.loadLatest();
     assert.equal(controller.getSnapshot().messages.length, 1);
     assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM chat_messages')).rows[0].n, 1);
     assert.equal((await f.domainPool.query('SELECT count(*)::int n FROM outbox_events')).rows[0].n, 1);

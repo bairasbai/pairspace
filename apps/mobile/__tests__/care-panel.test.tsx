@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { AccessibilityInfo } from 'react-native';
 import { CarePanel } from '../src/auth/CarePanel';
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import { SyntheticChatConnected } from '../src/auth/SyntheticChatConnected';
 const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const initial = { available: true, busy: false, status: 'idle' as const, incoming: null, checked: false, error: false };

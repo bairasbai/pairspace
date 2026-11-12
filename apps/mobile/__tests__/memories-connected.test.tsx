@@ -1,7 +1,7 @@
 import { leaveCopy } from '../src/auth/LeavePanel';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { SyntheticChatConnected } from '../src/auth/SyntheticChatConnected';
-import { createSessionController } from '../src/auth/controller';
+import { createSessionController } from './legacy-chat-window.fixture';
 import { memoriesCopy } from '../src/auth/memoriesCopy';
 import { ack, envelope, error, context, memory, uuid } from './memories-fixtures';
 it.each(['ru', 'en'] as const)('connected shared memories use one controller and clear session data in %s', async locale => {
