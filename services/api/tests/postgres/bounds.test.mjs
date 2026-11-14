@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { observeTask, barrierOrCompletion, withDeadline, settleBounded } from './async-bounds.mjs';
 
 const never = () => new Promise(() => {});
@@ -30,8 +32,32 @@ test('outer GNU timeout terminates stuck subprocess with nonzero status', () => 
 });
 
 
-test('full PostgreSQL suite retains a fixed 360-second outer limit and ten-second kill grace', () => {
+test('full PostgreSQL suite retains a fixed 1110-second outer limit and ten-second kill grace', () => {
   const script = readFileSync(new URL('../../scripts/run-postgres.sh', import.meta.url), 'utf8');
-  assert.match(script, /exec timeout --signal=TERM --kill-after=10s 360s bash scripts\/run-postgres-inner\.sh/);
+  assert.match(script, /exec timeout --signal=TERM --kill-after=10s 1110s bash scripts\/run-postgres-inner\.sh/);
   assert.match(script, /source scripts\/sanitize-pg-env\.sh/);
+});
+
+test('PostgreSQL cluster uses a quoted isolated TMPDIR and fails closed for missing parents', () => {
+  const script = readFileSync(new URL('../../scripts/run-postgres-inner.sh', import.meta.url), 'utf8');
+  const assignment = script.split('\n').find(line => line.startsWith('runtime='));
+  assert.equal(assignment, 'runtime="$(mktemp -d "${TMPDIR:-/tmp}/pairspace-pg.XXXXXXXX")"');
+  assert.match(script, /rm -rf -- "\$runtime"/);
+  const parent = mkdtempSync(path.join(tmpdir(), 'pg-location-test-'));
+  const chosen = path.join(parent, 'spaces ; literal');
+  mkdirSync(chosen);
+  const run = env => spawnSync('bash', ['-c', `set -e; ${assignment}; printf '%s\\n' "$runtime"; rmdir -- "$runtime"`],
+    { encoding: 'utf8', env: { PATH: process.env.PATH, ...env } });
+  try {
+    const relocated = run({ TMPDIR: chosen });
+    assert.equal(relocated.status, 0, relocated.stderr);
+    assert.equal(path.dirname(relocated.stdout.trim()), chosen);
+    assert.match(path.basename(relocated.stdout.trim()), /^pairspace-pg\.[A-Za-z0-9]{8}$/);
+    const fallback = run({});
+    assert.equal(fallback.status, 0, fallback.stderr);
+    assert.equal(path.dirname(fallback.stdout.trim()), '/tmp');
+    const missing = run({ TMPDIR: path.join(parent, 'missing') });
+    assert.notEqual(missing.status, 0);
+    assert.equal(missing.stdout, '');
+  } finally { rmSync(parent, { recursive: true }); }
 });

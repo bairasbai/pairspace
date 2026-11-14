@@ -1,4 +1,6 @@
-import { acknowledge, beginSend, failSend, pause } from './queue';
+import { visibilityMetadata } from './visibility-revision';
+import { parseHiddenMessage, type HiddenMessage } from './visibility-model';
+import { acknowledge, acknowledgeHidden, beginSend, failSend, pause } from './queue';
 import { normalizeMessageText } from './text';
 import type { QueueError, QueueState, Scope } from './types';
 
@@ -14,8 +16,8 @@ export type HistoryPage = Readonly<{
 }>;
 export type TransportError = QueueError | 'invalid_token' | 'invalid_request'
   | 'transport_error' | 'rejected' | 'invalid_response' | 'stale_credentials'
-  | 'auth_required' | 'access_required' | 'rate_limited';
-export type TransportResult<T> = Readonly<{ ok: true; value: T }
+  | 'auth_required' | 'access_required' | 'rate_limited' | 'visibility_changed' | 'message_hidden';
+export type TransportResult<T> = Readonly<{ ok: true; value: T; visibilityRevision?: number }
   | { ok: false; error: TransportError }>;
 export type QueueStore = Readonly<{ get(): QueueState; set(state: QueueState): void }>;
 export type ChatTransportOptions = Readonly<{
@@ -31,10 +33,11 @@ export type ChatTransportOptions = Readonly<{
    */
   getCredentialGeneration(): number;
   /** Explicit injection only. This module never opens a network connection by itself. */
-  request(request: Request): Promise<Response>;
+  request(request: Request, valid?: () => boolean): Promise<Response>;
   /** A synchronous, trusted store. There must be no async gap between get and set. */
   store: QueueStore;
-  acceptCanonicalMessage?(message: ChatMessage, token: string): Promise<boolean>;
+  acceptHiddenReceipt?(token: string, revision: number | undefined, message?: HiddenMessage, valid?: () => boolean): Promise<boolean>;
+  acceptCanonicalMessage?(message: ChatMessage, token: string, visibilityRevision?: number, valid?: () => boolean): Promise<boolean>;
 }>;
 
 type JsonRecord = Record<string, unknown>;
@@ -119,7 +122,7 @@ export async function readBoundedJson(response: Response, maxBytes: number): Pro
 }
 
 /** Test-only client boundary. The trusted caller supplies authentication; this does not implement it. */
-export function createChatTransport({ baseUrl, request, store, getCredentialGeneration, allowHttpLoopbackForTests = false, cookieOrigin, acceptCanonicalMessage }: ChatTransportOptions) {
+export function createChatTransport({ baseUrl, request, store, getCredentialGeneration, allowHttpLoopbackForTests = false, cookieOrigin, acceptCanonicalMessage, acceptHiddenReceipt }: ChatTransportOptions) {
   const origin = new URL(baseUrl);
   const testLoopback = allowHttpLoopbackForTests && origin.protocol === 'http:'
     && ['localhost', '127.0.0.1', '[::1]'].includes(origin.hostname);
@@ -149,7 +152,7 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
     }
     return { ok: true, value: captured };
   }
-  async function exchange(session: TransportSession, body?: JsonRecord, options?: HistoryOptions): Promise<TransportResult<JsonRecord>> {
+  async function exchange(session: TransportSession, body?: JsonRecord, options?: HistoryOptions, valid: () => boolean = () => true): Promise<TransportResult<JsonRecord>> {
     const { scope, token } = session;
     let response: Response;
     try {
@@ -167,7 +170,7 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
       response = await request(new Request(url.toString(), {
         method: body ? 'POST' : 'GET', headers, body: body ? JSON.stringify(body) : undefined,
         redirect: 'error', credentials: 'omit', cache: 'no-store',
-      }));
+      }), valid);
     } catch {
       return failure(currentError(session) ?? 'transport_error');
     }
@@ -183,7 +186,7 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
     if (inactive) return failure(inactive);
     if (response.status >= 500 && response.status <= 599) return failure('transport_error');
     if (response.status === 429) return failure('rate_limited');
-    if (!response.ok) return failure('rejected');
+    if (!response.ok && response.status !== 409) return failure('rejected');
     let json: unknown;
     try { json = await readBoundedJson(response, body ? SEND_RESPONSE_BYTES : HISTORY_RESPONSE_BYTES); }
     catch (error) {
@@ -192,11 +195,15 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
     const changed = currentError(session);
     if (changed) return failure(changed);
     if (!record(json)) return failure('invalid_response');
-    if (json.ok === false && typeof json.error === 'string') return failure('rejected');
+    if (response.status === 409 && json.ok === false && json.error === 'stale_membership'
+      && Object.keys(json).sort().join(',') === 'error,ok') return failure('access_required');
+    if (json.ok === false && typeof json.error === 'string') return failure(json.error === 'visibility_changed' || json.error === 'message_hidden' ? json.error : 'rejected');
+    if (response.status === 409) return failure('rejected');
     if (json.ok !== true || !record(json.value)) return failure('invalid_response');
-    return { ok: true, value: json.value };
+    return { ok: true, value: json.value, ...visibilityMetadata(response) };
   }
-  async function send(clientId: string, session: TransportSession): Promise<TransportResult<Readonly<{ replay: boolean }>>> {
+  async function send(clientId: string, session: TransportSession, valid: () => boolean = () => true): Promise<TransportResult<Readonly<{ replay: boolean; hidden?: true }>>> {
+    if (!valid()) return failure('stale_session');
     const captured = capture(session);
     if (!captured.ok) return captured;
     const { scope } = captured.value;
@@ -205,23 +212,39 @@ export function createChatTransport({ baseUrl, request, store, getCredentialGene
     store.set(started.state);
     const outgoing = started.state.messages.find(item => item.clientId === clientId)!;
     const result = await exchange(captured.value, { membership_epoch: scope.membershipEpoch,
-      client_message_id: clientId, body: outgoing.body });
+      client_message_id: clientId, body: outgoing.body }, undefined, valid);
     const allowPaused = !result.ok && (result.error === 'auth_required' || result.error === 'access_required');
     const stale = currentError(captured.value, allowPaused);
     if (stale) return failure(stale);
     if (allowPaused) return result;
+    if (!valid()) return failure('stale_session');
     const reject = (error: TransportError) => {
       const failed = failSend(store.get(), scope, clientId, outgoing.attempt, error === 'transport_error' || error === 'rate_limited');
       if (failed.ok) store.set(failed.state);
       return failure(error);
     };
     if (!result.ok) return reject(result.error);
+    if (Object.hasOwn(result.value, 'hiddenMessage')) {
+      if (Object.keys(result.value).sort().join(',') !== 'hiddenMessage,replay' || result.value.replay !== true) return reject('invalid_response');
+      const hidden = parseHiddenMessage(result.value.hiddenMessage, scope.coupleId);
+      if (!hidden || hidden.senderId !== scope.userId || hidden.clientId !== clientId || hidden.replyToId !== null) return reject('invalid_response');
+      const permitted = acceptHiddenReceipt ? await acceptHiddenReceipt(captured.value.token, result.visibilityRevision, hidden, valid) : true;
+      const afterHidden = currentError(captured.value);
+      if (afterHidden) return failure(afterHidden);
+      if (!valid()) return failure('stale_session');
+      if (!permitted) return reject('visibility_changed');
+      const accepted = acknowledgeHidden(store.get(), scope, hidden);
+      if (!accepted.ok) return reject('invalid_response');
+      store.set(accepted.state);
+      return { ok: true, value: { replay: true, hidden: true } };
+    }
     const message = parseMessage(result.value.message, scope);
     if (!message || message.senderId !== scope.userId || message.clientId !== clientId
       || (message.version === 1 && message.body !== outgoing.body) || typeof result.value.replay !== 'boolean') return reject('invalid_response');
-    const accepted = acceptCanonicalMessage ? await acceptCanonicalMessage(message, captured.value.token) : true;
+    const accepted = acceptCanonicalMessage ? await acceptCanonicalMessage(message, captured.value.token, result.visibilityRevision, valid) : true;
     const afterCanonical = currentError(captured.value);
     if (afterCanonical) return failure(afterCanonical);
+    if (!valid()) return failure('stale_session');
     if (!accepted) return reject('invalid_response');
     const acknowledged = acknowledge(store.get(), scope, { clientId, serverId: message.id,
       senderId: message.senderId, seq: message.seq, version: message.version, body: message.body });

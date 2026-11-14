@@ -11,7 +11,7 @@ let clock = new Date('2026-11-10T00:00:00Z');
 const scope = { coupleId: c1, membershipEpoch: 1 };
 const command = { ...scope, clientId: id(700) };
 const db = () => ({ ...adapter(pg), now: () => clock });
-beforeAll(async () => { pg = await createFixture(); await pg.exec(await readFile(new URL('../migrations/005_care_signals.sql', import.meta.url), 'utf8')); });
+beforeAll(async () => { pg = await createFixture(); for (const name of ['005_care_signals.sql','033_care_notification_simulations.sql']) await pg.exec(await readFile(new URL('../migrations/'+name, import.meta.url), 'utf8'));  });
 afterAll(async () => { await pg.close(); });
 it('stores a fixed signal once, returns only incoming signal, enforces cooldown and rolling visibility', async () => {
   expect(await readCareSignal(db(), principal, scope)).toEqual({ ok: true, value: { signal: null } });
@@ -27,7 +27,8 @@ it('stores a fixed signal once, returns only incoming signal, enforces cooldown 
   expect(await readCareSignal(db(), identityPrincipal(u2), scope)).toEqual({ ok: true, value: { signal: null } });
   expect(await sendCareSignal(db(), principal, command)).toMatchObject({ ok: true, value: { replay: true } });
   expect((await pg.query('SELECT * FROM care_signals')).rows).toHaveLength(2);
-  expect((await pg.query('SELECT * FROM outbox_events')).rows).toHaveLength(0);
+  expect((await pg.query("SELECT * FROM outbox_events WHERE type='care.signal_created'")).rows).toHaveLength(2);
+  expect((await pg.query('SELECT * FROM care_notification_simulations')).rows).toHaveLength(0);
 });
 it('fails closed for invalid inputs, foreign/waiting/missing pairs and stale membership', async () => {
   for (const bad of [null, [], {}, { ...command, senderId: u2 }, { ...command, clientId: 'bad' }, { ...command, membershipEpoch: 0 }]) {

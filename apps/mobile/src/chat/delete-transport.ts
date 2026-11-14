@@ -1,3 +1,5 @@
+import { visibilityMetadata } from './visibility-revision';
+import { parseHiddenMessage, type HiddenMessage } from './visibility-model';
 import { readBoundedJson, type TransportError, type TransportSession } from './transport';
 import { keys, positive, record, uuid, parseReplyMessage, type ReplyMessage } from './reply-model';
 export type DeleteTarget = Readonly<{
@@ -9,8 +11,8 @@ export type DeleteChatError = TransportError | 'message_unavailable' | 'version_
   | 'message_deleted' | 'idempotency_conflict';
 export type DeleteChatResult = Readonly<{ ok: true; value: Readonly<{
   message: ReplyMessage; replay: boolean; commandId: string;
-}> } | { ok: false; error: Exclude<DeleteChatError, 'message_deleted'> }
-  | { ok: false; error: 'message_deleted'; message: ReplyMessage }>;
+}> | Readonly<{ hiddenMessage: HiddenMessage; replay: true; commandId: string }>; visibilityRevision?: number } | { ok: false; error: Exclude<DeleteChatError, 'message_deleted'> }
+  | { ok: false; error: 'message_deleted'; message: ReplyMessage; visibilityRevision?: number }>;
 export type DeleteChatOptions = Readonly<{
   message: DeleteTarget; commandId: string; allowHttpLoopbackForTests?: boolean;
 }>;
@@ -72,21 +74,29 @@ export async function deleteChatMessage(baseURL: string, session: TransportSessi
       if (response.status !== 409 || !keys(json, 'ok,error,value') || !record(json.value)
         || !keys(json.value, 'commandId,message') || json.value.commandId !== command.commandId) return fail('invalid_response');
       const message = deletedMessage(json.value.message, pinned, false);
-      return message ? { ok: false, error: 'message_deleted', message } : fail('invalid_response');
+      return message ? { ok: false, error: 'message_deleted', message, ...visibilityMetadata(response) } : fail('invalid_response');
     }
     if (!keys(json, 'ok,error') || typeof json.error !== 'string') return fail('invalid_response');
     if (response.status === 401) return fail('auth_required');
     if (response.status === 403 || (response.status === 409 && json.error === 'stale_membership')) return fail('access_required');
     if (response.status === 409 && (json.error === 'message_unavailable' || json.error === 'version_conflict'
       || json.error === 'idempotency_conflict')) return fail(json.error);
+    if (json.error === 'visibility_changed' || json.error === 'message_hidden') return fail(json.error);
     if (response.status === 429) return fail('rate_limited');
     if (response.status >= 500 && response.status <= 599) return fail('transport_error');
     return fail('rejected');
+  }
+  if (response.ok && keys(json, 'ok,value') && json.ok === true && record(json.value) && Object.hasOwn(json.value, 'hiddenMessage')) {
+    const hidden = parseHiddenMessage(json.value.hiddenMessage, pinned.coupleId);
+    const fixed = ['id','coupleId','senderId','clientId','seq','createdAt','replyToId'] as const;
+    if (!keys(json.value, 'commandId,replay,hiddenMessage') || json.value.commandId !== command.commandId || json.value.replay !== true
+      || !hidden || hidden.deletedAt === null || fixed.some(key => hidden[key] !== pinned[key]) || hidden.version <= pinned.version) return fail('invalid_response');
+    return { ok: true, value: { commandId: command.commandId, replay: true, hiddenMessage: hidden }, ...visibilityMetadata(response) };
   }
   if (!response.ok || !keys(json, 'ok,value') || json.ok !== true || !record(json.value)
     || !keys(json.value, 'message,replay,commandId') || json.value.commandId !== command.commandId
     || typeof json.value.replay !== 'boolean') return fail('invalid_response');
   const message = deletedMessage(json.value.message, pinned, !json.value.replay);
   if (!message) return fail('invalid_response');
-  return { ok: true, value: Object.freeze({ message, replay: json.value.replay, commandId: command.commandId }) };
+  return { ok: true, value: Object.freeze({ message, replay: json.value.replay, commandId: command.commandId }), ...visibilityMetadata(response) };
 }

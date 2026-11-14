@@ -234,3 +234,131 @@ current-canonical replay, edit receipts, separate protected edit draft and versi
 knowledge. New stage from independently accepted f6197f8; final acceptance pending.
 The revised editing candidate distinguishes unchanged normalized saves (receipt only)
 from actual content revisions, so the Edited label is truthful after fresh reads.
+
+## Personal chat visibility candidate
+Actor-private hide/restore, metadata-only hidden history and same-transaction global
+visibility revision fence. Old accepted c6f8db3 preserved. See docs/CHAT_VISIBILITY.md;
+implementation and final acceptance pending, no publication or realtime claim.
+
+Outgoing lifecycle candidate: [CHAT_OUTGOING](docs/CHAT_OUTGOING.md) defines accepted
+receipt compaction and explicit local-attempt discard, preserving unresolved sends.
+
+Experimental encrypted recovery: [CHAT_JOURNAL](docs/CHAT_JOURNAL.md), composer and
+one immutable pending command only; default-off, native acceptance not established.
+
+- `docs/CHAT_RECONCILIATION.md`: bounded read-only current-window refresh and foreground lifecycle; candidate, not accepted.
+
+- `docs/MORNING_RITUAL.md` / `MORNING_SOURCE_AUDIT.md`: new independent morning-slot candidate; no original content import.
+
+- `docs/MORNING_DISCUSSIONS.md`: slot-bound bilateral immutable replies candidate,
+  full bounded history, existing morning disclosure preserved; gates pending.
+
+- `docs/MORNING_DISCUSSION_MUTATIONS.md`: candidate own reply CAS edit/no-op/delete,
+  versioned compatibility and terminal client knowledge; independent gate pending.
+
+- `docs/MORNING_PREPARED_EDITING.md`: candidate author-only pre-release morning text
+  edits, CAS/retry/privacy contract and clock limitations. Not independently accepted.
+
+- `docs/MORNING_PRIVATE_DRAFTS.md`: explicit author-only saved morning draft candidate,
+  separate from prepared letter; active-scope CAS/retry and protected RAM form. Not accepted.
+
+- `docs/MORNING_DRAFT_REMOVAL.md`: candidate author-confirmed terminal saved-draft
+  removal; v2 tombstones, legacy failclosed, no prepared-letter change. Gates pending.
+
+## Separation periods synthetic slice
+- docs/PARTINGS.md: explicit independent period resource, bounded contract and exclusions.
+- packages/domain/partings/: calendar/zone boundaries and checked-at projection.
+- services/api/src/partings*: scoped create/list/edit; migrations/030_* identity/overlap guards.
+- apps/mobile/src/auth/partings*: explicit RAM forms, immutable retries and checked-at state.
+
+## Manual arrival plan synthetic slice
+- docs/ARRIVAL_PLAN.md: source-grounded planned-arrival contract and limitations.
+- packages/domain/arrival/plan.ts: normalized optional label and explicit zone+offset.
+- services/api/src/arrival-plan*: singleton scoped CAS/canonical replay; migration031.
+- apps/mobile/src/auth/arrival*: explicit load/save/edit and immutable retry.
+
+## Future-notification preferences synthetic slice
+- docs/NOTIFICATION_PREFERENCES.md: own saved rules, not delivery/subscription.
+- packages/domain/notifications/preferences.ts: validation and wall-minute policy.
+- services/api/src/notification-preferences*: actor-private CAS/read-only simulation.
+- migration032: scoped per-actor rows and immutable command receipts.
+
+## Care outbox simulation
+- `services/api/src/care-outbox.ts`: trusted one-event dry-run processor, no HTTP/provider.
+- `services/api/migrations/033_care_notification_simulations.sql`: atomic care capture and immutable observations.
+- `docs/CARE_OUTBOX.md`: rollout, no backfill, historical replay and delivery exclusions.
+
+## Chat outbox privacy simulation
+- `services/api/src/chat-outbox.ts`: internal current-source/policy simulation, no payload or HTTP.
+- `services/api/migrations/034_chat_notification_simulations.sql`: new-event identity context,
+  immutable observations; existing shared processed_at unchanged.
+- `docs/CHAT_OUTBOX.md`: scope/privacy/rollout and delivery exclusions.
+
+## Morning-letter privacy simulation
+- `services/api/src/morning-notifications.ts`: explicit internal slot simulation; actual SQL release.
+- `services/api/migrations/035_morning_notification_simulations.sql`: immutable release-gated metadata.
+- `docs/MORNING_NOTIFICATION_SIMULATION.md`: uniform pre-release privacy, no opening/delivery.
+
+## Shared love dictionary candidate
+- `docs/LOVE_WORDS.md`: source-grounded words/meaning/occasion, authorship and privacy.
+- `packages/domain/words/`: pure text validation, independent of UI and database.
+- `services/api/src/love-words*.ts`: scoped complete snapshot and authored mutations.
+- `apps/mobile/`: RU/EN synthetic dictionary screen, CAS/retry and stale-response fences.
+- Synthetic lifetime100 including tombstones; no notification/native/offline promises.
+
+## Ask me candidate
+- `docs/ASK_ME.md`: source-grounded authored questions and one recipient response.
+- `packages/domain/asks/`, `services/api/src/asks*.ts`: text and scoped transitions.
+- Mobile Ask flow: explicit answer/skip, split own-text removal, complete bounded list.
+
+## Day scale candidate
+- `docs/DAY_SCALE.md`: explicit voluntary shared day rating, date/IANA and privacy.
+- `services/api/src/day-scale*.ts`, migration038: author-owned values and current CAS/retry.
+- `packages/domain/scale/`: pure integer/date/IANA validation.
+- `apps/mobile/src/auth/scale*.ts`, `ScalePanel.tsx`: explicit shared numeric input/history.
+- Removed is not a permanent tombstone: explicit fresh publication may use a higher version.
+
+## Continue the phrase candidate
+- `docs/CONTINUE_PHRASE.md`: authored beginning with sealed own continuation.
+- Backend and mobile Stems: recipient voluntary completion/skip, split own removal.
+- Locked role/phase projection never selects recipient-hidden author continuation.
+
+## Verification raw-log retention candidate
+- `docs/VERIFICATION_LOG_RETENTION.md`: private streamed child evidence,16MiB cap per stream.
+- Runner/process capture keeps full hashes and explicit incomplete/IO failure status.
+- No change to child commands, environment allowlist, deadlines or product modules.
+
+## Ordered stories candidate after accepted316978a
+- `docs/ORDERED_STORIES.md`: source-grounded topic to long narrative, no deadline.
+- `packages/domain/stories/`: Unicode text limits and legal metadata transitions.
+- Migration040 and `services/api/src/stories*.ts`: scoped immutable publication,
+  separate authored removal, canonical retries and metadata-only lists/ACKs.
+- `apps/mobile/src/auth/StoriesPanel.tsx`, `StoryReader.tsx`, `stories*.ts`:
+  RU/EN explicit composer/reader, RAM-only drafts and stale-response fences.
+- `services/api/tests/postgres/stories*.mjs`: real PG races and actual HTTP/mobile
+  lifecycle with official auth. New feature defaults off and is loopback-only.
+- Early contract review passed; focused API/mobile passed. Exact author and
+  independent FULL remain required; no native/production acceptance claim.
+
+## Hard question candidate after accepted67c6607
+- `docs/HARD_QUESTIONS.md`: recipient consent-gated authored question, safe decline.
+- `packages/domain/hard/`: Unicode bounds and six legal immutable metadata states.
+- Migration041 and `services/api/src/hard-questions*.ts`: metadata-only history,
+  role-gated body projection, one opening transition, current replay and own removal.
+- `apps/mobile/src/auth/hard-questions*.ts`, `HardQuestionsPanel.tsx` and reader:
+  RAM draft, explicit choices, close/navigation generations, latest-metadata fences.
+- Dedicated nativePG and actual HTTP/official-auth/mobile fixtures add no new waits
+  or relaxed guards. Early reviews/focused passed; exact FULL acceptance pending.
+
+## Shared-doing candidate after acceptedafd0770
+- `docs/SHARED_DOINGS.md`: source comparison, voluntary joining, own positions,
+  withdrawal/removal consequences, exact reachable states and CAS/current retries.
+- `packages/domain/doings/state.ts`, migration042 and `src/shared-doings*.ts`:
+  immutable title/total, forward-only own slot, derived completion, scoped receipts.
+- `apps/mobile/src/auth/shared-doings*.ts`, `SharedDoingsPanel.tsx` and copy:
+  separate RU/EN tab, RAM composer, explicit consent, controller generation fences.
+- Canonical ACK must follow the applied original command AND latest known state.
+  Initial red regressions remain evidence; API12/mobile29 focused passed.
+- `services/api/tests/postgres/shared-doings*.mjs`: actual auth/HTTP/mobile and
+  observed lock/expiry/revocation/CAS/capacity cases. Runtime and both FULL pending.
+- This checkpoint is synthetic/local; native/two-device and production not run.

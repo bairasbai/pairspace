@@ -1,0 +1,71 @@
+import { readFile } from 'node:fs/promises';
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import type { PGlite } from '@electric-sql/pglite';
+import { getArrivalPlan, saveArrivalPlan } from '../src/arrival-plan.ts';
+import { createArrivalPlanHandler } from '../src/arrival-plan-http.ts';
+import { parseArrivalFields } from '../../../packages/domain/arrival/plan.ts';
+import { bindSessionAuthority } from '../src/auth-authority.ts';
+import { createSyntheticAuthority } from '../src/synthetic-authority.ts';
+import { adapter, c1, c2, createFixture, id, identityPrincipal, outsider, principal, u2, waiting } from './fixtures.ts';
+let pg: PGlite;
+const scope = { coupleId:c1, membershipEpoch:1 }, db = () => adapter(pg);
+const command = { ...scope, commandId:id(801), expectedVersion:0, label:'Synthetic arrival', localDate:'2028-11-05', localTime:'01:30', timezone:'America/New_York', offset:'-04:00' };
+beforeAll(async () => { pg = await createFixture(); for (const f of ['012_shared_dates.sql','031_arrival_plan.sql']) await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8')); });
+afterAll(async () => { await pg.close(); });
+it('explicit schedule validates folds, rejects gaps and invalid dates, canonicalizes label/zone', () => {
+  expect(parseArrivalFields('  Meet\n here ', '2028-11-05','01:30','America/New_York','-04:00')).toMatchObject({ label:'Meet here', arrivesAt:'2028-11-05T05:30:00.000Z' });
+  expect(parseArrivalFields('Meet', '2028-11-05','01:30','America/New_York','-05:00')).toMatchObject({ arrivesAt:'2028-11-05T06:30:00.000Z' });
+  expect(parseArrivalFields('  ','2028-01-01','00:00','UTC','+00:00')).toMatchObject({label:''});
+  expect(parseArrivalFields('Meet','2000-01-01','00:00','UTC','+00:00')).toBeTruthy();
+  expect(parseArrivalFields('Meet','2100-12-31','23:59','UTC','+00:00')).toBeTruthy();
+  for (const args of [[null,'2028-01-01','00:00','UTC','+00:00'],['Meet','2027-02-29','00:00','UTC','+00:00'],['Meet','2028-03-12','02:30','America/New_York','-05:00'],['Meet','2028-01-01','00:00','UTC','-00:00'],['Meet','2101-01-01','00:00','UTC','+00:00'],['Meet','2028-01-01','00:00','bad','+00:00']]) expect(parseArrivalFields(...args as [unknown,unknown,unknown,unknown,unknown])).toBeNull();
+});
+it('singleton create, equal partner edit/no-op and current canonical retry', async () => {
+  expect(await getArrivalPlan(db(),principal,scope)).toMatchObject({ok:true,value:{plan:null}});
+  const first = await saveArrivalPlan(db(),principal,command); expect(first.ok).toBe(true); if(!first.ok)throw Error('fixture');
+  expect(first.value.plan).toMatchObject({version:1, creatorId:principal.userId});
+  expect(await saveArrivalPlan(db(),principal,command)).toMatchObject({ok:true,value:{replay:true,plan:{version:1}}});
+  expect(await saveArrivalPlan(db(),principal,{...command,commandId:id(802)})).toEqual({ok:false,error:'version_conflict'});
+  const edit = {...command,commandId:id(803),expectedVersion:1};
+  expect(await saveArrivalPlan(db(),identityPrincipal(u2),edit)).toMatchObject({ok:true,value:{plan:{version:1}}});
+  expect(await saveArrivalPlan(db(),identityPrincipal(u2),{...edit,commandId:id(804),label:'Changed',offset:'-05:00'})).toMatchObject({ok:true,value:{plan:{version:2,arrivesAt:'2028-11-05T06:30:00.000Z'}}});
+  expect(await saveArrivalPlan(db(),principal,command)).toMatchObject({ok:true,value:{replay:true,plan:{version:2,label:'Changed',id:first.value.plan.id}}});
+  expect(await getArrivalPlan(db(),identityPrincipal(u2),scope)).toMatchObject({ok:true,value:{plan:{version:2}}});
+  for (const delta of [{label:'New'},{localDate:'2028-11-04'},{localTime:'01:31'},{expectedVersion:1},{timezone:'America/Toronto'},{offset:'-05:00'}]) expect(await saveArrivalPlan(db(),principal,{...command,...delta})).toEqual({ok:false,error:'idempotency_conflict'});
+  await expect(pg.query('DELETE FROM arrival_plans')).rejects.toThrow();
+  await expect(pg.query('UPDATE arrival_plans SET creator_id=$1',[u2])).rejects.toThrow();
+  await expect(pg.query("UPDATE arrival_plan_commands SET label='bad'")).rejects.toThrow();
+});
+it('strict inputs and scope/auth denial', async () => {
+  for(const bad of [null,[],{}, {...command,x:1},{...command,coupleId:'bad'},{...command,membershipEpoch:0},{...command,commandId:'bad'},{...command,label:null},{...command,expectedVersion:-1},{...command,expectedVersion:2147483647}]) expect(await saveArrivalPlan(db(),principal,bad)).toEqual({ok:false,error:'invalid_request'});
+  expect(await getArrivalPlan(db(),principal,command)).toEqual({ok:false,error:'invalid_request'});
+  for(const operation of [getArrivalPlan,saveArrivalPlan]) {
+    const input=operation===getArrivalPlan?scope:command;
+    expect(await operation(db(),{...principal,userId:'bad'},input)).toEqual({ok:false,error:'unavailable'});
+    for(const coupleId of [c2,waiting,id(999)]) expect(await operation(db(),principal,{...input,coupleId})).toEqual({ok:false,error:'unavailable'});
+    expect(await operation(db(),identityPrincipal(outsider),input)).toEqual({ok:false,error:'unavailable'});
+    expect(await operation(db(),principal,{...input,membershipEpoch:2})).toEqual({ok:false,error:'stale_membership'});
+  }
+  const source=db(); await expect(getArrivalPlan(bindSessionAuthority({...source,now:()=>new Date(NaN)},{...source.sessionAuthority,recheck:async()=>true}),principal,scope)).rejects.toThrow('invalid_server_clock');
+});
+const url=`http://localhost/v1/couples/${c1}/arrival-plan`;
+const body={command_id:id(850),membership_epoch:1,expected_version:2,label:'HTTP plan',local_date:'2030-01-01',local_time:'12:00',timezone:'UTC',offset:'+00:00'};
+const req=(method='PUT',data:unknown=body,suffix='',headers:Record<string,string>={})=>new Request(url+suffix,{method,headers:{authorization:'Bearer fixture','content-type':'application/json','idempotency-key':id(850),...headers},...(method==='PUT'?{body:JSON.stringify(data)}:{})});
+it('HTTP schema, methods, no-store and redacted errors',async()=>{
+  const h=createArrivalPlanHandler(bindSessionAuthority(db(),createSyntheticAuthority(async()=>principal)));
+  expect((await h(new Request('http://localhost/unknown'))).status).toBe(404);
+  expect((await h(req('DELETE'))).status).toBe(405);
+  expect((await h(req('GET',null,'?membership_epoch=1'))).status).toBe(200);
+  for(const suffix of ['', '?membership_epoch=0','?membership_epoch=1&membership_epoch=1'])expect((await h(req('GET',null,suffix))).status).toBe(400);
+  expect((await h(req('PUT',body,'?x=1'))).status).toBe(400);
+  expect((await h(req('PUT',body,'',{'content-type':'text/plain'}))).status).toBe(415);
+  for(const bad of [null,[],{}, {...body,x:1},{...body,command_id:'bad'},{...body,command_id:id(899)}])expect((await h(req('PUT',bad))).status).toBe(400);
+  expect((await h(new Request(url,{method:'PUT',headers:{authorization:'Bearer fixture','content-type':'application/json'},body:'{'}))).status).toBe(400);
+  const saved=await h(req());expect(saved.status).toBe(200);expect(saved.headers.get('cache-control')).toBe('no-store');
+  expect((await h(req())).status).toBe(200);
+  expect((await h(req('PUT',{...body,label:'different'}))).status).toBe(409);
+  expect((await h(req('PUT',{...body,membership_epoch:0}))).status).toBe(400);
+  expect((await createArrivalPlanHandler(bindSessionAuthority(db(),createSyntheticAuthority(async()=>null)))(req())).status).toBe(401);
+  expect((await createArrivalPlanHandler(bindSessionAuthority(db(),createSyntheticAuthority(async()=>identityPrincipal(outsider))))(req())).status).toBe(403);
+  const source=db();expect((await createArrivalPlanHandler(bindSessionAuthority({...source,transaction:async()=>{throw Error('private');}},createSyntheticAuthority(async()=>principal)))(req())).status).toBe(503);
+});

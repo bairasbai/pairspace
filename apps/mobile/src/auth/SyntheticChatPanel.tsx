@@ -1,3 +1,4 @@
+import { visibilityCopy } from './ChatVisibilityPanel';
 import { ChatEditPanel, editCopy } from './ChatEditPanel';
 import type { EditState } from './chat-edit';
 import { ChatDeletePanel, deleteCopy } from './ChatDeletePanel';
@@ -13,7 +14,7 @@ import { InvitationPanel, type InvitationPanelProps } from './InvitationPanel';
 export type SyntheticChatPanelProps = {
   locale: 'ru' | 'en';
   phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
-  history?: HistoryView;
+  history?: HistoryView; visibilityChanged?: boolean; hiddenAcknowledged?: boolean; onHide?: (id:string)=>void;
   editState?: EditState; onBeginEdit?: (id:string)=>void; onEditDraft?: (text:string)=>void;
   onSaveEdit?: ()=>void; onCancelEdit?: ()=>void; onRetryEdit?: ()=>void; onReloadEdit?: ()=>void;
   currentUserId?: string; deleteState?: DeleteState;
@@ -186,6 +187,7 @@ function Login({ locale, phase, email, onEmail, onSignIn, onSignOut }: LoginProp
 
 /** Controlled synthetic-only UI. The parent owns requests, session and message state. */
 export function SyntheticChatPanel({
+  visibilityChanged, hiddenAcknowledged, onHide,
   editState, onBeginEdit, onEditDraft, onSaveEdit, onCancelEdit, onRetryEdit, onReloadEdit,
   currentUserId, deleteState, onBeginDelete, onConfirmDelete, onCancelDelete, onRetryDelete,
   locale, phase, error, draft, messages, outgoing, replyTarget, replyDetail, replyDetailLoading, chatSuspended, onReplyTarget, onOpenReplyTarget, onCancelReply, onCloseReplyDetail, history, onLoadOlder, onLoadNewer, onLoadLatest, onLoadOldest, onDraft, onSignIn, onSignOut, onSend, onRefresh, onCreateProfile, onCreateWaitingSpace, invitations,
@@ -239,6 +241,7 @@ export function SyntheticChatPanel({
             <Text selectable style={styles.messageBody}>{message.body === null ? replies.deleted : message.body}</Text>
             {message.replyToId && <Text>{replies.reference}: {message.replyToId}</Text>}
             {message.replyToId && onOpenReplyTarget && <Action label={`${replies.original}: ${message.id}`} disabled={chatSuspended || replyDetailLoading} onPress={() => onOpenReplyTarget(message.id)} />}
+            {onHide && <Action label={`${visibilityCopy[locale].hide}: ${message.id}`} disabled={chatSuspended} onPress={()=>onHide(message.id)}/>}
             {message.body !== null && (message.version ?? 1)>1 && <Text>{editCopy[locale].edited}</Text>}
             {message.body !== null && message.senderId===currentUserId && onBeginEdit &&
               <Action label={`${editCopy[locale].edit}: ${message.id}`} disabled={chatSuspended} onPress={()=>onBeginEdit(message.id)}/>}
@@ -249,6 +252,9 @@ export function SyntheticChatPanel({
           </View>)}
         <Action label={t.refresh} onPress={onRefresh} />
       </View>
+      {visibilityChanged && <Text accessibilityRole="alert">{visibilityCopy[locale].changed}</Text>}
+      {hiddenAcknowledged && <Text>{visibilityCopy[locale].hiddenCommit}</Text>}
+      {replyDetail && onHide && <Action label={`${visibilityCopy[locale].hide}: ${replyDetail.id}`} disabled={chatSuspended} onPress={()=>onHide(replyDetail.id)}/>}
       <ChatEditPanel locale={locale} state={editState} onDraft={onEditDraft} onSave={onSaveEdit}
         onCancel={onCancelEdit} onRetry={onRetryEdit} onReload={onReloadEdit}/>
       {replyDetail?.body != null && replyDetail.version>1 && <Text>{editCopy[locale].edited}</Text>}

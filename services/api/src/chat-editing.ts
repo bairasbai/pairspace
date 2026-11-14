@@ -1,3 +1,4 @@
+import { chatMessageHidden, hiddenChatReplay } from './chat-visibility-scope.ts';
 import { createHash } from "node:crypto";
 import type { AuthorizedDatabase, Principal, ApiError } from "./contracts.ts";
 import { normalizeMessageText } from "../../../packages/domain/chat/text.ts";
@@ -73,7 +74,8 @@ export async function editChatMessage(db: AuthorizedDatabase, p: Principal, inpu
                 ok: false,
                 error: denied
             };
-        const row = (await tx.query<Metadata>(`SELECT sender_id,version,deleted_at::text AS deleted_at,body=$3 AS same_body
+        const hidden=await chatMessageHidden(tx,messageId);
+        const row = (await tx.query<Metadata>(`SELECT sender_id,version,deleted_at::text AS deleted_at,${hidden ? '($3::text IS NULL AND false)' : 'body=$3'} AS same_body
       FROM chat_messages WHERE couple_id=$1 AND id=$2 FOR UPDATE`, [coupleId, messageId, body])).rows[0];
         if (!await activeSession(tx, db, p))
             return {
@@ -93,6 +95,7 @@ export async function editChatMessage(db: AuthorizedDatabase, p: Principal, inpu
                 ok: false,
                 error: "message_unavailable"
             };
+        if(hidden) return old ? hiddenChatReplay(tx,messageId,commandId) : {ok:false,error:'message_hidden'};
         const canonicalMessage = async () => {
             const current = (await tx.query<Row>(`SELECT ${columns} FROM chat_messages WHERE couple_id=$1 AND id=$2`, [coupleId, messageId])).rows[0];
             if (!current)

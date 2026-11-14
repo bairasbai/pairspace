@@ -416,3 +416,50 @@ it('own editing requires independent loopback opt-in and bounded PATCH bodies', 
   const origin='http://127.0.0.1:1234';const app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticChatEditing:true});
   for(const [headers,body,status] of [[{origin,'content-type':'application/json'},'{}',401],[{origin,'content-type':'text/plain'},'{}',415],[{origin,'content-type':'application/json'},'x'.repeat(17),413],[{origin:'https://attacker.invalid','content-type':'application/json'},'{}',403]] as const)expect((await app.handle(new Request(origin+path,{method:'PATCH',headers,body}))).status).toBe(status);
 });
+it('love words requires independent loopback opt-in and bounds every mutation body', async () => {
+  const path='/v1/couples/00000000-0000-4000-8000-000000000001/love-words';
+  expect((await createApiApplication(config()).handle(request(path))).status).toBe(404);
+  for (const flag of [true,'true',null]) expect(() => createApiApplication({...config(),enableSyntheticLoveWords:flag} as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin='http://127.0.0.1:1234';
+  const app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticLoveWords:true});
+  for(const method of ['POST','PUT','DELETE']) {
+    const route=path+(method==='POST'?'':'/00000000-0000-4000-8000-000000000002');
+    for(const [headers,body,status] of [
+      [{origin,'content-type':'application/json'},'{}',401],
+      [{origin,'content-type':'text/plain'},'{}',415],
+      [{origin,'content-type':'application/json'},'x'.repeat(17),413],
+      [{origin:'https://attacker.invalid','content-type':'application/json'},'{}',403],
+    ] as const) expect((await app.handle(new Request(origin+route,{method,headers,body}))).status).toBe(status);
+  }
+  const wrong=await app.handle(new Request(origin+path+'/00000000-0000-4000-8000-000000000002',{headers:{origin}}));
+  expect(wrong.status).toBe(405);expect(wrong.headers.get('allow')).toBe('PUT, DELETE');
+});
+it('asks requires independent loopback opt-in and bounds all mutation bodies', async () => {
+  const path='/v1/couples/00000000-0000-4000-8000-000000000001/asks';
+  expect((await createApiApplication(config()).handle(request(path))).status).toBe(404);
+  for (const flag of [true,'true',null]) expect(() => createApiApplication({...config(),enableSyntheticAsks:flag} as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+  const origin='http://127.0.0.1:1234';
+  const app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticAsks:true});
+  for(const [method,suffix] of [['POST',''],['POST','/id/answer'],['POST','/id/skip'],['DELETE','/id/question'],['DELETE','/id/answer']]) {
+    for(const [headers,body,status] of [[{origin,'content-type':'application/json'},'{}',401],[{origin,'content-type':'text/plain'},'{}',415],[{origin,'content-type':'application/json'},'x'.repeat(17),413],[{origin:'https://attacker.invalid','content-type':'application/json'},'{}',403]] as const)
+      expect((await app.handle(new Request(origin+path+suffix,{method,headers,body}))).status).toBe(status);
+  }
+  const wrong=await app.handle(new Request(origin+path+'/id/answer',{headers:{origin}}));
+  expect(wrong.status).toBe(405);expect(wrong.headers.get('allow')).toBe('POST, DELETE');
+});
+it('day scale has independent loopback opt-in and bounded POST/PUT/DELETE', async () => {
+ const path='/v1/couples/00000000-0000-4000-8000-000000000001/day-scale';
+ expect((await createApiApplication(config()).handle(request(path))).status).toBe(404);
+ for(const flag of [true,'true',null])expect(()=>createApiApplication({...config(),enableSyntheticDayScale:flag}as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+ const origin='http://127.0.0.1:1234',app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticDayScale:true});
+ for(const method of ['POST','PUT','DELETE'])for(const [headers,body,status]of [[{origin,'content-type':'application/json'},'{}',401],[{origin,'content-type':'text/plain'},'{}',415],[{origin,'content-type':'application/json'},'x'.repeat(17),413],[{origin:'https://attacker.invalid','content-type':'application/json'},'{}',403]]as const)expect((await app.handle(new Request(origin+path+(method==='POST'?'':'/id'),{method,headers,body}))).status).toBe(status);
+ const wrong=await app.handle(new Request(origin+path+'/id',{headers:{origin}}));expect(wrong.status).toBe(405);expect(wrong.headers.get('allow')).toBe('PUT, DELETE');
+});
+it('stems has independent loopback opt-in and bounded creation/completion/removal', async () => {
+ const path='/v1/couples/00000000-0000-4000-8000-000000000001/stems';
+ expect((await createApiApplication(config()).handle(request(path))).status).toBe(404);
+ for(const flag of [true,'true',null])expect(()=>createApiApplication({...config(),enableSyntheticStems:flag}as ApiApplicationConfig)).toThrow('invalid_api_configuration');
+ const origin='http://127.0.0.1:1234',app=createApiApplication({...config(),baseURL:origin,trustedOrigins:[origin],enableSyntheticStems:true});
+ for(const [method,suffix]of [['POST',''],['POST','/id/complete'],['POST','/id/skip'],['DELETE','/id/author-bundle'],['DELETE','/id/recipient-continuation']])for(const [headers,body,status]of [[{origin,'content-type':'application/json'},'{}',401],[{origin,'content-type':'text/plain'},'{}',415],[{origin,'content-type':'application/json'},'x'.repeat(17),413],[{origin:'https://attacker.invalid','content-type':'application/json'},'{}',403]]as const)expect((await app.handle(new Request(origin+path+suffix,{method,headers,body}))).status).toBe(status);
+ const wrong=await app.handle(new Request(origin+path+'/id/complete',{headers:{origin}}));expect(wrong.status).toBe(405);expect(wrong.headers.get('allow')).toBe('POST');
+});

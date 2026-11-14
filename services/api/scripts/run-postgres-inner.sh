@@ -13,7 +13,8 @@ if (( ${#missing[@]} )); then
   printf 'NOT RUN: missing local PostgreSQL prerequisites: %s\n' "${missing[*]}" >&2
   exit 77
 fi
-runtime="$(mktemp -d /tmp/pairspace-pg.XXXXXXXX)"
+# The full runner supplies its isolated workspace TMPDIR; do not exhaust /tmp.
+runtime="$(mktemp -d "${TMPDIR:-/tmp}/pairspace-pg.XXXXXXXX")"
 started=0
 cleanup() {
   if (( started )) || [[ -f "$runtime/data/postmaster.pid" ]]; then

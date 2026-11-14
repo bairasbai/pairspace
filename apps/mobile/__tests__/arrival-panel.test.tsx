@@ -1,0 +1,20 @@
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { ArrivalPanel } from '../src/auth/ArrivalPanel';
+import { emptyArrival } from '../src/auth/arrival-state';
+import { date } from './arrival-fixtures';
+it.each(['ru','en'] as const)('wires explicit controls and honest plan state %s',locale=>{
+ const callbacks={onField:jest.fn(),onSave:jest.fn(),onRetry:jest.fn(),onLoad:jest.fn(),onCancel:jest.fn(),onEdit:jest.fn()};
+ const props={...callbacks,locale};const view={...emptyArrival,available:true};const ui=render(<ArrivalPanel {...props} view={emptyArrival}/>);expect(ui.toJSON()).toBeNull();
+ ui.rerender(<ArrivalPanel {...props} view={view}/>);
+ const labels=locale==='ru'?['Название плана (необязательно)','Дата прибытия YYYY-MM-DD','Местное время HH:mm','Пояс прибытия IANA','Смещение UTC ±HH:mm']:['Plan label (optional)','Arrival date YYYY-MM-DD','Local time HH:mm','Arrival IANA time zone','UTC offset ±HH:mm'];
+ labels.forEach(label=>fireEvent.changeText(screen.getByLabelText(label),'x'));expect(callbacks.onField).toHaveBeenCalledTimes(5);
+ for(const label of locale==='ru'?['Сохранить план для обоих','Очистить форму','Проверить план']:['Save plan for both','Clear form','Check plan'])fireEvent.press(screen.getByText(label));
+ expect(callbacks.onSave).toHaveBeenCalledTimes(1);expect(callbacks.onCancel).toHaveBeenCalledTimes(1);expect(callbacks.onLoad).toHaveBeenCalledTimes(1);
+ ui.rerender(<ArrivalPanel {...props} view={{...view,checked:true}}/>);
+ fireEvent.press(screen.getByText(locale==='ru'?'Заполнить форму из проверенного плана':'Fill form from checked plan'));expect(callbacks.onEdit).toHaveBeenCalledTimes(1);
+ for(const asOf of ['2027-01-01T00:00:00.000Z','2029-01-01T00:00:00.000Z'])ui.rerender(<ArrivalPanel {...props} view={{...view,plan:{...date,label:asOf.startsWith('2027')?'':date.label},asOf,checked:true,error:true}}/>);
+ ui.rerender(<ArrivalPanel {...props} view={{...view,status:'retry',pending:date}}/>);
+ fireEvent.press(screen.getByText(locale==='ru'?'Повторить ту же команду':'Retry same command'));expect(callbacks.onRetry).toHaveBeenCalledTimes(1);
+ fireEvent.press(screen.getByText(locale==='ru'?'Сохранить план для обоих':'Save plan for both'));expect(callbacks.onSave).toHaveBeenCalledTimes(1);
+ ui.rerender(<ArrivalPanel {...props} view={{...view,busy:true,requiresRefresh:true,plan:date}}/>);fireEvent.press(screen.getByText(locale==='ru'?'Проверить план':'Check plan'));expect(callbacks.onLoad).toHaveBeenCalledTimes(1);
+});

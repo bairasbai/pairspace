@@ -1,48 +1,39 @@
+import { replyAnchor, type ReplyAnchor } from '../chat/reconciliation';
+import { createChatReconciliation } from './chat-reconciliation';
+import { redactUnavailable } from './reconciliation-redaction';
+import { createPairFeatures } from './pair-features';
+import { createChatJournal } from './chat-journal';
+import { verifyJournalReply } from './journal-reply';
+import type { JournalPort } from '../chat/journal/types';
+import { createOutgoingFlow, type PendingOutgoing } from './outgoing-flow';
+import type { AuthView } from './auth-view';
+import { historyReadId } from '../chat/read-identity';
+import { createReceiptVerifier } from './verify-chat-receipt';
+import { createChatVisibility } from './chat-visibility';
+import { createVisibilityFence } from '../chat/visibility-fence';
+import { createBoundedRequest } from './bounded-request';
+import { redactChatView, redactQueue } from './visibility-redaction';
 import { reconcileVisible } from '../chat/reconcile-visible';
-import { createChatEdit, type EditState } from './chat-edit';
+import { createChatEdit } from './chat-edit';
 import { createEditKnowledge, type BodyDigest } from '../chat/edit-knowledge';
-import { createChatDelete, type DeleteState } from './chat-delete';
-import { createWishesController } from './wishes';
-import { createSongsController } from './songs';
-import { createMemoriesController } from './memories';
-import { createDatesController } from './dates';
-import { createBlindController } from './blind';
-import { createTasksController } from './tasks';
-import { createLeaveController } from './leave';
-import { createLettersController } from './letters';
-import { createCareController } from './care';
-import { type HistoryView } from '../chat/history';
+import { createChatDelete } from './chat-delete';
 import type { HistoryWindowOptions } from '../chat/history-window';
 import { readReplyWindow, readReplyDetail, sendChatReply } from '../chat/reply-transport';
-import { displayMessage, createReplyKnowledge, selectReply, type DisplayMessage, type ReplySelection } from '../chat/reply-view';
-import { createQueue, enqueue, retry, beginSend, failSend, acknowledge, deleteConfirmed } from '../chat/queue';
+import { displayMessage, createReplyKnowledge, selectReply, type DisplayMessage } from '../chat/reply-view';
+import { createQueue, beginSend, failSend, acknowledge, acknowledgeHidden, deleteConfirmed } from '../chat/queue';
 import { createChatTransport, type TransportSession } from '../chat/transport';
 import type { QueueState } from '../chat/types';
 import { validateSyntheticConfig, type SyntheticConfig } from './config';
 import { readSessionContext, type SessionContext } from './context';
-import { createInvitationController } from './invitations-controller';
 import { provisionProfile } from './profile';
 import { requestWaitingSpace } from './waiting';
 import type { AuthIdentity, SessionClient } from './official-client';
 
-export type AuthView = Readonly<{
-  phase: 'signed_out' | 'busy' | 'signed_in' | 'blocked';
-  error: string | null; draft: string; messages: readonly DisplayMessage[];
-  replyTarget?: ReplySelection; replyDetail?: DisplayMessage; replyDetailLoading?: boolean; chatSuspended?: boolean;
-  history?: HistoryView;
-  currentUserId?: string; deleteState?: DeleteState; editState?: EditState;
-  outgoing?: Readonly<{ body: string; status: 'sending' | 'retry' | 'sent'; replyToId?: string }>;
-}>;
-// Correlation only, never authentication. Independent from mutation command IDs.
-let historyReadSequence = 0;
-function historyReadId() {
-  if (++historyReadSequence > 999999999999) throw Error('read_identity_exhausted');
-  return `00000000-0000-4000-8000-${String(historyReadSequence).padStart(12, '0')}`;
-}
+export type { AuthView } from './auth-view';
 const empty: AuthView = { phase: 'signed_out', error: null, draft: '', messages: [] };
 /** Ephemeral UI state; never persists credentials, drafts or message bodies. */
 export function createSessionController(config: SyntheticConfig, client: SessionClient,
-  request: (request: Request) => Promise<Response>, commandId: () => string, digest?: BodyDigest) {
+  request: (request: Request) => Promise<Response>, commandId: () => string, digest?: BodyDigest, journalPort?: JournalPort | Promise<JournalPort>) {
   const contextConfig: SyntheticConfig = Object.freeze({ mode: config.mode, baseURL: config.baseURL });
   validateSyntheticConfig(contextConfig);
   let view = empty;
@@ -63,13 +54,15 @@ export function createSessionController(config: SyntheticConfig, client: Session
   let sending = false;
   let draftRevision = 0;
   let outgoingClientId: string | null = null;
-  let pending: { readonly body: string; readonly revision: number; id: string | null; replyToId?: string } | null = null;
+  let pending: PendingOutgoing | null = null;
+  let selectedReplyAnchor: ReplyAnchor | undefined;
+  let restoredReplyId: string | undefined;
   const listeners = new Set<() => void>();
   const publish = (next: AuthView) => { view = next; for (const notify of listeners) notify(); };
   const invalidate = (preserveLeave = false) => {
-    generation++; detailSequence++; replyKnowledge.reset(); editKnowledge.reset(); chatDelete.reset(); chatEdit.reset(); historyBusy = false; abort.abort(); abort = new AbortController();
-    if (!preserveLeave) leaveController.reset();
-    verifiedContext = null; invitationController.reset(); careController.reset(); lettersController.reset(); tasksController.reset(); wishesController.reset(); datesController.reset(); memoriesController.reset(); songsController.reset(); blindController.reset();
+    generation++; selectedReplyAnchor = undefined; reconciliation.reset(); journal.suspend(); restoredReplyId = undefined; outgoingFlow.reset(); detailSequence++; replyKnowledge.reset(); editKnowledge.reset(); chatDelete.reset(); chatEdit.reset(); visibility.reset(); visibilityFence.reset(); historyBusy = false; abort.abort(); abort = new AbortController();
+    if (!preserveLeave) pairFeatures.resetLeave();
+    verifiedContext = null; pairFeatures.resetOrdinary();
     session = null; authIdentity = null; waitingUserId = null; queue = null; sending = false; pending = null; outgoingClientId = null; draftRevision++;
     publish({ ...empty, phase: 'busy' });
     return generation;
@@ -81,54 +74,9 @@ export function createSessionController(config: SyntheticConfig, client: Session
     });
     return authTail;
   };
-  const invitationController = createInvitationController(contextConfig, {
+  const pairFeatures = createPairFeatures(contextConfig, {
     capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
     getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const invitations = invitationController.actions;
-  const careController = createCareController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const care = careController.actions;
-  const lettersController = createLettersController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const letters = lettersController.actions;
-  const tasksController = createTasksController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const tasks = tasksController.actions;
-  const wishesController = createWishesController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const wishes = wishesController.actions;
-  const datesController = createDatesController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const dates = datesController.actions;
-  const memoriesController = createMemoriesController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const memories = memoriesController.actions;
-  const songsController = createSongsController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const songs = songsController.actions;
-  const blindController = createBlindController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block, refresh,
-  }, boundedRequest, commandId);
-  const blind = blindController.actions;
-  const leaveController = createLeaveController(contextConfig, {
-    capture: () => authIdentity && verifiedContext ? { generation, identity: authIdentity, context: verifiedContext } : null,
-    getCookie: () => client.getCookie(), block,
     suspend() {
       if (!authIdentity || !verifiedContext) return null;
       const identity = authIdentity; const context = verifiedContext;
@@ -138,11 +86,12 @@ export function createSessionController(config: SyntheticConfig, client: Session
     },
     finish() {
       const identity = authIdentity;
-      invalidate(true); authIdentity = identity;
+      void journal.retire(); invalidate(true); authIdentity = identity;
       publish({ ...empty, phase: 'blocked', error: 'leave_finished' });
     },
-  }, boundedRequest, commandId);
-  const leave = leaveController.actions;
+  }, boundedRequest, commandId, digest);
+  const hiddenReceipt = createReceiptVerifier(() => ({ generation, revision: visibilityFence.revision() }), () => client.getCookie(),
+    (message, token, revision, valid) => acceptMessages([message], token, revision, valid));
   const transport = createChatTransport({
     baseUrl: contextConfig.baseURL, allowHttpLoopbackForTests: true, cookieOrigin: contextConfig.baseURL,
     getCredentialGeneration: () => generation,
@@ -151,30 +100,32 @@ export function createSessionController(config: SyntheticConfig, client: Session
       set(next) { queue = next; },
     },
     request: boundedRequest,
-    acceptCanonicalMessage: (message, token) => acceptMessages([message], token),
+    acceptCanonicalMessage: (message, token, revision, valid) => acceptMessages([message], token, revision, valid),
+    acceptHiddenReceipt: hiddenReceipt,
   });
-  async function boundedRequest(input: Request) {
-    const controller = new AbortController();
-    const lifecycle = abort.signal;
-    const cancel = () => controller.abort();
-    lifecycle.addEventListener('abort', cancel, { once: true });
-    input.signal.addEventListener('abort', cancel, { once: true });
-    const timer = setTimeout(cancel, 10000);
-    try {
-      if (lifecycle.aborted || input.signal.aborted) controller.abort();
-      return await request(new Request(input, { signal: controller.signal }));
-    } finally {
-      clearTimeout(timer); lifecycle.removeEventListener('abort', cancel);
-      input.signal.removeEventListener('abort', cancel);
-    }
-  }
-  async function discover(): Promise<{ credential: TransportSession; changed: boolean } | null> {
+  const rawRequest = createBoundedRequest(request, () => abort.signal);
+  const visibilityFence = createVisibilityFence({
+    capture: () => session ? { generation, scope: session.scope } : null, cookie: () => client.getCookie(),
+    advance() {
+      const blockedReplyId = view.replyTarget?.id;
+      if (blockedReplyId) restoredReplyId = blockedReplyId;
+      reconciliation.visibilityChanged();
+      detailSequence++; refreshSequence++; historyBusy = false;
+      if (pending) pending.redacted = true;
+      if (queue) queue = redactQueue(queue, pending?.id ?? null);
+      chatEdit.visibilityChanged(); chatDelete.visibilityChanged(); visibility.invalidateHistory();
+      publish({ ...redactChatView(view, !!pending && draftRevision === pending.revision),
+        ...(blockedReplyId ? { replyAttachmentUnavailable: blockedReplyId } : {}) });
+    },
+  });
+  function boundedRequest(input: Request, valid?: () => boolean) { return visibilityFence.exchange(input, rawRequest, valid); }
+  async function discover(valid: () => boolean = () => true): Promise<{ credential: TransportSession; changed: boolean } | null> {
     const expected = authIdentity;
     if (!expected) return null;
     const current = generation; const sequence = ++discoverySequence;
     try {
       const cookie = await client.getCookie();
-      if (current !== generation || expected !== authIdentity) return null;
+      if (current !== generation || expected !== authIdentity || !valid()) return null;
       const result = await readSessionContext(contextConfig, expected.sessionId, cookie, boundedRequest);
       if (current !== generation || expected !== authIdentity) return null;
       // Any auth denial invalidates the current session, even from an older discovery request.
@@ -182,6 +133,13 @@ export function createSessionController(config: SyntheticConfig, client: Session
         block(result.error); return null;
       }
       if (sequence !== discoverySequence) return null;
+      if (!valid()) {
+        if (!result.ok && result.error !== 'transport_error') block(result.error);
+        if (result.ok && (result.value.state !== 'ready' || (session && (
+          result.value.userId !== session.scope.userId || result.value.coupleId !== session.scope.coupleId
+          || result.value.membershipEpoch !== session.scope.membershipEpoch)))) block('context_changed');
+        return null;
+      }
       if (!result.ok) {
         if (result.error === 'transport_error' && session) publish({ ...view, error: result.error });
         else block(result.error);
@@ -191,13 +149,13 @@ export function createSessionController(config: SyntheticConfig, client: Session
       if (value.state !== 'ready') {
         block('context_' + value.state);
         authIdentity = expected;
-        verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync(); tasksController.sync(); wishesController.sync(); datesController.sync(); memoriesController.sync(); songsController.sync(); blindController.sync(); leaveController.sync();
+        verifiedContext = value; pairFeatures.sync();
         if (value.state === 'no_active_pair') waitingUserId = value.userId;
         return null;
       }
       const changed = session !== null && (session.scope.userId !== value.userId
         || session.scope.coupleId !== value.coupleId || session.scope.membershipEpoch !== value.membershipEpoch);
-      if (changed) { invalidate(); authIdentity = expected; }
+      if (changed) { void journal.retire(); invalidate(); authIdentity = expected; }
       if (!session) {
         const scope = { userId: value.userId, coupleId: value.coupleId, membershipEpoch: value.membershipEpoch,
           sessionId: `${expected.sessionId}:${generation}` };
@@ -205,10 +163,13 @@ export function createSessionController(config: SyntheticConfig, client: Session
         session = { scope, token: '', credentialGeneration: generation, credentialKind: 'cookie' };
         publish({ ...empty, phase: 'signed_in', currentUserId: value.userId });
       }
-      verifiedContext = value; invitationController.sync(); careController.sync(); lettersController.sync(); tasksController.sync(); wishesController.sync(); datesController.sync(); memoriesController.sync(); songsController.sync(); blindController.sync(); leaveController.sync();
+      verifiedContext = value; pairFeatures.sync();
+      const verifiedGeneration = generation;
+      await journal.observeVerified({ ...session, token: cookie });
+      if (verifiedGeneration !== generation || !valid() || !session) return null;
       return { credential: { ...session, token: cookie }, changed };
     } catch {
-      if (current === generation && sequence === discoverySequence) {
+      if (current === generation && sequence === discoverySequence && valid()) {
         if (session) publish({ ...view, error: 'transport_error' });
         else block('transport_error');
       }
@@ -216,6 +177,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
     }
   }
   function block(error: string) {
+    if (error === 'access_required' || error.startsWith('context_')) void journal.retire();
     invalidate(); publish({ ...empty, phase: 'blocked', error });
   }
   function denied(error: string) {
@@ -224,8 +186,8 @@ export function createSessionController(config: SyntheticConfig, client: Session
     } else publish({ ...view, error });
   }
   async function refresh() {
-    if (leaveController.unresolved()) return;
-    leaveController.reset();
+    if (pairFeatures.unresolvedLeave()) return;
+    pairFeatures.resetLeave();
     return readWindow('latest', true);
   }
   async function readWindow(direction: HistoryWindowOptions['direction'], supersede = false) {
@@ -236,6 +198,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
     if ((direction === 'before' || direction === 'after') && anchorSeq == null) return;
     let current = generation;
     const sequence = ++refreshSequence;
+    reconciliation.invalidate();
     historyBusy = true;
     if (view.phase === 'signed_in') publish({ ...view, history: {
       ...view.history, status: 'loading', nextBeforeSeq: view.history?.nextBeforeSeq ?? null,
@@ -269,11 +232,11 @@ export function createSessionController(config: SyntheticConfig, client: Session
       }
       // Validate overlap identities, but retain only the new fifty-row window.
       const messages = result.value.messages.map(displayMessage);
-      if (!await acceptMessages(messages, credential.token, () => current === generation && sequence === refreshSequence)) {
+      if (!await acceptMessages(messages, credential.token, result.visibilityRevision, () => current === generation && sequence === refreshSequence)) {
         if (current === generation && sequence === refreshSequence && !view.chatSuspended) denied('invalid_response'); return;
       }
       if (current !== generation || sequence !== refreshSequence) return;
-      publish({ ...view, error: null, messages,
+      publish({ ...view, error: null, visibilityChanged: view.visibilityChanged ? false : undefined, messages,
         history: { status: 'ready', nextBeforeSeq: result.value.olderCursor?.seq ?? null,
           nextAfterSeq: result.value.newerCursor?.seq ?? null, boundedWindow: true, windowReset: direction === 'latest' } });
     } catch { if (current === generation && sequence === refreshSequence) publish({ ...view, error: 'transport_error' }); }
@@ -290,24 +253,29 @@ export function createSessionController(config: SyntheticConfig, client: Session
       const removed = deleteConfirmed(queue, session.scope, m.clientId, m.id, m.version);
       if (removed.ok) queue = removed.state;
       if (pending?.id === m.clientId) {
-        if (draftRevision === pending.revision) publish({ ...view, draft: '', replyTarget: undefined });
-        pending = null;
+        const unchanged = draftRevision === pending.revision;
+        void journal.settle(pending.id!, pending.revision);
+        pending = null; outgoingFlow.forgetDiscardConfirmation();
+        publish({ ...view, outgoingPending: undefined, discardConfirmation: undefined,
+          ...(unchanged ? { draft: '', replyTarget: undefined } : {}) });
       }
       if (outgoingClientId === m.clientId) { outgoingClientId = null; publish({ ...view, outgoing: undefined }); }
     }
   }
-  async function acceptMessages(messages: readonly DisplayMessage[], expectedCookie: string, valid: () => boolean = () => true) {
+  async function acceptMessages(messages: readonly DisplayMessage[], expectedCookie: string, expectedVisibility: number | undefined, valid: () => boolean = () => true) {
     const current = generation;
+    const revisionMatches = () => expectedVisibility !== undefined && expectedVisibility === visibilityFence.revision();
+    if (!revisionMatches()) return false;
     try {
       const transaction = await editKnowledge.prepare(messages);
-      if (!transaction || current !== generation || !valid()) return false;
+      if (!transaction || current !== generation || !valid() || !revisionMatches()) return false;
       const cookie = await client.getCookie();
-      if (current !== generation || !valid() || !transaction.isCurrent()) return false;
+      if (current !== generation || !valid() || !revisionMatches() || !transaction.isCurrent()) return false;
       if (cookie !== expectedCookie) { block('auth_required'); return false; }
       if (!replyKnowledge.accept(messages, [...view.messages, ...(view.replyDetail ? [view.replyDetail] : [])])) return false;
       transaction.commit();
     } catch (error) {
-      if (current !== generation || !valid()) return false;
+      if (current !== generation || !valid() || !revisionMatches()) return false;
       if (!(error instanceof Error) || !['edit_knowledge_limit', 'tombstone_limit'].includes(error.message)) return false;
       detailSequence++; refreshSequence++; scrubDeletedOutgoing(messages);
       publish({ ...view, messages: [], outgoing: undefined, replyDetail: undefined, replyTarget: undefined,
@@ -336,33 +304,45 @@ export function createSessionController(config: SyntheticConfig, client: Session
     }
     return true;
   }
-  async function sendQueuedReply(id: string, replyToId: string, credential: TransportSession, current: number) {
+  async function sendQueuedReply(id: string, replyToId: string, credential: TransportSession, current: number, valid: () => boolean) {
+    if (!valid()) return { ok: false as const, error: 'stale_session' as const };
     const started = beginSend(queue!, credential.scope, id);
     if (!started.ok) return { ok: false as const, error: started.error };
     queue = started.state;
     const item = queue.messages.find(message => message.clientId === id)!;
     const result = await sendChatReply(contextConfig.baseURL, credential, {
       clientId: id, body: item.body!, replyToId, allowHttpLoopbackForTests: true,
-    }, boundedRequest);
+    }, input => boundedRequest(input, valid));
     if (current !== generation || !queue) return { ok: false as const, error: 'stale_session' as const };
+    if (!result.ok && (result.error === 'auth_required' || result.error === 'access_required')) return result;
     const cookie = await client.getCookie();
     if (current !== generation || !queue) return { ok: false as const, error: 'stale_session' as const };
     if (cookie !== credential.token) return { ok: false as const, error: 'auth_required' as const };
+    if (!valid()) return { ok: false as const, error: 'stale_session' as const };
     if (!result.ok) {
       const failed = failSend(queue, credential.scope, id, item.attempt, result.error === 'transport_error' || result.error === 'rate_limited');
       if (failed.ok) queue = failed.state;
       return result;
     }
+    if ('hiddenMessage' in result.value) {
+      if (result.visibilityRevision !== visibilityFence.revision()) return { ok: false as const, error: 'visibility_changed' as const };
+      if (!await hiddenReceipt(credential.token, result.visibilityRevision, result.value.hiddenMessage, valid)) return { ok: false as const, error: 'visibility_changed' as const };
+      if (current !== generation || !queue || !valid()) return { ok: false as const, error: 'stale_session' as const };
+      const accepted = acknowledgeHidden(queue, credential.scope, result.value.hiddenMessage);
+      if (!accepted.ok) return { ok: false as const, error: 'invalid_response' as const };
+      queue = accepted.state; return { ok: true as const, value: { replay: true, hidden: true as const } };
+    }
     const m = result.value.message;
-    const accepted = await acceptMessages([displayMessage(m)], credential.token);
-    if (current !== generation || !queue) return { ok: false as const, error: 'stale_session' as const };
+    const accepted = await acceptMessages([displayMessage(m)], credential.token, result.visibilityRevision, valid);
+    if (current !== generation || !queue || !valid()) return { ok: false as const, error: 'stale_session' as const };
     if (!accepted) return { ok: false as const, error: 'invalid_response' as const };
     const ack = acknowledge(queue, credential.scope, { clientId: id, serverId: m.id, senderId: m.senderId,
       seq: m.seq, version: m.version, body: m.body, replyToId: m.replyToId });
     if (!ack.ok) return { ok: false as const, error: 'invalid_response' as const };
-    queue = ack.state; return result;
+    queue = ack.state; return { ok: true as const, value: { replay: result.value.replay } };
   }
   async function openReplyTarget(messageId: string) {
+    reconciliation.invalidate();
     if (view.phase !== 'signed_in' || view.chatSuspended) return;
     const source = view.messages.find(item => item.id === messageId) ?? (view.replyDetail?.id === messageId ? view.replyDetail : undefined);
     const targetId = source?.replyToId;
@@ -391,7 +371,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
         return;
       }
       const message = displayMessage(result.value);
-      if (!await acceptMessages([message], credential.token, () => current === generation && sequence === detailSequence)) {
+      if (!await acceptMessages([message], credential.token, result.visibilityRevision, () => current === generation && sequence === detailSequence)) {
         if (current === generation && sequence === detailSequence && !view.chatSuspended) denied('invalid_response'); return;
       }
       if (current !== generation || sequence !== detailSequence) return;
@@ -403,36 +383,81 @@ export function createSessionController(config: SyntheticConfig, client: Session
     if (view.phase !== 'signed_in') return;
     const message = view.messages.find(item => item.id === id) ?? (view.replyDetail?.id === id ? view.replyDetail : undefined);
     if (!message || message.body === null || view.chatSuspended) return;
-    draftRevision++; publish({ ...view, replyTarget: selectReply(message) });
+    reconciliation.invalidate();
+    draftRevision++; selectedReplyAnchor = replyAnchor(message); restoredReplyId = undefined; publish({ ...view, replyTarget: selectReply(message), replyAttachmentUnavailable: undefined }); journal.changed();
   }
-  const chatDelete = createChatDelete(contextConfig.baseURL, {
+  const chatHost = {
     capture: () => session && view.phase === 'signed_in' && !view.chatSuspended ? { generation, session } : null,
-    find: id => view.messages.find(message => message.id === id) ?? (view.replyDetail?.id === id ? view.replyDetail : undefined),
+    find: (id: string) => view.messages.find(message => message.id === id) ?? (view.replyDetail?.id === id ? view.replyDetail : undefined),
     credential: discover, cookie: () => client.getCookie(), denied,
+    acceptHiddenReceipt: hiddenReceipt,
+    revisionCurrent: (revision: number | undefined) => revision !== undefined && revision === visibilityFence.revision(),
+    accept: (message: DisplayMessage, token: string, revision?: number) => acceptMessages([message], token, revision),
+  };
+  const reconciliation = createChatReconciliation(contextConfig.baseURL, {
+    capture: chatHost.capture, selection: () => ({ messages: view.messages, detail: view.replyDetail, replyTarget: view.replyTarget?.id === selectedReplyAnchor?.id ? selectedReplyAnchor : undefined }),
+    credential: discover, cookie: () => client.getCookie(), denied,
+    accept: acceptMessages,
+    unavailable(ids, blockedReplyId) {
+      const unavailableTarget = blockedReplyId ?? (view.replyTarget && ids.includes(view.replyTarget.id) ? view.replyTarget.id : undefined);
+      if (unavailableTarget) restoredReplyId = unavailableTarget;
+      if (view.editState?.targetId && ids.includes(view.editState.targetId)) chatEdit.visibilityChanged();
+      const redacted = redactUnavailable(view, queue, ids, pending, draftRevision, outgoingClientId);
+      queue = redacted.queue; publish({ ...redacted.view, ...(unavailableTarget ? { replyAttachmentUnavailable: unavailableTarget } : {}) });
+    },
+  }, boundedRequest, historyReadId);
+  const chatDelete = createChatDelete(contextConfig.baseURL, { ...chatHost,
     publish: deleteState => publish({ ...view, deleteState }),
-    accept: (message, token) => acceptMessages([message], token),
   }, boundedRequest, commandId);
-  const chatEdit = createChatEdit(contextConfig.baseURL, {
-    capture: () => session && view.phase === 'signed_in' && !view.chatSuspended ? { generation, session } : null,
-    find: id => view.messages.find(message => message.id === id) ?? (view.replyDetail?.id === id ? view.replyDetail : undefined),
-    credential: discover, cookie: () => client.getCookie(), denied,
-    publish: editState => publish({ ...view, editState }), accept: (message, token) => acceptMessages([message], token),
+  const chatEdit = createChatEdit(contextConfig.baseURL, { ...chatHost,
+    publish: editState => publish({ ...view, editState }),
   }, boundedRequest, commandId, historyReadId);
+  const visibility = createChatVisibility(contextConfig.baseURL, { ...chatHost,
+    revision: () => visibilityFence.revision(),
+    acceptDeleted: (messages, token, revision) => acceptMessages(messages, token, revision),
+  }, boundedRequest, commandId, historyReadId);
+  const journal = createChatJournal(contextConfig.baseURL, journalPort, {
+    capture: () => session ? { generation, session } : null, discover, denied, cookie: () => client.getCookie(),
+    draft: () => ({ revision: draftRevision, text: view.draft, ...(view.replyTarget?.id ?? restoredReplyId ? { replyToId: view.replyTarget?.id ?? restoredReplyId } : {}) }),
+    clearLocal() { outgoingFlow.reset(); if (session) queue = createQueue(session.scope); pending = null; sending = false; restoredReplyId = undefined; draftRevision++; publish({ ...view, draft: '', replyTarget: undefined, replyAttachmentUnavailable: undefined, outgoing: undefined, outgoingPending: undefined }); },
+    hasPending: () => !!pending, bumpRevision: floor => { draftRevision = Math.max(draftRevision, floor + 1); },
+    apply(draft, saved, preserve) {
+      draftRevision = Math.max(draftRevision, draft?.revision ?? -1, saved?.draftRevision ?? -1) + 1;
+      restoredReplyId = preserve ? view.replyTarget?.id ?? restoredReplyId : draft?.replyToId;
+      pending = saved ? { id: saved.clientId, body: saved.body, revision: saved.draftRevision, replyToId: saved.replyToId, redacted: true } : null;
+      publish({ ...view, draft: preserve ? view.draft : draft?.text ?? '', ...(preserve ? {} : { replyTarget: undefined, replyAttachmentUnavailable: undefined }),
+        outgoing: undefined, outgoingPending: saved ? true : undefined });
+    },
+    removeReply() { restoredReplyId = undefined; draftRevision++; publish({ ...view, replyTarget: undefined, replyAttachmentUnavailable: undefined }); },
+    verifyReply(id, valid) {
+      const captured = generation;
+      return verifyJournalReply(id, valid, { baseURL: contextConfig.baseURL, discover, request: boundedRequest, readId: historyReadId,
+        cookie: () => client.getCookie(), denied, current: () => captured === generation,
+        accept: (message, token, revision, check) => acceptMessages([message], token, revision, check),
+        select: message => { selectedReplyAnchor = replyAnchor(message); restoredReplyId = undefined; publish({ ...view, replyTarget: selectReply(message), replyAttachmentUnavailable: undefined }); } });
+    },
+  });
+  const outgoingFlow = createOutgoingFlow({
+    get pending() { return pending; }, set pending(value) { pending = value; },
+    get sending() { return sending; }, set sending(value) { sending = value; },
+    get queue() { return queue; }, set queue(value) { queue = value; },
+    get outgoingClientId() { return outgoingClientId; }, set outgoingClientId(value) { outgoingClientId = value; },
+    view: () => view, generation: () => generation, draftRevision: () => draftRevision,
+    publish, denied, discover, commandId, send: transport.send, sendReply: sendQueuedReply,
+    canSend: () => (!view.replyAttachmentUnavailable || !!pending) && journal.canSend(),
+    ...(journalPort ? { beforeSend: journal.beforeSend, prepare: journal.prepare, settle: journal.settle, discard: journal.discard } : {}),
+  });
   const loadOlder = () => readWindow('before');
   return {
-    leave,
-    invitations,
-    care,
-    letters,
-    tasks, wishes, dates, memories, songs,
-    blind,
+    ...pairFeatures.actions, visibility, journal, reconciliation,
+    resumeJournalSignIn() { if (journalPort && view.phase === 'blocked' && view.error === 'auth_required') { invalidate(); publish(empty); } },
     setReplyTarget, openReplyTarget,
     beginEdit: chatEdit.beginEdit, setEditDraft: chatEdit.setEditDraft, cancelEdit: chatEdit.cancelEdit,
     saveEdit: chatEdit.saveEdit, retryEdit: chatEdit.retryEdit, reloadEdit: chatEdit.reloadEdit,
     beginDelete: chatDelete.beginDelete, cancelDelete: chatDelete.cancelDelete,
     confirmDelete: chatDelete.confirmDelete, retryDelete: chatDelete.retryDelete,
-    cancelReply() { if (view.phase !== 'signed_in') return; draftRevision++; publish({ ...view, replyTarget: undefined }); },
-    closeReplyDetail() { detailSequence++; publish({ ...view, replyDetail: undefined, replyDetailLoading: false }); },
+    cancelReply() { if (view.phase !== 'signed_in') return; reconciliation.invalidate(); restoredReplyId = undefined; journal.removeReply(); draftRevision++; publish({ ...view, replyTarget: undefined, replyAttachmentUnavailable: undefined }); journal.changed(); },
+    closeReplyDetail() { reconciliation.invalidate(); detailSequence++; publish({ ...view, replyDetail: undefined, replyDetailLoading: false }); },
     loadOlder,
     loadNewer: () => readWindow('after'),
     loadLatest: () => readWindow('latest', true),
@@ -440,7 +465,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
     getSnapshot: () => view,
     subscribe(notify: () => void) { listeners.add(notify); return () => { listeners.delete(notify); }; },
     setDraft(draft: string) {
-      if (view.phase === 'signed_in') { draftRevision++; publish({ ...view, draft }); }
+      if (view.phase === 'signed_in') { draftRevision++; publish({ ...view, draft }); journal.changed(); }
     },
     dispose() { invalidate(); publish(empty); },
     signIn(email: string, password: string) {
@@ -460,9 +485,11 @@ export function createSessionController(config: SyntheticConfig, client: Session
       }).then(async () => { if (current === generation) await refresh(); });
     },
     signOut() {
+      const retired = journal.retire();
       const current = invalidate();
       return serialize(async () => {
         if (current !== generation) return;
+        if (!await retired) throw new Error('journal_retire_failed');
         if (!await client.signOut()) throw new Error('logout_failed');
         if (current === generation) publish(empty);
       });
@@ -497,7 +524,7 @@ export function createSessionController(config: SyntheticConfig, client: Session
       }
     },
     async createWaitingSpace() {
-      if (invitations.getSnapshot().busy || invitations.getSnapshot().recovery === 'accept_uncertain'
+      if (pairFeatures.actions.invitations.getSnapshot().busy || pairFeatures.actions.invitations.getSnapshot().recovery === 'accept_uncertain'
         || view.phase !== 'blocked' || !['context_no_active_pair', 'waiting_retry_required'].includes(view.error ?? '')
         || !authIdentity || !waitingUserId) return;
       const expected = authIdentity; const expectedUserId = waitingUserId;
@@ -528,59 +555,10 @@ export function createSessionController(config: SyntheticConfig, client: Session
         block('waiting_retry_required'); authIdentity = expected; waitingUserId = expectedUserId;
       }
     },
-    async send() {
-      if (sending || view.chatSuspended || view.phase !== 'signed_in' || !queue) return;
-      sending = true;
-      const current = generation;
-      // One unresolved command at a time. Edits remain a separate draft, never a replay payload.
-      const command = pending ?? { body: view.draft, revision: draftRevision, id: null, ...(view.replyTarget ? { replyToId: view.replyTarget.id } : {}) };
-      pending = command;
-      publish({ ...view, error: null, outgoing: { body: command.body, status: 'sending', ...(command.replyToId ? { replyToId: command.replyToId } : {}) } });
-      try {
-        const discovered = await discover();
-        if (!discovered || discovered.changed || current !== generation || !queue) return;
-        const credential = discovered.credential;
-        command.id ??= commandId();
-        const id = command.id;
-        outgoingClientId = id;
-        const added = enqueue(queue, credential.scope, id, command.body, command.replyToId);
-        if (!added.ok) {
-          pending = null;
-          publish({ ...view, outgoing: undefined, error: added.error });
-          return;
-        }
-        queue = added.state;
-        if (queue.messages.find(message => message.clientId === id)?.status === 'failed') {
-          const retried = retry(queue, credential.scope, id);
-          if (retried.ok) queue = retried.state;
-        }
-        const result = command.replyToId ? await sendQueuedReply(id, command.replyToId, credential, current) : await transport.send(id, credential);
-        if (current !== generation) return;
-        if (queue?.messages.find(item => item.clientId === id)?.deleted) {
-          pending = null; outgoingClientId = null;
-          publish({ ...view, outgoing: undefined, draft: draftRevision === command.revision ? '' : view.draft });
-          return;
-        }
-        if (view.chatSuspended) return;
-        if (result.ok) {
-          pending = null;
-          publish({ ...view, error: null, draft: draftRevision === command.revision ? '' : view.draft,
-            ...(draftRevision === command.revision ? { replyTarget: undefined } : {}),
-            outgoing: { body: queue?.messages.find(item => item.clientId === id)?.canonicalBody ?? command.body, status: 'sent', ...(command.replyToId ? { replyToId: command.replyToId } : {}) } });
-          // Keep the reader's chosen window. Latest is an explicit action.
-        } else if (result.error === 'reply_unavailable') {
-          pending = null; publish({ ...view, outgoing: undefined, error: result.error,
-            ...(view.replyTarget?.id === command.replyToId ? { replyTarget: undefined } : {}),
-          });
-        } else if (!view.chatSuspended) denied(result.error);
-      } catch { if (current === generation) publish({ ...view, error: 'transport_error' }); }
-      finally {
-        if (current === generation) {
-          sending = false;
-          if (pending && !view.chatSuspended) publish({ ...view, outgoing: { body: pending.body, status: 'retry', ...(pending.replyToId ? { replyToId: pending.replyToId } : {}) } });
-        }
-      }
-    },
+    send: outgoingFlow.send,
+    beginDiscardOutgoing: outgoingFlow.beginDiscardOutgoing,
+    cancelDiscardOutgoing: outgoingFlow.cancelDiscardOutgoing,
+    confirmDiscardOutgoing: outgoingFlow.confirmDiscardOutgoing,
     refresh,
   };
 }

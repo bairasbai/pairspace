@@ -1,3 +1,4 @@
+import { baselineVisibility } from './visibility-baseline.fixture';
 import { createSessionController } from '../src/auth/controller';
 export const uuid = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 export const identity = { userId: 'synthetic', sessionId: 'session' };
@@ -24,6 +25,6 @@ export function fixture() {
   const history = jest.fn(async (r: Request) => windowResponse(r));
   const post = jest.fn(async (_r: Request) => envelope({}, 503));
   const controller = createSessionController({ mode: 'synthetic-loopback', baseURL: 'http://localhost:8787' }, client,
-    request => new URL(request.url).pathname === '/v1/session/context' ? discovery() : request.method === 'POST' ? post(request) : history(request), () => uuid(9));
+    request => baselineVisibility(request, new URL(request.url).pathname === '/v1/session/context' ? discovery() : request.method === 'POST' ? post(request) : history(request)), () => uuid(9));
   return { controller, client, history, discovery, post, login: () => controller.signIn('synthetic@example.test', 'test') };
 }

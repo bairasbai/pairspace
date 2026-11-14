@@ -27,16 +27,18 @@ async function verify({ root, profile = 'full', signal, onStep = () => {},
   const directory = mkdtempSync(path.join(tmpdir(), 'pairspace-verification-'));
   const runtime = path.join(directory, 'runtime');
   mkdirSync(runtime, { mode: 0o700 });
-  const report = { schemaVersion: 1, runId: randomUUID(), profile,
+  const logsDirectory = path.join(directory, 'logs');
+  const report = { schemaVersion: 2, runId: randomUUID(), profile,
     policy: 'CONTINUE_AFTER_FAILURE; remaining steps NOT_RUN after interruption',
     runtimeVersion: { node: process.version, platform: process.platform, arch: process.arch },
     status: 'RUNNING', acceptance: false, startedAt: new Date().toISOString(),
     scope: 'local API/mobile/domain/PostgreSQL/safety/JS export checkpoint',
     notProven: ['production readiness', 'native iOS/Android build or two-device E2E',
       'E2EE', 'legacy Next build/typecheck', 'independent acceptance'],
-    steps: [], artifacts: { report: 'report.json', runtime: 'runtime/', childLogs: 'NOT_RETAINED' } };
+    steps: [], artifacts: { report: 'report.json', runtime: 'runtime/', childLogs: 'logs/' } };
   save(report, directory);
   try {
+    mkdirSync(logsDirectory, { mode: 0o700 });
     report.before = capture(root);
     const steps = makePlan(root, runtime, profile);
     if (!steps.length || !expectedIds?.length
@@ -44,15 +46,15 @@ async function verify({ root, profile = 'full', signal, onStep = () => {},
       || expectedIds.some(id => !steps.some(step => step.id === id && step.required === true && !step.skip))) {
       throw new Error('INVALID_REQUIRED_PLAN');
     }
-    for (const step of steps) {
+    for (const [stepIndex, step] of steps.entries()) {
       let result;
-      if (step.skip || signal?.aborted) result = { status: 'NOT_RUN', reason: step.skip || 'interrupted' };
+      if (step.skip || signal?.aborted) result = { status: 'NOT_RUN', reason: step.skip || 'interrupted', childLogs: 'NO_PROCESS_EXECUTED' };
       else if (!step.command || !Array.isArray(step.args) || !Number.isFinite(step.timeoutMs) || step.timeoutMs <= 0) {
         result = { status: 'ERROR', error: 'INVALID_REQUIRED_STEP' };
       } else {
         const cwd = path.resolve(root, step.cwd);
         if (cwd !== root && !cwd.startsWith(root + path.sep)) throw new Error('STEP_PATH_ESCAPE');
-        result = await execute(step, { cwd, env: environment(runtime), signal });
+        result = await execute(step, { cwd, env: environment(runtime), signal, logsDirectory, stepIndex });
       }
       const coverage = checkCoverage(step.id, runtime);
       if (coverage) {

@@ -19,10 +19,12 @@ export function ChatEditPanel({ locale, state, onDraft, onSave, onCancel, onRetr
     return <View><Text>{t.edit}: {state.targetId}</Text><Text>{t.notice}</Text>
    <TextInput accessibilityLabel={t.draft} value={state.draft} multiline maxLength={16000} onChangeText={onDraft}/>
    {state.status === 'unknown' && <><Text accessibilityRole="alert">{t.unknown}</Text><Button title={t.retry} onPress={onRetry}/></>}
-   {state.needsReload && state.status !== 'deleted' && <Text accessibilityRole="alert">{t.conflict}</Text>}
-   {state.status === 'deleted' && <Text accessibilityRole="alert">{t.deleted}</Text>}
+   {state.needsReload && state.status !== 'deleted' && state.status !== 'hidden' && <Text accessibilityRole="alert">{t.conflict}</Text>}
+   {state.status === 'hidden' && <Text accessibilityRole="alert">{locale === 'ru' ? 'Видимость изменилась. Новый приватный текст сохранён; явно загрузите текущую версию. Если сообщение скрыто, сначала верните его.' : 'Visibility changed. New private text is retained; explicitly load the current version. If the message is hidden, restore it first.'}</Text>}
+        {state.status === 'deleted' && <Text accessibilityRole="alert">{t.deleted}</Text>}
    {state.status === 'saved' && <Text>{t.saved}</Text>}
-   {!pending && state.status !== 'deleted' && <><Button title={t.save} disabled={state.needsReload} onPress={onSave}/>
-     <Button title={t.reload} onPress={onReload}/></>}
+   {!pending && state.status !== 'deleted' && state.status !== 'hidden' && <><Button title={t.save} disabled={state.needsReload} onPress={onSave}/>
+     </>}
+   {!pending && state.status !== 'deleted' && <Button title={t.reload} onPress={onReload}/>}
    {!pending && <Button title={t.cancel} onPress={onCancel}/>}</View>;
 }

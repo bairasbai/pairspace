@@ -1,0 +1,43 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { randomUUID } from 'node:crypto';
+import { replyFixture } from './chat-replies-fixture.mjs';
+import { sendCareSignal } from '../../src/care-signals.ts';
+import { simulateCareOutbox as run } from '../../src/care-outbox.ts';
+import { saveNotificationPreferences as save } from '../../src/notification-preferences.ts';
+import { leavePair } from '../../src/pair-leave.ts';
+test('care durable capture: producer rollback, concurrent replay, workers dedupe, immutable observations and leave',async()=>{
+ const {f,a,db:base,principals:p}=await replyFixture();
+ let clock=new Date();const db={...base,now:()=>clock},scope={coupleId:a,membershipEpoch:1};
+ try{
+  const command={...scope,clientId:randomUUID()};
+  const broken={...db,transaction:work=>db.transaction(tx=>work({query(sql,args){if(sql.includes('INSERT INTO outbox_events'))throw Error('outbox fail');return tx.query(sql,args);}}))};
+  await assert.rejects(sendCareSignal(broken,p[0],command),/outbox fail/);
+  assert.equal((await f.domainPool.query('SELECT id FROM care_signals')).rowCount,0);
+  const sends=await Promise.all(Array.from({length:6},()=>sendCareSignal(db,p[0],command)));
+  assert.equal(sends.filter(x=>x.ok&&!x.value.replay).length,1);
+  assert.equal(sends.filter(x=>x.ok&&x.value.replay).length,5);
+  const event=(await f.domainPool.query("SELECT id FROM outbox_events WHERE type='care.signal_created'")).rows[0].id;
+  const results=await Promise.all(Array.from({length:8},()=>run(db,event)));
+  assert.equal(results.filter(x=>x.ok&&!x.value.replay).length,1);
+  assert.equal(results.filter(x=>x.ok&&x.value.replay).length,7);
+  assert.ok(results.every(x=>x.value.reason==='disabled'));
+  assert.equal((await f.domainPool.query('SELECT id FROM care_notification_simulations')).rowCount,1);
+  const pref={...scope,commandId:randomUUID(),expectedVersion:0,care:true,chat:false,letter:false,quiet:null};
+  assert.equal((await save(db,p[1],pref)).ok,true);
+  assert.equal((await run(db,event)).value.reason,'disabled');
+  clock=new Date(clock.getTime()+61000);
+  const fresh=await sendCareSignal(db,p[0],{...scope,clientId:randomUUID()});assert.ok(fresh.ok);
+  const freshId=(await f.domainPool.query('SELECT id FROM outbox_events WHERE care_signal_id=$1',[fresh.value.signal.id])).rows[0].id;
+  assert.equal((await run(db,freshId)).value.reason,'allowed');
+  clock=new Date(clock.getTime()+61000);
+  const last=await sendCareSignal(db,p[0],{...scope,clientId:randomUUID()});
+  const lastId=(await f.domainPool.query('SELECT id FROM outbox_events WHERE care_signal_id=$1',[last.value.signal.id])).rows[0].id;
+  assert.equal((await leavePair(db,p[0],{...scope,commandId:randomUUID(),confirm:true})).ok,true);
+  assert.equal((await run(db,lastId)).value.reason,'unavailable');
+  assert.equal((await run(db,freshId)).value.reason,'allowed');
+  assert.equal((await run(db,freshId)).value.historicalObservation,true);
+  await assert.rejects(f.domainPool.query('DELETE FROM care_notification_simulations'));
+  await assert.rejects(f.domainPool.query("UPDATE outbox_events SET membership_epoch=2 WHERE id=$1",[event]));
+ }finally{await f.close();}
+});

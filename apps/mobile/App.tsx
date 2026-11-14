@@ -1,3 +1,4 @@
+import {ConnectedTogether} from './src/auth/ConnectedTogether';
 import { ConnectedNavigation } from './src/auth/ConnectedNavigation';
 import { useControllerOwner } from './src/auth/useControllerOwner';
 import { useState } from 'react';
@@ -24,7 +25,7 @@ export function PairspaceApp({ syntheticController = null }: { syntheticControll
       <Text style={styles.brand}>{showcaseCopy[locale].brand}</Text>
       <Text style={styles.banner}>{syntheticController ? text.connectedPreview : text.preview}</Text>
       <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          {tab === 'chat' && syntheticController ? <SyntheticChatConnected ownsController={false} showCareSend={false} controller={syntheticController} locale={locale} /> : <PreviewScreen key={tab} tab={tab} text={text} locale={locale} setLocale={setLocale} draft={draft} setDraft={setDraft} />}
+          {tab === 'together' && syntheticController ? <ConnectedTogether controller={syntheticController} locale={locale}/> : tab === 'chat' && syntheticController ? <SyntheticChatConnected ownsController={false} showCareSend={false} controller={syntheticController} locale={locale} /> : <PreviewScreen key={tab} tab={tab} text={text} locale={locale} setLocale={setLocale} draft={draft} setDraft={setDraft} />}
         {syntheticController ? <ConnectedNavigation controller={syntheticController} locale={locale} selected={tab} onSelect={setTab} />
           : <Navigation selected={tab} onSelect={setTab} onHeart={onHeart} text={text} />}
       </KeyboardAvoidingView>

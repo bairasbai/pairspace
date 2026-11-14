@@ -364,3 +364,236 @@ an Edited label. New no-op receipt records applied_version/intent without updati
 message version. Actual edits and restoration of original text remain marked. Stored
 or delivered notifications are not automatically rewritten. 997c12b is preserved as
 an author-tested but superseded candidate, not independently accepted.
+
+## Personal hide/restore stage
+Hiding is not deletion. It must affect all canonical read/replay paths for one actor
+without exposing the fact to the partner. A global actor+pair+epoch revision fences
+old in-flight body responses; a per-message version protects toggle commands. Capture
+revision inside the same locked transaction as the projection, never after commit.
+Exact committed hidden retries resolve with metadata, not historical body and not a
+fake tombstone. Restoration must read current edited content or terminal deletion.
+
+Visibility author focused evidence: API63, mobile1940, actualPG51 PASS. Root's
+whole-hidden-page criterion proved with251 synthetic rows, boundary+middle50 hidden,
+full traversal/restoration and unchanged partner. No production/publication. Frozen
+FULL11 and independent acceptance pending; do not treat focused PASS as acceptance.
+
+Next approved slice from accepted1d993: remove500-success outgoing hard-stop through
+terminal-only compaction; explicit local discard with unknown-outcome warning and
+operation/session guards. Current-session security denial still wins after discard.
+No server cancellation, publication, durable queue or realtime claim. Acceptance pending.
+
+Outgoing focused evidence: mobile1967/1967 and actualPG61/61 PASS, including501 real
+successful sends, old-operation/current-session denial distinction and retained
+reply/edit/delete/visibility regressions. API production unchanged. Await frozen
+FULL11 and independent acceptance; do not treat focused PASS as accepted checkpoint.
+
+Next approved slice from18053d5: experimental encrypted composer+onepending journal,
+online membership before reveal, explicit restore/retry, no autoPOST. Restored pending
+always metadata-only; canonical server response alone permits message display. Native
+backup/reinstall/power-loss proof remains open. No production/publication. See CHAT_JOURNAL.
+
+- Next candidate after independently accepted experimental journal ab81: bounded current-window
+  reconciliation, explicit/foreground only, no polling or autoPOST. Preserve old history position,
+  drafts and terminal knowledge; journal remains default-off. Exact gates pending.
+
+- Next candidate after accepted2db3d05: explicit morning ritual, own recipient preferences,
+  immutable assigned slots, one-time fill and bounded complete history. Original code audited,
+  no original letters copied. No late fill/edit/cancel/period links; not full parity. Gates pending.
+
+- Morning `ab3de3e` accepted independently in local synthetic scope (FULL11 +10 extras).
+  Next independent candidate adds replies under each morning letter, without copying
+  the letter into chat or exposing recipient opening status. Sender release and recipient
+  durable latch remain distinct ACLs. Own reply edit/delete are deferred explicitly;
+  new work needs author FULL11 and independent acceptance. Journal remains default-off.
+
+- Morning discussions5343ce5 accepted independently FULL11+11 extras. Next candidate
+  adds own CAS edit/no-op and terminal delete via v2; original create fingerprints remain
+  immutable, no historical body copies. Legacy deleted paths fail closed. Journal stays
+  default-off; native and publication not claimed. All prior sources/artifacts retained.
+
+- c276fcc morning reply mutations accepted independently in synthetic/cloud scope.
+  Next candidate: prepared morning author-only edit before release, separate GET/PUT,
+  CAS/no-op and immutable fingerprints. Never gate edits on recipient opening (read
+  receipt leak); require trusted application time and SQL wall clock before release.
+  Real rollback of both clocks is outside proof. Original fill API remains unchanged.
+  Separate RAM editor preserves newer drafts/unknown commands. Gates pending.
+
+- Prepared editing4d4ef80 independently accepted FULL11+12+7 external checks in cloud.
+  Next bounded P0 candidate: explicit private morning drafts save/load, not automatic
+  readiness. Server plaintext+ACL, no E2EE claim. Draft may survive deadline/fill without
+  becoming recipient content. Server deletion/retention remain separate policy work;
+  current active membership required. Exact author and independent gates pending.
+
+- Private morning draft53a1734 independently accepted FULL11+16 extras. Next candidate
+  author-confirmed logical removal: current body cleared, terminal version retained;
+  no restore/recreate for that slot in this slice. Prepared letters unaffected, no
+  physical backup purge promise. V2 canonical replay, legacy failclosed, terminal
+  knowledge survives form close. Exact author/independent gates pending.
+
+- Terminal morning draft removal710a124 independently accepted: author and independent
+  FULL11 11/11 each plus10 adversarial PG checks; prior interrupted report not accepted.
+  New P0 separation-period slice follows TAN_ATA_MAP, separate from shared dates.
+  Explicit create/list/edit inclusive local ranges+IANA, stable identity and overlap
+  guards; server checked-at countdown rather than deviceclock promise. Existing morning
+  slots/letters unchanged, no linkage/renumbering/flight/notifications. Candidate gates pending.
+
+- Separation periods a0cb439 independently accepted: author repeat and independent
+  FULL11 11/11 each; prior Metro dependency symlink failure preserved, not accepted.
+  Next bounded P0: independent manual arrival plan, source grounded in Tan Ata
+  MoveArrival but no gender/penalty/only-later restriction. No booking/airline status,
+  period or letter changes. Optional label, explicit IANA+offset, CAS/current retry.
+  Candidate pending exact author and independent FULL11; no native/production claim.
+
+- Manual arrival2c706114 is independently accepted. Next bounded P0 is actor-private
+  saved rules for future notifications, default off, generic-only and optional quiet
+  interval. Own-rule preview simulation accepts category only at server now, not an
+  event or delivery request. Existing sends are unchanged; no token/provider/job/OS
+  permission. First save0→1, later no-op stable version; exact gates pending.
+
+## Care capture / notification simulation
+Approved bounded next slice: new care signal produces atomic outbox; existing sends/replays
+retain their contract. Internal dry-run observes current membership and recipient policy,
+never sends. Replays are historical evidence, not current authorization. Quiet hours do not
+schedule later delivery. Session/device delivery checks remain future work. See CARE_OUTBOX.
+Independent review W1 caught stale worker time sampled before a membership-lock wait.
+Clock is now sampled after the final lock, shared by policy, observation and processed_at;
+actual blocked-row regressions cover expiry and quiet-start boundaries. Old run preserved.
+
+## Chat notification privacy
+Approved next slice reuses existing chat.message_created event, captures originating scope in
+atomic sidecar without historical backfill, and evaluates current source metadata/recipient
+visibility/preferences internally. Senderhide and replyparent do not drive recipient rules.
+No shared processed_at mutation; replay is historical evidence. Clock after final locks/reads.
+Early self/independent review identified capture recipient-lock authority expiry risk. Producers
+must recheck after capture and throw exact rollback sentinel, mapped outside transaction;
+returning unavailable inside transaction would wrongly commit. Real expiry regressions added.
+API coverage outer budget reviewed: dd00c51 author234968ms, independent diagnostic233806ms
+left only~2–2.6% reserve under240s after an independent timeout. Approved bounded300s outer
+reserve, unchanged fulltests/includes/90% thresholds/pertest30s. Old failure remains preserved;
+new source needs author and independentFULL anew. See VERIFICATION_RUNNER.md.
+
+## Morning-letter notification boundary
+Approved ONLYmorning_slots, not legacyletters. Before actualSQLrelease uniformnot_due with no
+content/prefs/draft/opening/observation query/write. One SQLtime afteralllocks shared gate/policy/asOf.
+Afterrelease contentEXISTS only, missedblocked, availablelatestletterprefs; no autoopen/readstate.
+Historicalreplay stays internal evidence, not deliverygrant. Earlyreview required beforefreeze.
+Morning early review hardened release at SQL level: one materialized timestamp +releasedboolean,
+contentEXISTS gated bysameexact timestamp, microsecondasOf preserved. First sharedboundary test
+exposed testpool starvation; notificationlockcases now use isolated bounded connections, old
+prepared pool/assertions unchanged. Failures preserved, no budgetincrease.
+
+## Love dictionary candidate after accepted1a415a0
+Read Tan Ata words page, WordForm and lib/talk on4822e213. Word required, meaning and
+occasion optional; author-only editing, visible author and glossary presentation.
+Build independent pair/epoch-scoped user flow instead of more delivery simulations.
+Confirmed own deletion is a privacy improvement. Synthetic100 lifetime INCLUDING
+removed entries is explicit in UI, not a tariff; edits/deletions remain available.
+Full reads alone establish snapshot checkedAt; own canonical ACK only updates its
+entry. Metadata tombstones and version fences prevent late-list resurrection. No
+private original data, provider/native delivery, persistence or production claims.
+Early independent review and exact author/independent FULL11 pending; no GitHub/main.
+
+## Observed PostgreSQL boundary fixture repair during dictionary verification
+The first frozen dictionary FULL timed out; unchanged raw PG diagnosis also exposed
+an earlier assertion failure. Holder-transaction pg_stat_activity was cached while
+pg_blocking_pids was live, pairing old query text with a new real blocker. Dedicated
+real-PG regression reproduced this and the pg_stat_clear_snapshot remedy. Refresh
+stats before each poll; retain exact SQL/blocker/pre-release assertions. Await both
+parallel holder cleanups before propagating failure. Production code unchanged;
+prior FAIL retained. Re-freeze/full gates required, larger diagnostic is not acceptance.
+
+## Bounded aggregate PG reserve
+After observer repair, diagnostic-only407/407 completed in948s, not acceptance.
+Approved wrapper1110s/runner1140s from15% measured reserve rounded30s, keeping30s
+cleanup margin,15s runner grace,10s kill grace and all inner/test/SQL settings.
+Observer explains stale-query assertions, not unknown aggregate runtime slowdown.
+Exact profile regression/docs and new frozen author+independent FULL required.
+
+## Independent API measurement reserve after b4017a1
+Independent API300s timeout repeated after cloud recovery. Diagnostic-only600s run
+completed388tests/64files in353535ms, coverage99.10/97.32/100/99.53; not acceptance.
+Approved outer API450s (25% reserve rounded30s), exact args/coverage/inner guards and
+all other budgets unchanged. Aggregate slowdown cause unknown. New SHA/both FULLs
+required; earlier authorPASS applies only to b4017a1, independent not yet accepted.
+
+## Ask me candidate after accepted e469600
+Tan Ata ask page/AskBoard/libtalk confirmed single recipient answer and sharedhistory.
+New bounded user slice adds voluntary terminal skip and split own-text removal:
+asker never erases other's answer; answering actor can remove own answer only.
+Question removal after skip preserves recipient choice; withdrawal is distinct.
+Explicit confirmations explain remaining text, terminal choices and no replacement.
+100 lifetime synthetic cap, CAS/current retries, RAM drafts, no provider/native claims.
+Early independent review and both FULLs pending. Source branch only, no GitHub/main.
+
+## Day scale candidate after accepted5d93a70
+Tan Ata scale page/ScaleDial/libtalk/rateDay read at4822e213: one mutable own0–100
+rating per day, visible shared history; absence differs from0. Source fixed city
+is replaced by explicit IANA and trusted today/expected-date rejection. No default50.
+Own removal clears current value; deliberate new CAS publication is not restore.
+No diagnosis, ranking, pressure, notifications or native/durable-offline claim.
+100 lifetime dates per actor is a visible synthetic cap, not tariff or production.
+Early code review and both exact-SHA FULLs pending; GitHub/main unchanged.
+
+## Continue the phrase candidate after accepted6547291
+Tan Ata stems page/TalkParts/libtalk: author commits beginning+own continuation;
+recipient writes once before seeing it. Distinct from fixed-catalog blind rounds.
+Added explicit skip/withdraw/split removal: skip never reveals author continuation;
+completed recipient removal never relocks already revealed author text. Bundle
+removal only erases own beginning/continuation, preserves partner response.
+100 lifetime synthetic cap,500/2000/2000 codepoints, bounded full history; no AI,
+notifications/native/production claims. Early review and both FULLs required.
+
+## Diagnose original FULL failures before more product work
+AcceptedStems6b5c72b had unexplained author/independent mobile exit1; later exact
+diagnostics and full retries passed but do not identify original cause. A separate
+runner slice retains private raw child output, never embeds it in report JSON.
+16MiB per-stream prefix cap with full drain/hash; overflow/IO cannot yield accepted
+evidence. Commands/env/timeouts/cleanup/coverage unchanged. Not a fix claim for
+original flakiness. Next P1 deferred until reviewed logging checkpoint accepted.
+
+## Ordered stories candidate after accepted316978a
+The coordinator accepted log retention as Library v17 after both exact FULLs.
+The next slice reads Tan Ata stories/page, StoryOrder/StoryTell, libtalk/actions
+at4822e213, and compares existing Ask. The old week placeholder contradicts the
+page/catalogue and is not adopted. Voluntary/no deadline already exist in Ask.
+Distinct adaptation: topic300/narrative8000 codepoints, metadata-only100 history
+and ACK, separate long composer/explicit reader, independent authored removals.
+Both current members may explicitly read a told body immediately/repeatedly.
+Early independent contract review passed after reader generation, newer-detail,
+single-ACK gaps and exact wire-shape clarifications, before implementation.
+Clock fixture failures preserved: pre-auth rollback was outside valid session;
+invalid clock hits shared auth guard first. Only new tests corrected, not guards.
+Focused API13/13 and mobile22/22 passed with four90% floors; a new UI composition
+fixture failure is preserved (unstable captured identity fixed in own test).
+Real HTTP/mobile and real PG race tests are added but unverified at this checkpoint.
+Exact author/independent FULL remain required; native/two-device/production not run.
+New product WIP has its own Library identity/version history; accepted v17 unchanged.
+Early code reviewer found a confirmation surviving reset/rebind without panel unmount.
+Unique controller reset generations now remount the confirmation owner; replacement
+with another ready instance is fenced too. New regression tests use the same actor,
+record and version. Mobile focused24/24 passed on555b59f with typecheck/lint and
+four90% floors. These checks precede the required exact clean author/independent FULL.
+
+## Hard question candidate after accepted67c6607 / Library v18
+Actual Tan Ata hard page/TalkParts/libtalk/actions read at4822e213; opening is one
+irreversible consent transition with later reads, not burn-after-reading. Recipient
+sealed/declined text is never selected; author sees own active text. Added explicit
+decline/author removal, technical2000/100 bounds, scoped current retry and RAM reader.
+Semantic/API/mobile static reviews and focused API12/mobile25 passed. New realPG
+wait/expiry/revocation/CAS and actualHTTP/mobile cases await runtime verification;
+both exact FULLs remain required. Separate Hard WIP; accepted18/storyWIP4 unchanged.
+Follow-up c07a6d7 focused API12/mobile27 passed, including the two added lifecycle/
+retry combinations; no new lint warnings. RealPG and exact FULL results remain pending
+at this frozen documentation checkpoint and will be recorded in external evidence.
+
+## Shared-doing candidate after acceptedafd0770 / Library v19
+Actual Tan Ata doings: two monotone personal positions and automatic both-complete;
+distinct from SharedTasks single complete/reopen. Contract: docs/SHARED_DOINGS.md.
+Explicit join/refusal, own-only progress, withdrawal clears own position, author
+removal clears both. Default-off loopback API042, full100 history, title200/parts1000.
+Initial API fixture-units/lint FAIL preserved; corrected focused API12/mobile29 PASS.
+Reviewer found replay reachable-before but not after original operation; red5FAIL
+preserved, applied-operation reachability now enforced with7 regressions PASS.
+Real PG/HTTP/mobile scenarios added, first execution and both exact FULL still due.
+Separate new WIP; accepted19/earlier WIPs unchanged. No native/two-device/production.

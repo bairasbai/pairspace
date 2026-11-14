@@ -1,17 +1,8 @@
 'use strict';
 const { spawn } = require('node:child_process');
-const { createHash } = require('node:crypto');
+const { captureStream } = require('./stream-capture.cjs');
 
-// Discard content, continuously drain both pipes. Reports never contain test payloads,
-// inherited environment, credential values, or unbounded child output.
-function streamDigest(stream) {
-  const hash = createHash('sha256');
-  let bytes = 0;
-  stream.on('data', chunk => { bytes += chunk.length; hash.update(chunk); });
-  return () => ({ bytes, sha256: hash.digest('hex'), content: 'NOT_RETAINED' });
-}
-
-function runProcess(step, { cwd, env, signal }) {
+function runProcess(step, { cwd, env, signal, logsDirectory, stepIndex, capture = captureStream }) {
   return new Promise(resolve => {
     const started = Date.now();
     let timedOut = false;
@@ -24,8 +15,8 @@ function runProcess(step, { cwd, env, signal }) {
       cwd, env, shell: false, detached: process.platform !== 'win32',
       stdio: ['ignore', 'pipe', 'pipe'],
     });
-    const stdout = streamDigest(child.stdout);
-    const stderr = streamDigest(child.stderr);
+    const stdout = capture(child.stdout, { directory: logsDirectory, index: stepIndex, name: 'stdout' });
+    const stderr = capture(child.stderr, { directory: logsDirectory, index: stepIndex, name: 'stderr' });
     function kill(kind) {
       try {
         if (process.platform === 'win32') child.kill(kind);
@@ -56,10 +47,13 @@ function runProcess(step, { cwd, env, signal }) {
       }
       clearTimeout(forceTimer);
       signal?.removeEventListener('abort', abort);
-      const status = interrupted ? 'INTERRUPTED' : timedOut ? 'TIMEOUT'
+      const processStatus = interrupted ? 'INTERRUPTED' : timedOut ? 'TIMEOUT'
         : error ? 'ERROR' : cleanupRequired ? 'FAIL' : exitCode === 0 && exitSignal === null ? 'PASS' : 'FAIL';
-      resolve({ status, exitCode, signal: exitSignal, error, timedOut, interrupted,
-        cleanupRequired, durationMs: Date.now() - started, stdout: stdout(), stderr: stderr() });
+      const out = stdout(), err = stderr();
+      const evidenceComplete = out.complete && err.complete;
+      const status = processStatus === 'PASS' && !evidenceComplete ? 'FAIL' : processStatus;
+      resolve({ status, processStatus, exitCode, signal: exitSignal, error, timedOut, interrupted,
+        evidenceComplete, cleanupRequired, durationMs: Date.now() - started, stdout: out, stderr: err });
     });
     timer = setTimeout(() => { timedOut = true; stop(); }, step.timeoutMs);
     if (signal?.aborted) abort();

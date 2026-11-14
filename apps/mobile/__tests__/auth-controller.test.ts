@@ -473,7 +473,7 @@ it.each([[400, 'rejected'], [429, 'rate_limited'], [503, 'transport_error']] as 
   controller.setDraft('hello');
   request.mockResolvedValueOnce(envelope({ private: 'server detail' }, status));
   await controller.send();
-  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, nextAfterSeq: null, boundedWindow: true, windowReset: true }, phase: 'signed_in', currentUserId: uuid(1), error, draft: 'hello', messages: [message], outgoing: { body: 'hello', status: 'retry' } });
+  expect(controller.getSnapshot()).toEqual({ history: { status: 'ready', nextBeforeSeq: null, nextAfterSeq: null, boundedWindow: true, windowReset: true }, phase: 'signed_in', currentUserId: uuid(1), error, draft: 'hello', messages: [message], outgoingPending: true, outgoing: { body: 'hello', status: 'retry' } });
   expect(request).toHaveBeenCalledTimes(2);
 });
 it('reports invalid history responses without replacing the last verified history', async () => {

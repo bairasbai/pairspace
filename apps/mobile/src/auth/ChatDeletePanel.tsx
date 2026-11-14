@@ -26,6 +26,7 @@ export function ChatDeletePanel({ locale, state, onConfirm, onCancel, onRetry }:
     {state?.status === 'unknown' && <View><Text accessibilityRole="alert">{t.unknown}</Text>
       <Button title={t.retry} onPress={onRetry} /></View>}
     {state?.status === 'sending' && <Text>{t.sending}</Text>}
+    {state?.status === 'hidden' && <Text>{locale === 'ru' ? 'Удаление было выполнено. Сообщение скрыто в вашем чате.' : 'Deletion was committed. The message is hidden in your chat.'}</Text>}
     {state?.status === 'deleted' && <Text>{t.deleted}</Text>}
     {state?.status === 'error' && <Text accessibilityRole="alert">{state.error === 'message_deleted' ? t.alreadyDeleted : t.error}</Text>}
   </View>;

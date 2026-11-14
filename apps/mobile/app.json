@@ -8,7 +8,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": { "supportsTablet": true },
-    "android": {},
+    "android": { "allowBackup": false },
     "experiments": { "autolinkingModuleResolution": true }
   }
 }

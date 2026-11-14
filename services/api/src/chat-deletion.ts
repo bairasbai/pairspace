@@ -1,3 +1,4 @@
+import { chatMessageHidden, hiddenChatReplay } from './chat-visibility-scope.ts';
 import type { AuthorizedDatabase, Principal, ApiError } from "./contracts.ts";
 import { authorizeChat } from "./chat.ts";
 import { activeSession, validPrincipal } from "./session.ts";
@@ -59,6 +60,7 @@ export async function deleteChatMessage(db: AuthorizedDatabase, p: Principal, in
                 ok: false,
                 error: denied
             };
+        const hidden=await chatMessageHidden(tx,messageId);
         const row = (await tx.query<Metadata>(`SELECT id,sender_id,version,deleted_at::text AS deleted_at
       FROM chat_messages WHERE couple_id=$1 AND id=$2 FOR UPDATE`, [coupleId, messageId])).rows[0];
         if (!await activeSession(tx, db, p))
@@ -80,6 +82,7 @@ export async function deleteChatMessage(db: AuthorizedDatabase, p: Principal, in
                 ok: false,
                 error: "message_unavailable"
             };
+        if(hidden) return old ? hiddenChatReplay(tx,messageId,commandId) : {ok:false,error:'message_hidden'};
         const canonicalMessage = async () => {
             const canonical = (await tx.query<Row>(`SELECT ${columns} FROM chat_messages WHERE couple_id=$1 AND id=$2`, [coupleId, messageId])).rows[0];
             if (!canonical || canonical.body !== null || canonical.deleted_at === null) throw new Error('invalid_deletion_canonical');

@@ -1,0 +1,258 @@
+import { fixture, own, incoming, answered, skipped, withdrawn, uuid, context, ack, list, error, envelope, settle } from './asks-fixtures';
+it('requires manual full read; creates shared question and never claims ACK made list fresh', async () => {
+    const f = fixture(), listener = jest.fn(), stop = f.api.subscribe(listener);
+    f.controller.sync();
+    expect(listener).not.toHaveBeenCalled();
+    await f.api.create();
+    expect(f.api.getSnapshot().requiresRefresh).toBe(true);
+    await f.load();
+    await f.api.create();
+    expect(f.api.getSnapshot()).toMatchObject({ questions: [own], checked: false, used: 1, status: 'saved', create: '', checkedAt: '2026-11-11T00:00:00.000Z' });
+    expect(await f.operation.mock.calls[1][0].json()).toEqual({ command_id: uuid(3), membership_epoch: 1, text: own.question });
+    stop();
+    f.controller.reset();
+    f.api.setCreate('x');
+    f.api.setAnswer('x');
+    f.api.beginAnswer(own.id);
+    await f.api.create();
+    await f.api.load();
+    await f.api.retry();
+    f.set(null);
+    f.controller.sync();
+    expect(f.api.getSnapshot().available).toBe(false);
+});
+it('unknown ACK retries exact immutable command and preserves separate newer RAM', async () => {
+    const f = fixture();
+    await f.load();
+    let resolve!: (r: Response) => void;
+    f.operation.mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    const work = f.api.create();
+    await settle();
+    await f.api.create();
+    await f.api.retry();
+    await f.api.load();
+    f.api.beginAnswer(incoming.id);
+    f.api.setCreate('New question');
+    resolve(error('temporary', 503));
+    await work;
+    await f.api.create();
+    await f.api.retry();
+    expect(await f.operation.mock.calls[1][0].json()).toEqual(await f.operation.mock.calls[2][0].json());
+    expect(f.command).toHaveBeenCalledTimes(1);
+    expect(f.api.getSnapshot().create).toBe('New question');
+});
+it('recipient answers once, independent drafts, late newer answer text becomes stale not resubmittable', async () => {
+    const f = fixture();
+    await f.load([incoming]);
+    f.api.beginAnswer(incoming.id);
+    f.api.setAnswer('Good');
+    let resolve!: (r: Response) => void;
+    f.operation.mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    const work = f.api.answer();
+    await settle();
+    f.api.setAnswer('New RAM');
+    f.api.setCreate('Separate');
+    resolve(ack(answered));
+    await work;
+    expect(f.api.getSnapshot()).toMatchObject({ answerDraft: { text: 'New RAM', stale: 'terminal' }, create: 'Separate', questions: [answered] });
+    const calls = f.operation.mock.calls.length;
+    await f.api.answer();
+    expect(f.operation).toHaveBeenCalledTimes(calls);
+    f.api.beginAnswer(incoming.id);
+    f.api.cancelAnswer();
+    f.api.cancelCreate();
+    expect(f.api.getSnapshot()).toMatchObject({ answerDraft: null, create: '' });
+});
+it('only designated recipient can answer/skip; confirmed skip terminal; no empty answer submission', async () => {
+    const f = fixture();
+    await f.load([own]);
+    f.api.beginAnswer(own.id);
+    await f.api.skip(own.id, true);
+    await f.api.answer();
+    expect(f.api.getSnapshot().answerDraft).toBeNull();
+    await f.load([incoming]); // identity mismatch is rejected, use separate actor fixture for valid incoming.
+    const g = fixture();
+    await g.load([incoming]);
+    g.api.beginAnswer(incoming.id);
+    await g.api.answer();
+    expect(g.api.getSnapshot().status).toBe('invalid');
+    await g.api.skip(incoming.id, false);
+    g.operation.mockResolvedValueOnce(ack(skipped));
+    await g.api.skip(incoming.id, true);
+    expect(g.api.getSnapshot().questions).toEqual([skipped]);
+    expect(g.api.getSnapshot().answerDraft).toBeNull();
+    await g.api.skip(incoming.id, true);
+    await g.api.removeAnswer(incoming.id, true);
+    expect(g.operation).toHaveBeenCalledTimes(2);
+});
+it('split removals preserve partner answer and response attribution timestamp', async () => {
+    const ownAnswered = { ...answered, id: own.id, authorId: own.authorId, recipientId: own.recipientId };
+    const { question: _, ...removedQuestion } = { ...ownAnswered, questionState: 'removed' as const, version: 3 };
+    const f = fixture();
+    await f.load([ownAnswered]);
+    await f.api.removeQuestion(own.id, false);
+    await f.api.removeAnswer(own.id, true);
+    f.operation.mockResolvedValueOnce(ack(removedQuestion));
+    await f.api.removeQuestion(own.id, true);
+    expect(f.api.getSnapshot().questions).toEqual([removedQuestion]);
+    expect(f.operation.mock.calls[1][0].method).toBe('DELETE');
+    expect(f.operation.mock.calls[1][0].url).toContain('/question');
+    const { answer: __, ...removedAnswer } = { ...answered, responseState: 'answer_removed' as const, version: 3 };
+    const g = fixture();
+    await g.load([answered]);
+    await g.api.removeAnswer(incoming.id, false);
+    g.operation.mockResolvedValueOnce(ack(removedAnswer));
+    await g.api.removeAnswer(incoming.id, true);
+    expect(g.api.getSnapshot().questions).toEqual([removedAnswer]);
+    expect(g.api.getSnapshot().questions[0].answeredAt).toBe(answered.answeredAt);
+    const h = fixture();
+    await h.load([own]);
+    h.operation.mockResolvedValueOnce(ack(withdrawn));
+    await h.api.removeQuestion(own.id, true);
+    expect(h.api.getSnapshot().questions).toEqual([withdrawn]);
+});
+it('GET terminal closes untouched answer form but keeps dirty answer explicitly stale', async () => {
+    const f = fixture();
+    await f.load([incoming]);
+    f.api.beginAnswer(incoming.id);
+    await f.load([skipped]);
+    expect(f.api.getSnapshot().answerDraft).toBeNull();
+    const g = fixture();
+    await g.load([incoming]);
+    g.api.beginAnswer(incoming.id);
+    g.api.setAnswer('Unsaved');
+    await g.load([answered]);
+    expect(g.api.getSnapshot().answerDraft).toMatchObject({ text: 'Unsaved', stale: 'terminal' });
+    await g.api.answer();
+    expect(g.api.getSnapshot().status).toBe('conflict');
+});
+it('waiting-first complete list rejects missing rows, reordering and terminal resurrection', async () => {
+    const f = fixture(), old = { ...answered, sequence: 2 };
+    await f.load([incoming, old]);
+    expect(f.api.getSnapshot().questions).toHaveLength(0); // same id forbidden
+    const g = fixture(), old2 = { ...answered, id: uuid(20), sequence: 2 };
+    await g.load([incoming, old2]);
+    expect(g.api.getSnapshot().questions).toHaveLength(2);
+    for (const questions of [[old2, incoming], [incoming], [{ ...incoming, question: 'edited' }, old2], [incoming, { ...old2, responseState: 'waiting', answer: undefined, answeredAt: undefined, version: 3 }]]) {
+        g.operation.mockResolvedValueOnce(list(questions));
+        await g.api.load();
+        expect(g.api.getSnapshot().error).toBe(true);
+        expect(g.api.getSnapshot().questions).toEqual([incoming, old2]);
+    }
+});
+it.each(['version_conflict', 'idempotency_conflict', 'capacity_reached'])('known conflict blocks new mutation until refresh %s', async (code) => { const f = fixture(); await f.load(); f.operation.mockResolvedValueOnce(error(code, 409)); await f.api.create(); expect(f.api.getSnapshot()).toMatchObject({ pending: false, requiresRefresh: true, status: code === 'capacity_reached' ? 'limit' : 'conflict' }); await f.api.retry(); f.api.beginAnswer(incoming.id); });
+it.each([401, 403, 409])('clears session on denial %s', async (status) => { const f = fixture(); await f.load(); f.operation.mockResolvedValueOnce(error('stale_membership', status)); await f.api.create(); expect(f.host.block).toHaveBeenCalled(); expect(f.api.getSnapshot().available).toBe(false); });
+it('handles invalid, unavailable, malformed and transient failures', async () => {
+    const f = fixture();
+    await f.load();
+    f.api.setCreate('');
+    await f.api.create();
+    expect(f.api.getSnapshot().status).toBe('invalid');
+    f.api.setCreate('How are you?');
+    f.command.mockReturnValueOnce('bad');
+    await f.api.create();
+    f.operation.mockResolvedValueOnce(error('invalid_request', 400));
+    await f.api.create();
+    expect(f.api.getSnapshot().pending).toBe(false);
+    f.operation.mockResolvedValueOnce(error('not_found', 404));
+    await f.api.load();
+    expect(f.api.getSnapshot().status).toBe('unavailable');
+    await f.load();
+    f.operation.mockResolvedValueOnce(error('not_found', 404));
+    await f.api.create();
+    expect(f.api.getSnapshot().status).toBe('retry');
+    f.operation.mockResolvedValueOnce(new Response('oops'));
+    await f.api.retry();
+    expect(f.api.getSnapshot().pending).toBe(true);
+});
+it('strict list/ACK schemas and command ownership; canonical replay may include later removal', async () => {
+    for (const value of [{ questions: [], used: 0, capacity: 99, checkedAt: '2026-11-11T00:00:00.000Z' }, { questions: [], used: 0, capacity: 100, checkedAt: 'bad' }, { questions: [own], used: 0, capacity: 100, checkedAt: '2026-11-11T00:00:00.000Z' }]) {
+        const f = fixture();
+        f.operation.mockResolvedValue(envelope(value));
+        await f.api.load();
+        expect(f.api.getSnapshot().error).toBe(true);
+    }
+    for (const value of [null, { ...own, authorId: uuid(4), recipientId: uuid(1) }, { ...own, question: 'Wrong' }, { ...own, version: 4 }, withdrawn]) {
+        const f = fixture();
+        await f.load();
+        f.operation.mockResolvedValueOnce(ack(value));
+        await f.api.create();
+        expect(f.api.getSnapshot().status).toBe('retry');
+    }
+    const f = fixture();
+    await f.load();
+    f.operation.mockResolvedValueOnce(ack(withdrawn, true));
+    await f.api.create();
+    expect(f.api.getSnapshot().questions).toEqual([withdrawn]);
+    const g = fixture();
+    await g.load([incoming]);
+    g.api.beginAnswer(incoming.id);
+    g.api.setAnswer('Good');
+    g.operation.mockResolvedValueOnce(ack(skipped, true));
+    await g.api.answer();
+    expect(g.api.getSnapshot().status).toBe('retry');
+});
+it('capacity includes terminal history, answer and removal still possible at100', async () => {
+    const questions = Array.from({ length: 100 }, (_, n) => ({ ...withdrawn, id: uuid(100 + n), sequence: n + 1 })).reverse();
+    const f = fixture();
+    await f.load(questions);
+    await f.api.create();
+    expect(f.api.getSnapshot().status).toBe('limit');
+    const g = fixture();
+    await g.load([{ ...incoming, sequence: 100 }, ...questions.slice(1)]);
+    g.api.beginAnswer(incoming.id);
+    g.api.setAnswer('Good');
+    g.operation.mockResolvedValueOnce(ack({ ...answered, sequence: 100 }));
+    await g.api.answer();
+    expect(g.api.getSnapshot().status).toBe('saved');
+});
+it('generation, cookie, context fences and pending full refresh recovery', async () => {
+    const f = fixture();
+    await f.load();
+    f.operation.mockResolvedValueOnce(error('temporary', 503));
+    await f.api.create();
+    await f.load([own]);
+    expect(f.api.getSnapshot().status).toBe('retry');
+    const g = fixture();
+    g.discovery.mockResolvedValue(envelope({ ...context, membershipEpoch: 2 }));
+    await g.api.load();
+    expect(g.host.refresh).toHaveBeenCalled();
+    const h = fixture();
+    h.host.getCookie.mockResolvedValueOnce('one').mockResolvedValueOnce('two');
+    await h.api.load();
+    expect(h.host.block).toHaveBeenCalled();
+    const k = fixture();
+    let resolve!: (r: Response) => void;
+    k.operation.mockReturnValueOnce(new Promise(r => { resolve = r; }));
+    const task = k.api.load();
+    await settle();
+    k.controller.reset();
+    resolve(list([own]));
+    await task;
+    expect(k.api.getSnapshot().questions).toEqual([]);
+    for (const status of [401, 503]) {
+        const j = fixture();
+        j.discovery.mockResolvedValue(error('temporary', status));
+        await j.api.load();
+        expect(j.operation).not.toHaveBeenCalled();
+    }
+    const j = fixture();
+    j.set(null);
+    await j.api.load();
+    expect(j.operation).not.toHaveBeenCalled();
+});
+it('actual snapshot clock rollback fails closed without losing RAM and later fresh GET recovers', async () => {
+    const f = fixture();
+    await f.load([incoming]);
+    f.api.beginAnswer(incoming.id);
+    f.api.setAnswer('New unsaved answer');
+    f.api.setCreate('New unsaved question');
+    for (const checkedAt of ['2026-11-10T00:00:30.000Z', 'bad']) {
+        f.operation.mockResolvedValueOnce(list([answered], checkedAt));
+        await f.api.load();
+        expect(f.api.getSnapshot()).toMatchObject({ questions: [incoming], checked: false, error: true, checkedAt: '2026-11-11T00:00:00.000Z', create: 'New unsaved question', answerDraft: { text: 'New unsaved answer' } });
+    }
+    f.operation.mockResolvedValueOnce(list([answered], '2026-11-12T00:00:00.000Z'));
+    await f.api.load();
+    expect(f.api.getSnapshot()).toMatchObject({ questions: [answered], checked: true, error: false, checkedAt: '2026-11-12T00:00:00.000Z', create: 'New unsaved question', answerDraft: { text: 'New unsaved answer', stale: 'terminal' } });
+});

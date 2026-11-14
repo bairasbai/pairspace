@@ -1,7 +1,9 @@
+import type { HiddenMessage } from './visibility-model';
 import { normalizeMessageText } from './text';
 import type { Ack, Outgoing, QueueError, QueueResult, QueueState, Scope } from './types';
 
 export const MAX_OUTGOING_RECORDS = 500;
+export const MAX_ACCEPTED_OUTGOING = 50;
 const validId = (id: unknown): id is string => typeof id === 'string' && /^[A-Za-z0-9:_-]{1,128}$/.test(id);
 const positive = (value: number) => Number.isSafeInteger(value) && value > 0;
 const sameScope = (a: Scope, b: Scope) => a.userId === b.userId && a.coupleId === b.coupleId
@@ -26,7 +28,23 @@ function guard(state: QueueState, scope: Scope, allowPaused = false): QueueError
   return null;
 }
 function replace(state: QueueState, message: Outgoing): QueueResult {
-  return success(freeze({ ...state, messages: state.messages.map(item => item.clientId === message.clientId ? message : item) }));
+  const messages = state.messages.map(item => item.clientId === message.clientId ? message : item);
+  // Keep this acknowledgement and the newest other accepted records. Unresolved
+  // attempts are never candidates, including permanent failures awaiting consent.
+  const accepted = messages.filter(item => item.status === 'accepted' && item.clientId !== message.clientId);
+  const keepOthers = message.status === 'accepted' ? MAX_ACCEPTED_OUTGOING - 1 : MAX_ACCEPTED_OUTGOING;
+  const remove = new Set(accepted.slice(0, Math.max(0, accepted.length - keepOthers)).map(item => item.clientId));
+  return success(freeze({ ...state, messages: messages.filter(item => !remove.has(item.clientId)) }));
+}
+
+/** Explicit local consent only. This does not delete or cancel a server message. */
+export function discardOutgoing(state: QueueState, scope: Scope, clientId: string): QueueResult {
+  const denied = guard(state, scope);
+  if (denied) return fail(state, denied);
+  const message = state.messages.find(item => item.clientId === clientId);
+  if (!message) return fail(state, 'unknown_message');
+  if (message.status === 'accepted') return fail(state, 'invalid_transition');
+  return success(freeze({ ...state, messages: state.messages.filter(item => item.clientId !== clientId) }));
 }
 
 export function enqueue(state: QueueState, scope: Scope, clientId: string, input: unknown, replyToId?: string): QueueResult {
@@ -133,4 +151,19 @@ export function logout(state: QueueState): QueueState {
 export function login(state: QueueState, scope: Scope): QueueResult {
   if (state.scope.sessionId === scope.sessionId) return fail(state, 'stale_session');
   return success(createQueue(scope));
+}
+
+/** An exact committed receipt proves acceptance without authorizing plaintext display. */
+export function acknowledgeHidden(state: QueueState, scope: Scope, input: HiddenMessage): QueueResult {
+  const denied = guard(state, scope);
+  if (denied) return fail(state, denied);
+  const message = state.messages.find(item => item.clientId === input.clientId);
+  if (!message || message.attempt === 0) return fail(state, 'unknown_message');
+  if (input.coupleId !== scope.coupleId || input.senderId !== scope.userId
+    || (input.replyToId ?? undefined) !== message.replyToId || !positive(input.version)
+    || (message.serverId !== null && (message.serverId !== input.id || message.seq !== input.seq))) return fail(state, 'invalid_ack');
+  if (state.messages.some(item => item.clientId !== input.clientId && (item.serverId === input.id || item.seq === input.seq))) return fail(state, 'invalid_ack');
+  if (message.deleted) return success(state);
+  return replace(state, { ...message, body: null, canonicalBody: undefined, hidden: true, status: 'accepted',
+    error: null, serverId: input.id, seq: input.seq, version: Math.max(message.version, input.version) });
 }

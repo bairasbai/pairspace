@@ -285,3 +285,177 @@ work. Exact author/independent gates pending: [CHAT_EDITING_EVIDENCE](CHAT_EDITI
 Owner refinement before acceptance: normalized unchanged saves retain version and do
 not mark an untouched message as edited; real edits and restoring original text remain
 marked. No-op receipts still protect retries and CAS. Final revised-SHA gates required.
+
+## Personal chat hide/restore
+Candidate after independently accepted c6f8db3: personal visibility CAS, explicit
+confirmation/restore, complete bounded hidden-metadata navigation and actor-private
+revision fencing. No notification or partner-visible hidden metadata. This does not
+close durable queue/native restart, realtime, delivery/read receipts or retention work.
+Exact frozen full and independent gates required: [CHAT_VISIBILITY](CHAT_VISIBILITY.md).
+
+### Bounded outgoing lifecycle (candidate)
+Retire only confirmed receipts (retain50, total500), never unresolved/failed commands.
+Explicit local discard can release a stuck attempt but cannot undo a server send.
+Late operation results cannot affect new work; current-session revocation still blocks.
+See [CHAT_OUTGOING](CHAT_OUTGOING.md). Focused/FULL11/independent acceptance pending.
+Durable queue, realtime, native restart and delivery/read receipts remain separate.
+
+### Experimental encrypted recovery (candidate)
+Composer plus one immutable pending send/reply, transactional ciphertext journal,
+online scope validation and explicit restore/retry. Official Expo SQLite adapter,
+existing AES-GCM/SecureStore; no plaintext fallback or history persistence. Linux
+process-restart tests do not close native device/backup/reinstall/security gates.
+See [CHAT_JOURNAL](CHAT_JOURNAL.md); focused/FULL11/independent acceptance pending.
+
+## Current-window reconciliation candidate
+Bounded authorized read snapshot and new-message indicator, explicit and foreground-return
+only. Does not add polling, read/delivery receipts, background delivery, native proof or
+production rollout. Pending author/independent exact gates; journal remains default-off.
+
+## Morning ritual candidate
+Recipient-owned time/zone → explicit future morning → one-time prepared letter → sealed,
+available or genuinely missed → bounded full history. No auto promises/notifications,
+period links/late fill/edits/cancellation. Independent new implementation; gates pending.
+
+## Morning discussion candidate after accepted ab3de3e
+Both participants can explicitly reply under one morning slot, with preserved author
+identity and multiline text. Native-sequence bounded30 replacement windows provide
+complete history access rather than a first-page-only list. No original-letter copy,
+notifications, auto-opening or changes to old chat/letter contracts. Recipient requires
+own durable opening; sender release access does not reveal that opening. Slot-scoped
+RAM drafts and immutable retries preserve newer text and session isolation. Own reply
+editing/deletion, period numbering and translation remain deferred. Implementation and
+verification are in progress, not accepted; see MORNING_DISCUSSIONS.md.
+
+## Morning reply mutations candidate
+Own CAS edits with explicit save and honest no-op edited marker; explicit confirmed
+terminal deletion, immutable original-command retries returning current canonical state.
+V2 history retains tombstones and bounded navigation; legacy routes filter deleted
+records without leaking bodies. Non-evicting bounded metadata knowledge prevents late
+response resurrection; private newer drafts remain unsaved, not canonical. See
+MORNING_DISCUSSION_MUTATIONS.md. Implementation/testing pending, not accepted.
+
+## Prepared morning letter editing candidate
+After independently accepted c276fcc, add author-only pre-release loading and CAS
+editing with explicit Save/Cancel and canonical immutable retry. New no-ops must
+also pass deadline and version checks. No recipient opening/edited metadata leaks;
+separate RAM editor drafts cannot replace the fill composer. Dual trusted/SQL clock
+checks do not claim protection against actual rollback of both clocks. Frozen
+FULL11 and independent acceptance pending: [contract](MORNING_PREPARED_EDITING.md).
+
+## Private morning drafts candidate
+After accepted prepared-edit4d4ef80, explicit author-only save/load separate from fill
+and prepared content. Private text is not published at deadline; CAS/replay preserves
+current saved version and newer RAM input. Server-side plaintext with ACL, not E2EE.
+No deletion/retention policy, auto-fill or offline durable-storage claim. Frozen full
+and independent gates pending: [contract](MORNING_PRIVATE_DRAFTS.md).
+
+## Private morning draft logical removal candidate
+After accepted53a1734: explicit confirmed author-only CAS deletion of saved draft,
+terminal metadata and no revival through retries/stale ACKs. No restore/recreate in
+this slice; ready letters remain unchanged. Logical current-body removal is not
+physical DB/backup erasure. Native/production and retention decisions remain open.
+[Contract](MORNING_DRAFT_REMOVAL.md), exact author/independent gates pending.
+
+## Separation periods candidate after accepted710a124
+Create/list/edit independent all-day separation periods with timezone snapshots,
+overlap prevention, version conflict and immutable retries. Complete bounded100 list,
+explicit no-current/upcoming/ended state, checked-at server time. Both current active
+members can manage periods; not a mutual consent scheduling feature. Letter slots,
+numbering/release/ready bodies stay unchanged. Flight, automatic linkage, notifications,
+deletion and native/device/production gates remain open. Contract: [PARTINGS](PARTINGS.md).
+
+## Manual arrival plan candidate after accepted a0cb439
+One explicit manually entered arrival plan per couple epoch, equal partner create/
+read/edit, optional label and explicit local date/time+IANA+offset snapshot. Stable
+identity, no-op/CAS and current canonical immutable retries. Past means entered time
+has passed, not actual arrival. No airline verification, booking, cancellation,
+history, notifications or changes to periods/letters. [Contract](ARRIVAL_PLAN.md).
+
+## Future-notification preferences candidate after accepted2c706114
+Private actor/epoch settings with disabled defaults, care/chat/letter opt-ins, fixed
+ generic preview and optional IANA quiet interval. Own-rule simulation explicitly is
+not event eligibility or delivery. No push/token/OS/provider/worker/queue changes;
+existing in-app communication unchanged. [Contract](NOTIFICATION_PREFERENCES.md).
+
+### Care durable capture (pending independent acceptance)
+New synthetic care signals atomically capture minimal outbox; trusted one-event simulation
+records policy outcome with dedupe and rollback-safe retry. No delivery queue/worker daemon,
+push, device tokens or quiet-end scheduling. See docs/CARE_OUTBOX.md for exact limitations.
+
+### Chat notification privacy simulation (awaiting independent acceptance)
+Existing event receives atomic scope metadata and one internal privacy observation: deleted or
+recipient-hidden sources suppressed; senderhide unrelated. No notification delivery/realtime,
+read receipts, historical backfill or copied message content. See CHAT_OUTBOX.md.
+
+### Morning-letter privacy simulation (pending independent acceptance)
+Explicit internal slot check uses actual SQL release, not application/device clocks. Before release
+no readiness/private-content query; afterward existing prepared content and recipient letter rules
+produce immutable historical simulation only. No push, opening, scheduling or delivery queue.
+
+### Shared love dictionary candidate after accepted1a415a0
+A real bounded user scenario: explicit shared word plus optional meaning/occasion,
+authored editing and confirmed logical removal, complete synthetic100-lifetime list,
+CAS/canonical retries and bounded stale-response fencing. No pending-action counters,
+notifications or durable offline/native promises. Source-grounded Tan Ata words mode,
+not closure of all11 conversation modes. Early review and exact FULL11 gates pending.
+See [LOVE_WORDS](LOVE_WORDS.md).
+
+### Ask me candidate after accepted e469600
+Authored shared question, one recipient answer or voluntary terminal skip; independent
+own-text removal preserves the other's words and consent state. Complete bounded100
+lifetime history, CAS/canonical retries and honest RAM drafts. Not blind answers,
+notifications or production readiness. See [ASK_ME](ASK_ME.md); early/full gates pending.
+
+### Voluntary day scale candidate after accepted5d93a70
+Explicit own0–100 day rating shared with partner, correction/removal and deliberate
+new publication; missing is not0 and no default50 is sent. Stable local date/IANA,
+new entry only for trusted today with midnight mismatch rejection; no diagnosis,
+comparison/ranking or reminders. Complete bounded100 lifetime dates per author.
+See [DAY_SCALE](DAY_SCALE.md). Early review and exact FULL11 acceptance pending.
+
+### Continue the phrase candidate after accepted6547291
+Authored beginning plus committed hidden own continuation; other participant may
+complete once and reveal both, or voluntarily skip without disclosure. Own bundle
+and recipient response removal preserve the other author's text and completed
+state. Not a replacement for existing fixed blind rounds. Bounded synthetic100
+lifetime history, no provider/native claims. See [CONTINUE_PHRASE](CONTINUE_PHRASE.md).
+
+### Verification diagnostics before further P1
+Private per-step raw output evidence closes the observability gap from unexplained
+mobile failures. Bounded streamed files, full digests, explicit incomplete status;
+no command/test/timeout changes. Earlier failures retained, not declared fixed.
+Separate reviewed exact-SHA author/independent FULL gates required. See
+[VERIFICATION_LOG_RETENTION](VERIFICATION_LOG_RETENTION.md).
+
+### Ordered stories candidate after accepted316978a
+Short authored topic and one voluntary long narrative, with no deadline or reminder.
+Metadata-only complete synthetic100 history/ACK and explicit body reader distinguish
+this from Ask's inline2000-character responses. Own topic/body removal preserves the
+other author's part; CAS/current retries, epoch ACL and RAM drafts remain bounded.
+Independent contract review and focused API/mobile passed; real PG/HTTP/mobile and
+both exact clean FULL11 gates remain required. No native/production claim; accepted
+Library v17 is unchanged. See [ORDERED_STORIES](ORDERED_STORIES.md).
+
+### Hard question candidate after accepted67c6607
+Authored question is hidden from its recipient until a voluntary, confirmed opening;
+the author can read their own text. One opening transition, repeated later reads,
+explicit decline without revealing and own-author removal preserve recipient choice.
+Distinct from Ask/Stories/Blind; no answer obligation/deadline/provider. Bounded
+synthetic2000-character/100-envelope history, epoch ACL/CAS/current retries and RAM
+display generations. Early reviews/focused passed, realPG and both exact FULLs pending.
+See [HARD_QUESTIONS](HARD_QUESTIONS.md); accepted18/storiesWIP4 remain unchanged.
+## Shared doings after acceptedafd0770 — synthetic checkpoint
+
+Two separate personal positions through one book/course/series; automatic current
+completion only when both reach the end. Explicit recipient join/refusal, own-only
+advance and withdrawal, author removal of shared title/total/BOTH positions.
+Bounded100 history/title200/parts1000, independent default-off loopback flag, RAM
+draft/pending, strict CAS/current retry. No deadline, reminders or participation by
+silence. See [SHARED_DOINGS](SHARED_DOINGS.md) for source facts vs adaptations.
+Early semantic/API review passed; mobile replay P2 reproduced and fixed with applied
+operation reachability. Focused API12/mobile29 passed; all failed evidence retained.
+Dedicated realPG/HTTP/mobile cases are added but not yet executed at this checkpoint.
+Exact author and independent FULL still required. Separate WIP; accepted19 unchanged.
+Native iOS/Android, two-device E2E, durable offline and production remain open.
+

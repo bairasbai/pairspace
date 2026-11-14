@@ -1,0 +1,20 @@
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { PartingsPanel } from '../src/auth/PartingsPanel';
+import { emptyPartings } from '../src/auth/partings-state';
+import { date } from './partings-fixtures';
+it.each(['ru','en'] as const)('wires explicit controls and renders honest dated states %s',locale=>{
+ const callbacks={onDraft:jest.fn(),onStartDate:jest.fn(),onEndDate:jest.fn(),onTimezone:jest.fn(),onCreate:jest.fn(),onRetry:jest.fn(),onList:jest.fn(),onCancel:jest.fn(),onEdit:jest.fn()};
+ const props={...callbacks,locale};const view={...emptyPartings,available:true};const ui=render(<PartingsPanel {...props} view={emptyPartings}/>);expect(ui.toJSON()).toBeNull();
+ ui.rerender(<PartingsPanel {...props} view={view}/>);
+ const labels=locale==='ru'?['Название периода','Начало YYYY-MM-DD','Последний день разлуки YYYY-MM-DD','Пояс периода IANA']:['Period title','Start YYYY-MM-DD','Last separation day YYYY-MM-DD','Period IANA time zone'];
+ labels.forEach(label=>fireEvent.changeText(screen.getByLabelText(label),'x'));for(const f of [callbacks.onDraft,callbacks.onStartDate,callbacks.onEndDate,callbacks.onTimezone])expect(f).toHaveBeenCalledWith('x');
+ for(const label of locale==='ru'?['Сохранить период для обоих','Очистить форму','Обновить периоды']:['Save period for both','Clear form','Refresh periods'])fireEvent.press(screen.getByText(label));
+ expect(callbacks.onCreate).toHaveBeenCalledTimes(1);expect(callbacks.onCancel).toHaveBeenCalledTimes(1);expect(callbacks.onList).toHaveBeenCalledTimes(1);
+ ui.rerender(<PartingsPanel {...props} view={{...view,partings:[date],asOf:'2028-02-29T00:00:00.000Z',checked:true,error:true}}/>);
+ fireEvent.press(screen.getByText(locale==='ru'?'Изменить период':'Edit period'));expect(callbacks.onEdit).toHaveBeenCalledWith(date.id);
+ for(const asOf of ['2027-01-01T00:00:00.000Z','2029-01-01T00:00:00.000Z'])ui.rerender(<PartingsPanel {...props} view={{...view,partings:[date],asOf,checked:true}}/>);
+ ui.rerender(<PartingsPanel {...props} view={{...view,status:'retry',pending:{title:date.title,startDate:date.startDate,endDate:date.endDate,timezone:date.timezone},editing:{id:date.id,version:1}}}/>);
+ fireEvent.press(screen.getByText(locale==='ru'?'Повторить ту же команду':'Retry same command'));expect(callbacks.onRetry).toHaveBeenCalledTimes(1);
+ fireEvent.press(screen.getByText(locale==='ru'?'Сохранить изменения для обоих':'Save changes for both'));expect(callbacks.onCreate).toHaveBeenCalledTimes(1);
+ ui.rerender(<PartingsPanel {...props} view={{...view,busy:true,requiresRefresh:true,partings:[date]}}/>);fireEvent.press(screen.getByText(locale==='ru'?'Обновить периоды':'Refresh periods'));expect(callbacks.onList).toHaveBeenCalledTimes(1);
+});

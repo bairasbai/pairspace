@@ -65,7 +65,8 @@ test('real PostgreSQL: fixed care signal isolation, concurrent replay/cooldown, 
     assert.equal((await request(0, pairA, id, 2)).status, 409);
     assert.equal((await (await request(1, pairA, undefined, 2)).json()).value.signal, null);
     assert.equal((await f.domainPool.query('SELECT * FROM care_signals')).rows.length, 2);
-    assert.equal((await f.domainPool.query('SELECT * FROM outbox_events')).rows.length, 0);
+    assert.equal((await f.domainPool.query("SELECT * FROM outbox_events WHERE type='care.signal_created'")).rows.length, 2);
+    assert.equal((await f.domainPool.query('SELECT * FROM care_notification_simulations')).rows.length, 0);
     await connections[0].auth.signOut();
     assert.equal((await request(0, pairA, id, 2)).status, 401);
   } finally { await f.close(); }

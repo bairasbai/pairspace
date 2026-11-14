@@ -1,19 +1,29 @@
 /// <reference types="node" />
+import type { JournalPort } from '../src/chat/journal/types';
+import { baselineVisibility } from './visibility-baseline.fixture';
 import { createHash } from 'node:crypto';
 import { createSessionController } from '../src/auth/controller';
 import { context, identity, row, uuid, envelope, windowResponse, settle, deferred } from './chat-window.fixture';
 export { context, identity, row, uuid, envelope, settle, deferred };
 export const message = (n:number) => ({ ...row(n), replyToId: n === 251 ? row(1).id : null, deletedAt: null as string|null });
-export function fixture(digest: (body:string)=>Promise<string> = async body=>createHash('sha256').update(body).digest('hex')) {
+export function fixture(digest: (body:string)=>Promise<string> = async body=>createHash('sha256').update(body).digest('hex'), journal?: JournalPort | Promise<JournalPort>) {
   let current=context;
   const client={signIn:jest.fn(async()=>identity),signOut:jest.fn(async()=>true),getCookie:jest.fn(async()=>'test=cookie')};
   const discovery=jest.fn(async()=>envelope(current));
   const history=jest.fn(async(r:Request)=>{const json=await windowResponse(r).json();json.value.messages=json.value.messages.map((m:ReturnType<typeof row>)=>message(m.seq/3));return envelope(json.value);});
+  const reconciliation = jest.fn(async (r: Request) => {
+    const url = new URL(r.url);
+    const fromId = (id: string) => message(Number(id.slice(-12)) - 1000);
+    const role = (name: string) => { const id = url.searchParams.get(name); return id ? { id, message: fromId(id) } : null; };
+    return envelope({ readId: url.searchParams.get('read_id'),
+      messages: (url.searchParams.get('message_ids') || '').split(',').filter(Boolean).map(fromId), unavailableIds: [],
+      detail: role('detail_id'), replyTarget: role('reply_target_id'), latestVisible: { id: message(251).id, seq: message(251).seq } });
+  });
   const detail=jest.fn(async(r:Request)=>{const u=new URL(r.url);const id=u.searchParams.get('message_id');const n=Number(id?.slice(-12))-1000;return envelope({message:message(n),readId:u.searchParams.get('read_id')});});
   const post=jest.fn(async(r:Request)=>{const body=await r.clone().json();return envelope({replay:false,message:{...row(300),senderId:current.userId,clientId:body.client_message_id,body:body.body,...(r.url.endsWith('/replies')?{replyToId:body.reply_to_id,deletedAt:null}:{})}});});
   const remove=jest.fn(async(r:Request)=>{const body=await r.clone().json();const id=new URL(r.url).pathname.split('/').at(-1)!;const n=Number(id.slice(-12))-1000;return envelope({commandId:body.command_id,replay:false,message:{...message(n),body:null,version:body.expected_version+1,deletedAt:'2026-11-12T00:00:00.000Z'}});});
   const edit=jest.fn(async(r:Request)=>{const body=await r.clone().json();const id=new URL(r.url).pathname.split('/').at(-1)!;const n=Number(id.slice(-12))-1000;return envelope({commandId:body.command_id,replay:false,message:{...message(n),body:body.body,version:body.expected_version+1}});});
   let command=20;
-  const controller=createSessionController({mode:'synthetic-loopback',baseURL:'http://localhost:8787'},client,r=>r.url.endsWith('/context')?discovery():r.method==='DELETE'?remove(r):r.method==='PATCH'?edit(r):r.method==='POST'?post(r):r.url.includes('/message-detail?')?detail(r):history(r),()=>uuid(command++),digest);
-  return{controller,client,discovery,history,detail,post,remove,edit,setContext:(c:typeof context)=>{current=c;},login:()=>controller.signIn('a@example.test','test')};
+  const controller=createSessionController({mode:'synthetic-loopback',baseURL:'http://localhost:8787'},client,r=>baselineVisibility(r,r.url.endsWith('/context')?discovery():r.method==='DELETE'?remove(r):r.method==='PATCH'?edit(r):r.method==='POST'?post(r):r.url.includes('/reconcile?')?reconciliation(r):r.url.includes('/message-detail?')?detail(r):history(r)),()=>uuid(command++),digest,journal);
+  return{controller,client,discovery,history,detail,post,remove,edit,reconciliation,setContext:(c:typeof context)=>{current=c;},login:()=>controller.signIn('a@example.test','test')};
 }

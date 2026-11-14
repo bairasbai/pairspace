@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import { createNativeJournal } from '../src/chat/journal/native';
 import { createOfficialSessionClient } from '../src/auth/official-client';
 import { createSyntheticRuntime } from '../src/auth/runtime';
 import { defaultAuthConfig, syntheticStoragePrefix } from '../src/auth/config';
@@ -8,6 +10,7 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { randomUUID } from 'expo-crypto';
 import { createSessionController } from '../src/auth/controller';
 
+jest.mock('../src/chat/journal/native', () => ({ createNativeJournal: jest.fn() }));
 jest.mock('better-auth/react', () => ({ createAuthClient: jest.fn() }));
 jest.mock('@better-auth/expo/client', () => ({ expoClient: jest.fn(() => ({ id: 'expo' })) }));
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn() }));
@@ -69,4 +72,25 @@ it('encodes every exact origin character including host/port without collisions 
     expect(hex.match(/.{4}/g)!.map(part => String.fromCharCode(parseInt(part, 16))).join('')).toBe(origins[index]);
   });
   expect(() => syntheticStoragePrefix({ ...config, baseURL: 'http://127.0.0.1:1234/path' })).toThrow();
+});
+
+it('journal runtime remains opt-in and disabled on web', async () => {
+  const original = Platform.OS;
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'web' });
+  try {
+    createSyntheticRuntime(config, { experimentalChatJournal: true });
+    expect(jest.mocked(createSessionController).mock.calls[0][5]).toBeUndefined();
+    expect(createNativeJournal).not.toHaveBeenCalled();
+  } finally { Object.defineProperty(Platform, 'OS', { configurable: true, value: original }); }
+});
+it('native experimental runtime passes its factory promise to the protected coordinator', async () => {
+  const original = Platform.OS;
+  Object.defineProperty(Platform, 'OS', { configurable: true, value: 'ios' });
+  try {
+    createSyntheticRuntime(config, { experimentalChatJournal: true });
+    const pending = jest.mocked(createSessionController).mock.calls[0][5];
+    expect(pending).toBeInstanceOf(Promise);
+    await pending;
+    expect(createNativeJournal).toHaveBeenCalledTimes(1);
+  } finally { Object.defineProperty(Platform, 'OS', { configurable: true, value: original }); }
 });

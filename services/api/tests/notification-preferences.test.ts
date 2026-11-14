@@ -1,0 +1,76 @@
+import { readFile } from 'node:fs/promises';
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import type { PGlite } from '@electric-sql/pglite';
+import { getNotificationPreferences as get, saveNotificationPreferences as save, previewNotificationPreferences as preview } from '../src/notification-preferences.ts';
+import { createNotificationPreferencesHandler } from '../src/notification-preferences-http.ts';
+import { parseNotificationFields, evaluateNotificationPolicy, type NotificationFields } from '../../../packages/domain/notifications/preferences.ts';
+import { bindSessionAuthority } from '../src/auth-authority.ts';
+import { createSyntheticAuthority } from '../src/synthetic-authority.ts';
+import { adapter, c1, c2, createFixture, id, identityPrincipal, outsider, principal, u2, waiting } from './fixtures.ts';
+let pg:PGlite;const db=()=>adapter(pg), scope={coupleId:c1,membershipEpoch:1};
+const fields={care:false,chat:false,letter:false,quiet:null};
+const command={...scope,...fields,commandId:id(701),expectedVersion:0};
+beforeAll(async()=>{pg=await createFixture();for(const f of ['012_shared_dates.sql','032_notification_preferences.sql'])await pg.exec(await readFile(new URL('../migrations/'+f,import.meta.url),'utf8'));});
+afterAll(async()=>{await pg.close();});
+it('strict private rule schema and wall-clock quiet semantics including both DST folds',()=>{
+ expect(parseNotificationFields(fields)).toEqual(fields);
+ const quiet={start:'22:00',end:'07:00',timezone:'US/Eastern'};
+ expect(parseNotificationFields({...fields,quiet})).toEqual({...fields,quiet});
+ for(const bad of [null,[],{}, {...fields,care:1},{...fields,x:1},{...fields,quiet:{}},{...fields,quiet:{...quiet,end:'22:00'}},{...fields,quiet:{...quiet,start:'24:00'}},{...fields,quiet:{...quiet,timezone:'bad'}},{...fields,quiet:{...quiet,timezone:'+03:00'}}])expect(parseNotificationFields(bad)).toBeNull();
+ const enabled:NotificationFields={...fields,care:true,quiet:{start:'01:00',end:'02:00',timezone:'America/New_York'}};
+ for(const instant of ['2026-11-01T05:30:00Z','2026-11-01T06:30:00Z'])expect(evaluateNotificationPolicy(enabled,'care',new Date(instant))).toEqual({allowedByPreferences:false,reason:'quiet_hours'});
+ expect(evaluateNotificationPolicy(enabled,'chat',new Date('2026-11-01T05:30:00Z')).reason).toBe('disabled');
+ expect(evaluateNotificationPolicy(enabled,'care',new Date('2026-11-01T07:00:00Z')).reason).toBe('allowed');
+ for(const [instant,reason]of [['2026-01-02T03:00:00Z','quiet_hours'],['2026-01-02T11:59:00Z','quiet_hours'],['2026-01-02T12:00:00Z','allowed'],['2026-01-02T02:59:00Z','allowed']])expect(evaluateNotificationPolicy({...enabled,quiet},'care',new Date(instant)).reason).toBe(reason);
+ expect(evaluateNotificationPolicy({...enabled,quiet:null},'care',new Date()).reason).toBe('allowed');
+ expect(()=>evaluateNotificationPolicy(enabled,'care',new Date(NaN))).toThrow('invalid_server_clock');
+});
+it('virtual defaults, first explicit default save1, private partner and canonical no-op/replay',async()=>{
+ expect(await get(db(),principal,scope)).toMatchObject({ok:true,value:{preferences:{...fields,version:0,preview:'generic',userId:principal.userId}}});
+ expect(await preview(db(),principal,{...scope,category:'care'})).toMatchObject({ok:true,value:{allowedByPreferences:false,reason:'disabled',preferenceVersion:0,simulationOnly:true}});
+ expect(await save(db(),principal,command)).toMatchObject({ok:true,value:{preferences:{...fields,version:1}}});
+ expect(await save(db(),principal,{...command,commandId:id(702),expectedVersion:1})).toMatchObject({ok:true,value:{preferences:{version:1}}});
+ expect(await save(db(),principal,{...command,commandId:id(703),expectedVersion:1,care:true})).toMatchObject({ok:true,value:{preferences:{care:true,version:2}}});
+ expect(await save(db(),principal,command)).toMatchObject({ok:true,value:{replay:true,preferences:{care:true,version:2}}});
+ expect(await get(db(),identityPrincipal(u2),scope)).toMatchObject({ok:true,value:{preferences:{...fields,version:0,userId:u2}}});
+ expect(await preview(db(),principal,{...scope,category:'care'})).toMatchObject({ok:true,value:{reason:'allowed',preferenceVersion:2,simulationOnly:true}});
+ expect(await save(db(),principal,{...command,commandId:id(704)})).toEqual({ok:false,error:'version_conflict'});
+ expect(await save(db(),principal,{...command,care:true})).toEqual({ok:false,error:'idempotency_conflict'});
+ await expect(pg.query('DELETE FROM notification_preferences')).rejects.toThrow();
+ await expect(pg.query('UPDATE notification_preferences SET user_id=$1,version=version+1',[u2])).rejects.toThrow();
+ await expect(pg.query("UPDATE notification_preference_commands SET fingerprint='{}'")).rejects.toThrow();
+});
+it('strict scope/input/auth and unavailable clocks',async()=>{
+ for(const bad of [null,[],{}, {...command,x:1},{...command,coupleId:'bad'},{...command,membershipEpoch:0},{...command,commandId:'bad'},{...command,expectedVersion:-1},{...command,expectedVersion:2147483647},{...command,quiet:{start:'22:00',end:'07:00',timezone:'america/new_york'}}])expect(await save(db(),principal,bad)).toEqual({ok:false,error:'invalid_request'});
+ expect(await get(db(),principal,command)).toEqual({ok:false,error:'invalid_request'});
+ for(const bad of [null,[],{}, {...scope,category:'unknown'}, {...scope,category:'care',recipientId:u2},{...scope,coupleId:'bad',category:'care'}])expect(await preview(db(),principal,bad)).toEqual({ok:false,error:'invalid_request'});
+ for(const [operation,input] of [[get,scope],[save,command],[preview,{...scope,category:'care'}]] as const){
+ expect(await operation(db(),{...principal,userId:'bad'},input)).toEqual({ok:false,error:'unavailable'});
+ for(const coupleId of [c2,waiting,id(999)])expect(await operation(db(),principal,{...input,coupleId})).toEqual({ok:false,error:'unavailable'});
+ expect(await operation(db(),identityPrincipal(outsider),input)).toEqual({ok:false,error:'unavailable'});
+ expect(await operation(db(),principal,{...input,membershipEpoch:2})).toEqual({ok:false,error:'stale_membership'});
+ }
+ const source=db();await expect(get(bindSessionAuthority({...source,now:()=>new Date(NaN)},{...source.sessionAuthority,recheck:async()=>true}),principal,scope)).rejects.toThrow('invalid_server_clock');
+});
+const url=`http://localhost/v1/couples/${c1}/notification-preferences`;
+const body={command_id:id(750),membership_epoch:1,expected_version:2,...fields,care:true,quiet:{start:'22:00',end:'07:00',timezone:'UTC'}};
+const req=(method='PUT',data:unknown=body,suffix='',headers:Record<string,string>={})=>new Request(url+suffix,{method,headers:{authorization:'Bearer fixture','content-type':'application/json','idempotency-key':id(750),...headers},...(method==='PUT'?{body:JSON.stringify(data)}:{})});
+it('HTTP strict routes/schemas, read-only own preview and generic privacy',async()=>{
+ const h=createNotificationPreferencesHandler(bindSessionAuthority(db(),createSyntheticAuthority(async()=>principal)));
+ expect((await h(new Request('http://localhost/unknown'))).status).toBe(404);expect((await h(req('DELETE'))).status).toBe(405);
+ expect((await h(req('GET',null,'?membership_epoch=1'))).status).toBe(200);
+ expect((await h(req('GET',null,'/preview?category=care&membership_epoch=1'))).status).toBe(200);
+ const unsupportedPreview = await h(req('PUT',body,'/preview'));
+ expect(unsupportedPreview.status).toBe(405);expect(unsupportedPreview.headers.get('allow')).toBe('GET');
+ expect((await h(req('DELETE'))).headers.get('allow')).toBe('GET, PUT');
+ for(const suffix of ['', '?membership_epoch=0','?membership_epoch=1&membership_epoch=1','/preview?membership_epoch=1&category=care&recipient=x'])expect((await h(req('GET',null,suffix))).status).toBe(400);
+ expect((await h(req('PUT',body,'?x=1'))).status).toBe(400);expect((await h(req('PUT',body,'',{'content-type':'text/plain'}))).status).toBe(415);
+ for(const bad of [null,[],{}, {...body,preview:'content'},{...body,command_id:'bad'},{...body,command_id:id(799)}])expect((await h(req('PUT',bad))).status).toBe(400);
+ expect((await h(new Request(url,{method:'PUT',headers:{authorization:'Bearer fixture','content-type':'application/json'},body:'{'}))).status).toBe(400);
+ const saved=await h(req());expect(saved.status).toBe(200);expect(saved.headers.get('cache-control')).toBe('no-store');
+ expect((await h(req())).status).toBe(200);expect((await h(req('PUT',{...body,care:false}))).status).toBe(409);
+ expect((await h(req('PUT',{...body,membership_epoch:0}))).status).toBe(400);
+ expect((await createNotificationPreferencesHandler(bindSessionAuthority(db(),createSyntheticAuthority(async()=>null)))(req())).status).toBe(401);
+ expect((await createNotificationPreferencesHandler(bindSessionAuthority(db(),createSyntheticAuthority(async()=>identityPrincipal(outsider))))(req())).status).toBe(403);
+ const source=db();expect((await createNotificationPreferencesHandler(bindSessionAuthority({...source,transaction:async()=>{throw Error('private');}},createSyntheticAuthority(async()=>principal)))(req())).status).toBe(503);
+});

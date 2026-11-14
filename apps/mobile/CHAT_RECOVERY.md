@@ -63,3 +63,28 @@ Not verified: physical iOS/Android devices, native builds, keyboards/network swi
 SecureStore execution, durable drafts after app/process restart, background recovery,
 realtime, delivery/read receipts, production deployment or E2EE. Expo export is JS
 bundling only. These limitations keep the broader CHAT P0 acceptance gate open.
+
+## Bounded outgoing records and explicit local discard
+
+The RAM queue retains at most 50 accepted records and 500 total records. Accepted
+canonical receipts (including hidden/deleted metadata) may be compacted; queued,
+sending and failed attempts are never automatically evicted. The visible history,
+terminal deletion ledger, edited-version digest ledger and visibility revision
+fence keep their separate existing bounds and authorization rules.
+
+`beginDiscardOutgoing` / `cancelDiscardOutgoing` / `confirmDiscardOutgoing(token)`
+are local-only actions. Confirmation warns that an unknown operation may already
+have committed, removes its retry option, and never issues HTTP DELETE or promises
+server cancellation. A matching unchanged composer/reply selection is cleared;
+a newer private draft is preserved. The `reply_unavailable` outcome now retains a
+redacted pending attempt so its failed queue record remains explicitly discardable,
+rather than silently leaving an unreachable record. If a canonical GET already
+proved acceptance while POST ACK is pending, discard releases only the pending
+operation; the accepted record remains eligible for normal compaction.
+
+Discard permits a new send while the previous request finishes. Every send carries
+an operation-validity guard through discovery, the visibility fence, canonical
+digest/cookie checks, queue mutation and completion. Late success/transient failure
+cannot update a newer operation. Current-session auth/membership denial remains
+fail-closed even after discard; old-session denial cannot block a replacement login.
+This is not durable offline storage and does not cancel already-started network I/O.

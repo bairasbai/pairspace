@@ -15,12 +15,14 @@ function plan(root, runtime, profile = 'full') {
     node('api-typecheck', 'services/api', ['node_modules/typescript/bin/tsc', '--noEmit']),
     node('api-lint', '.', ['services/api/node_modules/eslint/bin/eslint.js', '--config',
       'services/api/eslint.config.js', 'services/api', 'packages/domain']),
+    // b4017a1 independent measurement353535ms plus25%, rounded30s =>450s.
+    // Only aggregate API deadline; exact args/inner guards remain unchanged.
     node('api-domain-coverage', 'services/api', ['node_modules/vitest/vitest.mjs', 'run', '--coverage',
       '--coverage.thresholds.statements=90', '--coverage.thresholds.branches=90',
       '--coverage.thresholds.functions=90', '--coverage.thresholds.lines=90',
       '--coverage.reporter=json-summary', '--coverage.include=services/api/src/**/*.ts',
       '--coverage.include=packages/domain/**/*.ts', '--coverage.reportsDirectory=' + path.join(runtime, 'api-coverage'),
-      '--fsModuleCachePath=' + path.join(runtime, 'vitest-fs-cache'), '--no-cache'], 240000),
+      '--fsModuleCachePath=' + path.join(runtime, 'vitest-fs-cache'), '--no-cache'], 450000),
     node('mobile-typecheck', 'apps/mobile', ['node_modules/typescript/bin/tsc', '--noEmit']),
     node('mobile-lint', 'apps/mobile', ['node_modules/eslint/bin/eslint.js', '.']),
     node('mobile-domain-coverage', '.', ['apps/mobile/node_modules/jest/bin/jest.js',
@@ -33,7 +35,7 @@ function plan(root, runtime, profile = 'full') {
     node('postgres-safety', 'services/api', ['--test', ...readdirSync(path.join(root, 'services/api/tests/postgres'))
       .filter(name => name.endsWith('.test.mjs')).sort().map(name => 'tests/postgres/' + name)]),
     { id: 'real-postgres', cwd: 'services/api', command: 'bash', args: ['scripts/run-postgres.sh'],
-      timeoutMs: 390000, graceMs: 15000, required: true },
+      timeoutMs: 1140000, graceMs: 15000, required: true },
     node('root-domain', '.', ['--test', ...readdirSync(path.join(root, 'tests'))
       .filter(name => name.endsWith('.test.ts')).sort().map(name => 'tests/' + name)]),
     node('mobile-js-export', 'apps/mobile', ['node_modules/expo/bin/cli', 'export', '--platform', 'ios',

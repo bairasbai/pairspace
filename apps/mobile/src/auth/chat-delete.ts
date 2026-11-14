@@ -1,9 +1,10 @@
+import type { HiddenMessage } from '../chat/visibility-model';
 import { deleteChatMessage, type DeleteTarget } from '../chat/delete-transport';
 import { displayMessage, type DisplayMessage } from '../chat/reply-view';
 import type { TransportSession } from '../chat/transport';
 
 export type DeleteState = Readonly<{
-  status: 'idle' | 'confirming' | 'sending' | 'unknown' | 'error' | 'deleted';
+  status: 'idle' | 'confirming' | 'sending' | 'unknown' | 'error' | 'deleted' | 'hidden';
   confirmation?: Readonly<{ token: string; messageId: string; version: number; seq: number; createdAt: string }>;
   pendingId?: string;
   error?: string;
@@ -15,7 +16,9 @@ type Host = {
   cookie(): Promise<string | null>;
   publish(state: DeleteState): void;
   denied(error: string): void;
-  accept(message: DisplayMessage, token: string): Promise<boolean>;
+  acceptHiddenReceipt?(token: string, revision: number | undefined, message: HiddenMessage): Promise<boolean>;
+  revisionCurrent?(revision: number | undefined): boolean;
+  accept(message: DisplayMessage, token: string, revision?: number): Promise<boolean>;
 };
 /** A confirmation is not a command. Only explicit confirmation allocates its retry key. */
 export function createChatDelete(baseURL: string, host: Host,
@@ -46,9 +49,15 @@ export function createChatDelete(baseURL: string, host: Host,
       const cookie = await host.cookie();
       if (!current(command.generation) || pending !== command) return;
       if (cookie !== found.credential.token) { host.denied('auth_required'); return; }
+      if (result.ok && 'hiddenMessage' in result.value) {
+        if (host.revisionCurrent && !host.revisionCurrent(result.visibilityRevision)) { publish({ status: 'unknown', pendingId: command.message.id, error: 'visibility_changed' }); return; }
+        if (host.acceptHiddenReceipt && !await host.acceptHiddenReceipt(found.credential.token, result.visibilityRevision, result.value.hiddenMessage)) return;
+        if (!current(command.generation) || pending !== command) return;
+        pending = null; publish({ status: 'hidden' }); return;
+      }
       if (!result.ok) {
         if (result.error === 'message_deleted') {
-          const accepted = await host.accept(displayMessage(result.message), found.credential.token);
+          const accepted = await host.accept(displayMessage(result.message), found.credential.token, result.visibilityRevision);
           if (!current(command.generation) || pending !== command) return;
           if (!accepted) {
             publish({ status: 'unknown', pendingId: command.message.id, error: 'invalid_response' }); return;
@@ -61,7 +70,8 @@ export function createChatDelete(baseURL: string, host: Host,
         return;
       }
       if (!current(command.generation) || pending !== command) return;
-      const accepted = await host.accept(displayMessage(result.value.message), found.credential.token);
+      if (!('message' in result.value)) return;
+      const accepted = await host.accept(displayMessage(result.value.message), found.credential.token, result.visibilityRevision);
       if (!current(command.generation) || pending !== command) return;
       if (!accepted) {
         publish({ status: 'unknown', pendingId: command.message.id, error: 'invalid_response' }); return;
@@ -74,6 +84,7 @@ export function createChatDelete(baseURL: string, host: Host,
     } finally { if (current(command.generation)) busy = false; }
   }
   return {
+    visibilityChanged() { selection = null; serial++; publish({ status: pending ? 'unknown' : 'idle', ...(pending ? { pendingId: pending.message.id } : {}) }); },
     reset() { serial++; selection = null; pending = null; busy = false; state = { status: 'idle' }; },
     beginDelete(id: string) {
       const context = host.capture(), message = host.find(id);

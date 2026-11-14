@@ -13,6 +13,7 @@ export type Outgoing = Readonly<{
   body: string | null;
   /** Canonical display only; body remains the immutable original send command. */
   canonicalBody?: string;
+  hidden?: boolean;
   status: SendStatus;
   attempt: number;
   error: 'rejected' | null;

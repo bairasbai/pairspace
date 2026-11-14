@@ -1,3 +1,4 @@
+import type { HiddenMessage } from '../chat/visibility-model';
 import { editChatMessage } from '../chat/edit-transport';
 import { readReplyDetail } from '../chat/reply-transport';
 import { displayMessage, type DisplayMessage } from '../chat/reply-view';
@@ -5,7 +6,7 @@ import type { DeleteTarget } from '../chat/delete-transport';
 import type { TransportSession } from '../chat/transport';
 import { normalizeMessageText } from '../chat/text';
 export type EditState = Readonly<{
-    status: 'idle' | 'editing' | 'sending' | 'unknown' | 'conflict' | 'saved' | 'deleted' | 'error';
+    status: 'idle' | 'editing' | 'sending' | 'unknown' | 'conflict' | 'saved' | 'deleted' | 'hidden' | 'error';
     targetId?: string;
     version?: number;
     draft: string;
@@ -24,7 +25,9 @@ type Host = {
     cookie(): Promise<string | null>;
     publish(state: EditState): void;
     denied(error: string): void;
-    accept(message: DisplayMessage, token: string): Promise<boolean>;
+    acceptHiddenReceipt?(token: string, revision: number | undefined, message: HiddenMessage): Promise<boolean>;
+    revisionCurrent?(revision: number | undefined): boolean;
+    accept(message: DisplayMessage, token: string, revision?: number): Promise<boolean>;
 };
 const empty: EditState = { status: 'idle', draft: '', needsReload: false };
 const metadata = (m: DisplayMessage): DeleteTarget => ({ id: m.id, coupleId: m.coupleId, senderId: m.senderId,
@@ -85,9 +88,18 @@ export function createChatEdit(baseURL: string, host: Host, request: (request: R
                 host.denied('auth_required');
                 return;
             }
-            const canonical = result.ok ? result.value.message : result.error === 'message_deleted' ? result.message : null;
+            if (result.ok && 'hiddenMessage' in result.value) {
+                if (host.revisionCurrent && !host.revisionCurrent(result.visibilityRevision)) { publish({ ...state, status: 'unknown', error: 'visibility_changed' }); return; }
+                if (host.acceptHiddenReceipt && !await host.acceptHiddenReceipt(found.credential.token, result.visibilityRevision, result.value.hiddenMessage)) return;
+                if (!current(command.generation) || pending !== command) return;
+                const unchanged = revision === command.revision;
+                pending = null;
+                publish({ ...state, status: 'hidden', draft: unchanged ? '' : state.draft, needsReload: true });
+                return;
+            }
+            const canonical = result.ok && 'message' in result.value ? result.value.message : !result.ok && result.error === 'message_deleted' ? result.message : null;
             if (canonical) {
-                const accepted = await host.accept(displayMessage(canonical), found.credential.token);
+                const accepted = await host.accept(displayMessage(canonical), found.credential.token, 'visibilityRevision' in result ? result.visibilityRevision : undefined);
                 if (!current(command.generation) || pending !== command)
                     return;
                 if (!accepted) {
@@ -124,6 +136,12 @@ export function createChatEdit(baseURL: string, host: Host, request: (request: R
         }
     }
     return {
+        visibilityChanged() {
+            readSequence++;
+            if (!pending) busy = false;
+            const unchanged = revision === baselineRevision || revision === pending?.revision;
+            publish({ ...state, status: pending ? 'unknown' : 'hidden', draft: unchanged ? '' : state.draft, needsReload: true });
+        },
         observe,
         reset() { readSequence++; revision++; target = null; pending = null; busy = false; generation = -1; state = empty; },
         beginEdit(id: string) {
@@ -146,7 +164,7 @@ export function createChatEdit(baseURL: string, host: Host, request: (request: R
             if (value === state.draft)
                 return;
             revision++;
-            publish({ ...state, draft: value, status: state.status === 'deleted' ? 'deleted' : pending ? state.status : 'editing' });
+            publish({ ...state, draft: value, status: (state.status === 'deleted' || state.status === 'hidden') ? state.status : pending ? state.status : 'editing' });
         },
         cancelEdit() {
             if (pending || busy)
@@ -157,7 +175,7 @@ export function createChatEdit(baseURL: string, host: Host, request: (request: R
             publish(empty);
         },
         async saveEdit() {
-            if (!target || pending || busy || !current(generation) || state.needsReload || state.status === 'deleted')
+            if (!target || pending || busy || !current(generation) || state.needsReload || (state.status === 'deleted' || state.status === 'hidden'))
                 return;
             const normalized = normalizeMessageText(state.draft);
             if (!normalized.ok) {
@@ -198,7 +216,7 @@ export function createChatEdit(baseURL: string, host: Host, request: (request: R
                     return;
                 }
                 const m = displayMessage(result.value);
-                const accepted = await host.accept(m, found.credential.token);
+                const accepted = await host.accept(m, found.credential.token, result.visibilityRevision);
                 if (!current(g) || sequence !== readSequence)
                     return;
                 if (!accepted) {

@@ -1,3 +1,4 @@
+import { visibleChatPredicate } from './chat-visibility-scope.ts';
 import type { AuthorizedDatabase, Message, Principal, Result } from './contracts.ts';
 import { authorizeChat } from './chat.ts';
 import { activeSession, validPrincipal } from './session.ts';
@@ -29,13 +30,14 @@ export async function readChatWindow(db: AuthorizedDatabase, principal: Principa
     || !isEpoch(f.membershipEpoch) || !isUuid(f.readId)
     || !['latest', 'oldest', 'before', 'after'].includes(String(f.direction))) return { ok: false, error: 'invalid_request' };
   if (anchored && (!positive(f.anchorSeq) || !isUuid(f.anchorId))) return { ok: false, error: 'invalid_cursor' };
-  const scoped = participantScope + (replyAware ? '' : " AND to_jsonb(m)->>'deleted_at' IS NULL");
+  const baseScope = participantScope + (replyAware ? '' : " AND to_jsonb(m)->>'deleted_at' IS NULL");
   const coupleId = f.coupleId.toLowerCase(), epoch = f.membershipEpoch, readId = f.readId.toLowerCase();
   return db.transaction(async tx => {
     if (!await activeSession(tx, db, principal)) return { ok: false, error: 'unavailable' };
     const denied = await authorizeChat(tx, principal, coupleId, epoch, false);
     if (denied) return { ok: false, error: denied };
     if (!await activeSession(tx, db, principal)) return { ok: false, error: 'unavailable' };
+    const scoped = baseScope + ` AND ${await visibleChatPredicate(tx, 'm')}`;
     if (anchored && !(await tx.query(`SELECT m.seq FROM chat_messages m WHERE ${scoped} AND m.seq=$2 AND m.id=$3`, [coupleId, f.anchorSeq, f.anchorId])).rows.length) {
       return { ok: false, error: 'invalid_cursor' };
     }

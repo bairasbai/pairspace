@@ -1,3 +1,4 @@
+import { chatMessageHidden, hiddenOriginal, hiddenChatReplay } from './chat-visibility-scope.ts';
 import { originalChatBodyMatches } from './chat-send-identity.ts';
 import type { AuthorizedDatabase, Principal, Result, SqlExecutor } from "./contracts.ts";
 import { authorizeChat } from "./chat.ts";
@@ -60,63 +61,77 @@ export async function sendChatReply(db: AuthorizedDatabase, p: Principal, input:
     if (!parsed.ok)
         return parsed;
     const { coupleId, membershipEpoch, clientId, body } = parsed.value, replyToId = f.replyToId.toLowerCase();
-    return db.transaction(async (tx) => {
-        if (!await activeSession(tx, db, p))
-            return {
-                ok: false,
-                error: "unavailable"
-            };
-        const denied = await authorizeChat(tx, p, coupleId, membershipEpoch, true);
-        if (denied)
-            return {
-                ok: false,
-                error: denied
-            };
-        if (!await activeSession(tx, db, p))
-            return {
-                ok: false,
-                error: "unavailable"
-            };
-        const old = (await tx.query<Row>(`SELECT ${columns} FROM chat_messages WHERE couple_id=$1 AND sender_id=$2 AND client_message_id=$3`, [coupleId, p.userId, clientId])).rows[0];
-        if (old) {
-            if (old.deleted_at)
-                return {
-                    ok: false,
-                    error: "reply_unavailable"
-                };
-            if (!originalChatBodyMatches(old, body) || old.reply_to_id !== replyToId)
-                return {
-                    ok: false,
-                    error: "idempotency_conflict"
-                };
-            return {
-                ok: true,
-                value: {
-                    message: convert(old),
-                    replay: true
-                }
-            };
-        }
-        const parent = await target(tx, coupleId, replyToId);
-        if (!parent || parent.deleted_at)
-            return {
-                ok: false,
-                error: "reply_unavailable"
-            };
-        const seq = (await tx.query<{
-            seq: string;
-        }>("UPDATE couples SET next_chat_seq=next_chat_seq+1 WHERE id=$1 RETURNING (next_chat_seq-1)::text AS seq", [coupleId])).rows[0].seq;
-        const made = (await tx.query<Row>(`INSERT INTO chat_messages(couple_id,sender_id,client_message_id,seq,body,reply_to_id)
-      VALUES($1,$2,$3,$4,$5,$6) RETURNING ${columns}`, [coupleId, p.userId, clientId, seq, body, replyToId])).rows[0];
-        await tx.query("INSERT INTO outbox_events(couple_id,type,message_id) VALUES($1,'chat.message_created',$2)", [coupleId, made.id]);
-        return {
-            ok: true,
-            value: {
-                message: convert(made),
-                replay: false
-            }
-        };
-    });
+    const expiredAfterCapture = new Error('chat_session_expired_after_capture');
+    try {
+      return await db.transaction(async (tx) => {
+          if (!await activeSession(tx, db, p))
+              return {
+                  ok: false,
+                  error: "unavailable"
+              };
+          const denied = await authorizeChat(tx, p, coupleId, membershipEpoch, true);
+          if (denied)
+              return {
+                  ok: false,
+                  error: denied
+              };
+          if (!await activeSession(tx, db, p))
+              return {
+                  ok: false,
+                  error: "unavailable"
+              };
+          const replayId = (await tx.query<{id:string}>(`SELECT id FROM chat_messages WHERE couple_id=$1 AND sender_id=$2 AND client_message_id=$3`, [coupleId,p.userId,clientId])).rows[0];
+          if (replayId && await chatMessageHidden(tx,replayId.id)) {
+              const original=await hiddenOriginal(tx,replayId.id);
+              if(original.reply_to_id!==replyToId || !originalChatBodyMatches(original,body))return {ok:false,error:'idempotency_conflict'};
+              return hiddenChatReplay(tx,replayId.id);
+          }
+          const old = (await tx.query<Row>(`SELECT ${columns} FROM chat_messages WHERE couple_id=$1 AND sender_id=$2 AND client_message_id=$3`, [coupleId, p.userId, clientId])).rows[0];
+          if (old) {
+              if (old.deleted_at)
+                  return {
+                      ok: false,
+                      error: "reply_unavailable"
+                  };
+              if (!originalChatBodyMatches(old, body) || old.reply_to_id !== replyToId)
+                  return {
+                      ok: false,
+                      error: "idempotency_conflict"
+                  };
+              return {
+                  ok: true,
+                  value: {
+                      message: convert(old),
+                      replay: true
+                  }
+              };
+          }
+          if (await chatMessageHidden(tx,replyToId)) return {ok:false,error:'message_hidden'};
+          const parent = await target(tx, coupleId, replyToId);
+          if (!parent || parent.deleted_at)
+              return {
+                  ok: false,
+                  error: "reply_unavailable"
+              };
+          const seq = (await tx.query<{
+              seq: string;
+          }>("UPDATE couples SET next_chat_seq=next_chat_seq+1 WHERE id=$1 RETURNING (next_chat_seq-1)::text AS seq", [coupleId])).rows[0].seq;
+          const made = (await tx.query<Row>(`INSERT INTO chat_messages(couple_id,sender_id,client_message_id,seq,body,reply_to_id)
+        VALUES($1,$2,$3,$4,$5,$6) RETURNING ${columns}`, [coupleId, p.userId, clientId, seq, body, replyToId])).rows[0];
+          await tx.query("INSERT INTO outbox_events(couple_id,type,message_id) VALUES($1,'chat.message_created',$2)", [coupleId, made.id]);
+          if (!await activeSession(tx, db, p)) throw expiredAfterCapture;
+          return {
+              ok: true,
+              value: {
+                  message: convert(made),
+                  replay: false
+              }
+          };
+      });
+    } catch (error) {
+      if (error === expiredAfterCapture) return { ok: false, error: 'unavailable' };
+      throw error;
+    }
 }
 export async function readChatMessage(db: AuthorizedDatabase, p: Principal, input: unknown): Promise<Result<{
     message: ReplyMessage;
@@ -151,6 +166,7 @@ export async function readChatMessage(db: AuthorizedDatabase, p: Principal, inpu
                 ok: false,
                 error: "unavailable"
             };
+        if (await chatMessageHidden(tx,messageId)) return {ok:false,error:'message_hidden'};
         const row = await target(tx, coupleId, messageId);
         return row ? {
             ok: true,

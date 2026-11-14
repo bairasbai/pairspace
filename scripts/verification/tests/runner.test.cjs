@@ -84,3 +84,25 @@ test('required command schema validation rejects missing binary, args and budget
   }
   expect((await run({ expectedIds: undefined, profile: 'invalid' })).exitCode).toBe(1);
 });
+
+test('two executed steps use private numeric raw artifacts and skipped step has none', async () => {
+  const { createHash } = require('node:crypto');
+  const result = await run({ expectedIds: ['../one', 'two'], makePlan: () => [
+    step('../one', 'process.stdout.write("private-first");process.stderr.write("err")'),
+    step('two', 'process.stdout.write("private-second")'),
+    { id: 'optional', required: false, skip: 'NOT_RUN' },
+  ] });
+  expect(result.exitCode).toBe(0);
+  const logs = path.join(result.directory, 'logs');
+  expect(fs.statSync(logs).mode & 0o777).toBe(0o700);
+  expect(fs.readdirSync(logs).sort()).toEqual(['0000-stderr.bin', '0000-stdout.bin', '0001-stderr.bin', '0001-stdout.bin']);
+  for (const [index, value] of ['private-first', 'private-second'].entries()) {
+    const info = result.report.steps[index].stdout;
+    expect(info.artifact).toBe(`logs/000${index}-stdout.bin`);
+    expect(fs.readFileSync(path.join(result.directory, info.artifact), 'utf8')).toBe(value);
+    expect(info.sha256).toBe(createHash('sha256').update(value).digest('hex'));
+    expect(fs.statSync(path.join(result.directory, info.artifact)).mode & 0o777).toBe(0o600);
+  }
+  expect(result.report.steps[2].childLogs).toBe('NO_PROCESS_EXECUTED');
+  expect(JSON.stringify(result.report)).not.toMatch(/private-first|private-second/);
+});

@@ -1,0 +1,117 @@
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { AsksPanel } from '../src/auth/AsksPanel';
+import type { AsksActions } from '../src/auth/asks';
+import type { AskView, AskQuestion } from '../src/auth/asks-state';
+const actor = '00000000-0000-4000-8000-000000000001', partner = '00000000-0000-4000-8000-000000000002';
+const question: AskQuestion = { id: '00000000-0000-4000-8000-000000000010', coupleId: '00000000-0000-4000-8000-000000000099', authorId: partner, recipientId: actor, membershipEpoch: 1, sequence: 1, version: 1, createdAt: '2026-01-01T00:00:00.000Z', questionState: 'active', responseState: 'waiting', question: 'Synthetic question' };
+const base: AskView = { userId: actor, available: true, busy: false, checked: false, checkedAt: null, questions: [], used: 0, capacity: 100, create: '', answerDraft: null, pending: false, requiresRefresh: false, error: false, status: 'idle' };
+function fixture() {
+    let view = base;
+    const controller = { getSnapshot: () => view, subscribe: jest.fn(() => () => { }), load: jest.fn(async () => { }), setCreate: jest.fn(), cancelCreate: jest.fn(), create: jest.fn(async () => { }), beginAnswer: jest.fn(), setAnswer: jest.fn(), cancelAnswer: jest.fn(), answer: jest.fn(async () => { }), skip: jest.fn(async () => { }), removeQuestion: jest.fn(async () => { }), removeAnswer: jest.fn(async () => { }), retry: jest.fn(async () => { }) } satisfies AsksActions;
+    return { controller, set: (next: AskView) => { view = next; } };
+}
+it.each(['ru', 'en'] as const)('explicit asks forms and irreversible confirmations %s', locale => {
+    const f = fixture(), props = { controller: f.controller, locale };
+    f.set({ ...base, available: false });
+    const ui = render(<AsksPanel {...props}/>);
+    expect(ui.toJSON()).toBeNull();
+    const update = (next: AskView) => { f.set(next); ui.rerender(<AsksPanel {...props}/>); };
+    update({ ...base, checked: true, checkedAt: question.createdAt });
+    expect(screen.getByText(locale === 'ru' ? 'В проверенном списке пока нет вопросов.' : 'No questions in the checked list yet.')).toBeTruthy();
+    fireEvent.changeText(screen.getByLabelText(locale === 'ru' ? 'Новый вопрос' : 'New question'), 'Newer question');
+    expect(f.controller.setCreate).toHaveBeenCalledWith('Newer question');
+    for (const label of locale === 'ru' ? ['Отправить вопрос партнёру', 'Отменить новый вопрос', 'Обновить все вопросы'] : ['Send question to partner', 'Cancel new question', 'Refresh all questions'])
+        fireEvent.press(screen.getByText(label));
+    expect(f.controller.create).toHaveBeenCalledTimes(1);
+    expect(f.controller.cancelCreate).toHaveBeenCalledTimes(1);
+    expect(f.controller.load).toHaveBeenCalledTimes(1);
+    update({ ...base, questions: [question], used: 1, answerDraft: { id: question.id, version: 1, text: 'My draft' } });
+    expect(screen.getByText(locale === 'ru' ? 'Автор вопроса: Партнёр' : 'Question by: Partner')).toBeTruthy();
+    expect(screen.getByText(locale === 'ru' ? 'Ответ от: Вы' : 'Response by: You')).toBeTruthy();
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Ответить 1' : 'Answer 1'));
+    expect(f.controller.beginAnswer).toHaveBeenCalledWith(question.id);
+    fireEvent.changeText(screen.getByLabelText(locale === 'ru' ? 'Ваш несохранённый ответ' : 'Your unsaved answer'), 'Newer answer');
+    expect(f.controller.setAnswer).toHaveBeenCalledWith('Newer answer');
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Сохранить ответ для обоих' : 'Save answer for both'));
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Отменить ответ' : 'Cancel answer'));
+    expect(f.controller.answer).toHaveBeenCalledTimes(1);
+    expect(f.controller.cancelAnswer).toHaveBeenCalledTimes(1);
+    const confirm = locale === 'ru' ? 'Подтвердить' : 'Confirm', cancel = locale === 'ru' ? 'Оставить без изменений' : 'Keep unchanged';
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Пропустить 1' : 'Skip 1'));
+    expect(f.controller.skip).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByText(cancel));
+    expect(f.controller.skip).not.toHaveBeenCalled();
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Пропустить 1' : 'Skip 1'));
+    fireEvent.press(screen.getByText(confirm));
+    expect(f.controller.skip).toHaveBeenCalledWith(question.id, true);
+    update({ ...base, questions: [{ ...question, authorId: actor, recipientId: partner, responseState: 'answered', answer: 'Partner response', answeredAt: question.createdAt, version: 2 }] });
+    expect(screen.queryByText(locale === 'ru' ? 'Ответить 1' : 'Answer 1')).toBeNull();
+    expect(screen.getByText((locale === 'ru' ? 'Метка времени ответа: ' : 'Answer timestamp: ') + question.createdAt)).toBeTruthy();
+    expect(screen.getByText(locale === 'ru' ? 'Не раньше даты вопроса; не отметка прочтения.' : 'Not before the question date; not a read receipt.')).toBeTruthy();
+    expect(screen.getByText(locale === 'ru' ? 'Автор вопроса: Вы' : 'Question by: You')).toBeTruthy();
+    expect(screen.getByText(locale === 'ru' ? 'Ответ от: Партнёр' : 'Response by: Partner')).toBeTruthy();
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Удалить свой вопрос 1' : 'Remove your question 1'));
+    expect(screen.getByText(locale === 'ru' ? 'Удалить текст своего вопроса для обоих? Уже сохранённый ответ партнёра останется. Если вопрос ещё ждёт ответа, он будет отозван. Пропуск или ранее удалённый ответ не изменятся.' : 'Remove your question text for both? An already saved partner answer will remain. If the question is still waiting for a response, it will be withdrawn. A skipped or previously removed answer state will not change.')).toBeTruthy();
+    fireEvent.press(screen.getByText(confirm));
+    expect(f.controller.removeQuestion).toHaveBeenCalledWith(question.id, true);
+    update({ ...base, questions: [{ ...question, questionState: 'removed', question: undefined, responseState: 'answered', answer: 'Own response', answeredAt: question.createdAt, version: 3 }] });
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Удалить свой ответ 1' : 'Remove your answer 1'));
+    expect(screen.getByText(locale === 'ru' ? 'Удалить свой ответ для обоих? Это окончательно: новый ответ на этот вопрос добавить уже нельзя. Вопрос партнёра останется, если он не был удалён раньше.' : 'Remove your answer for both? This is final: a new answer cannot be added to this question. The partner’s question will remain unless it was already removed.')).toBeTruthy();
+    fireEvent.press(screen.getByText(confirm));
+    expect(f.controller.removeAnswer).toHaveBeenCalledWith(question.id, true);
+    for (const responseState of ['skipped', 'withdrawn', 'answer_removed'] as const)
+        update({ ...base, questions: [{ ...question, questionState: 'removed', question: undefined, responseState, version: 4, ...(responseState === 'answer_removed' ? { answeredAt: question.createdAt } : {}) }] });
+    update({ ...base, status: 'retry', pending: true, error: true });
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Повторить ту же команду' : 'Retry same command'));
+    expect(f.controller.retry).toHaveBeenCalledTimes(1);
+    update({ ...base, busy: true, requiresRefresh: true, status: 'saving' });
+    fireEvent.press(screen.getByText(locale === 'ru' ? 'Обновить все вопросы' : 'Refresh all questions'));
+    expect(f.controller.load).toHaveBeenCalledTimes(1);
+    for (const status of ['idle', 'saved', 'invalid', 'conflict', 'unavailable', 'limit'] as const)
+        update({ ...base, status });
+});
+it.each(['ru', 'en'] as const)('stale draft remains editable but cannot be submitted %s', locale => {
+    const f = fixture(), props = { controller: f.controller, locale };
+    const ui = render(<AsksPanel {...props}/>);
+    for (const stale of ['changed', 'terminal'] as const) {
+        f.set({ ...base, answerDraft: { id: question.id, version: 1, text: 'Draft preserved', stale } });
+        ui.rerender(<AsksPanel {...props}/>);
+        expect(screen.getByText(new RegExp(locale === 'ru' ? (stale === 'changed' ? 'Вопрос изменился.' : 'Этот вопрос больше не принимает ответ.') : (stale === 'changed' ? 'This question changed.' : 'This question no longer accepts an answer.')))).toBeTruthy();
+        fireEvent.press(screen.getByText(locale === 'ru' ? 'Сохранить ответ для обоих' : 'Save answer for both'));
+        expect(f.controller.answer).not.toHaveBeenCalled();
+        fireEvent.changeText(screen.getByDisplayValue('Draft preserved'), 'Still editable');
+        expect(f.controller.setAnswer).toHaveBeenLastCalledWith('Still editable');
+        fireEvent.press(screen.getByText(locale === 'ru' ? 'Отменить ответ' : 'Cancel answer'));
+    }
+    expect(f.controller.cancelAnswer).toHaveBeenCalledTimes(2);
+});
+it('cap and pending guards, current-version confirmation and removed text privacy', () => {
+    const f = fixture(), props = { controller: f.controller, locale: 'en' as const };
+    f.set({ ...base, questions: [question], used: 100 });
+    const ui = render(<AsksPanel {...props}/>);
+    const update = (next: AskView) => { f.set(next); ui.rerender(<AsksPanel {...props}/>); };
+    fireEvent.press(screen.getByText('Send question to partner'));
+    expect(f.controller.create).not.toHaveBeenCalled();
+    expect(screen.getByText('Remaining capacity in known data: 0')).toBeTruthy();
+    fireEvent.press(screen.getByText('Skip 1'));
+    update({ ...base, questions: [{ ...question, version: 2, responseState: 'skipped' }] });
+    expect(screen.queryByText('Confirm')).toBeNull();
+    update({ ...base, questions: [question] });
+    fireEvent.press(screen.getByText('Skip 1'));
+    update({ ...base, userId: partner, questions: [question] });
+    expect(screen.queryByText('Confirm')).toBeNull();
+    update({ ...base, questions: [question] });
+    fireEvent.press(screen.getByText('Skip 1'));
+    update({ ...base, questions: [{ ...question, version: 2, questionState: 'removed', question: undefined, responseState: 'withdrawn' }] });
+    expect(screen.queryByText('Synthetic question')).toBeNull();
+    expect(screen.queryByText('Confirm')).toBeNull();
+    update({ ...base, questions: [question], pending: true, busy: true, answerDraft: { id: question.id, version: 1, text: 'Editable' } });
+    fireEvent.press(screen.getByText('Answer 1'));
+    fireEvent.press(screen.getByText('Skip 1'));
+    fireEvent.press(screen.getByText('Save answer for both'));
+    expect(f.controller.beginAnswer).not.toHaveBeenCalled();
+    expect(f.controller.skip).not.toHaveBeenCalled();
+    expect(f.controller.answer).not.toHaveBeenCalled();
+    fireEvent.changeText(screen.getByDisplayValue('Editable'), 'Still editable');
+    expect(f.controller.setAnswer).toHaveBeenCalledWith('Still editable');
+});

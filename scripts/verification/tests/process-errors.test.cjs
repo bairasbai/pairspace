@@ -1,3 +1,5 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const { EventEmitter } = require('node:events');
 async function fixture({ platform = 'linux', failure, killFailure, pid = 999, aborted = false } = {}) {
   jest.resetModules();
@@ -9,13 +11,15 @@ async function fixture({ platform = 'linux', failure, killFailure, pid = 999, ab
   jest.doMock('node:child_process', () => ({ spawn: () => child }));
   const { runProcess } = require('../process.cjs');
   const controller = new AbortController(); if (aborted) controller.abort();
-  const promise = runProcess({ command: 'fixture', args: [], timeoutMs: 1 }, { cwd: '.', env: {}, signal: controller.signal });
+  const logsDirectory = fs.mkdtempSync(path.join(require('node:os').tmpdir(), 'capture-error-'));
+  const promise = runProcess({ command: 'fixture', args: [], timeoutMs: 1 }, { cwd: '.', env: {}, signal: controller.signal, logsDirectory, stepIndex: 0 });
   await new Promise(resolve => setTimeout(resolve, 10));
   if (failure) child.emit('error', failure);
   child.emit('close', null, 'SIGTERM');
   const result = await promise;
   kill.mockRestore(); Object.defineProperty(process, 'platform', platformProperty);
   jest.dontMock('node:child_process'); jest.resetModules();
+  fs.rmSync(logsDirectory, { recursive: true, force: true });
   return result;
 }
 test('termination errors and missing pid are explicit without raw messages', async () => {

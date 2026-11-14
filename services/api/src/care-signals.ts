@@ -53,6 +53,10 @@ export async function sendCareSignal(db: AuthorizedDatabase, principal: Principa
     if (recent.rows.length) return fail('cooldown');
     const inserted = await tx.query<Row>(`INSERT INTO care_signals(couple_id,sender_id,recipient_id,client_signal_id,membership_epoch,created_at)
       VALUES($1,$2,$3,$4,$5,$6) RETURNING ${columns}`, [scope.coupleId, principal.userId, recipient.value, scope.clientId, scope.membershipEpoch, now]);
+    // Capture only newly accepted signals, in this same transaction. Old retries
+    // never backfill historical events; this row authorizes no external delivery.
+    await tx.query(`INSERT INTO outbox_events(couple_id,type,care_signal_id,membership_epoch,created_at)
+      VALUES($1,'care.signal_created',$2,$3,$4)`, [scope.coupleId, inserted.rows[0].id, scope.membershipEpoch, now]);
     return { ok: true, value: { signal: signal(inserted.rows[0]), replay: false } };
   });
 }
