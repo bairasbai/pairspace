@@ -597,4 +597,4 @@ Real PG/HTTP/mobile scenarios added, first execution and both exact FULL still d
 Separate new WIP; accepted19/earlier WIPs unchanged. No native/two-device/production.
 
 ## Prediction reconstruction, 15 November 2026
-Separate reconstruction from6e12b894, not recovered985e2bb: domain2d31808 has75 focused cases and authorFULL11PASS. New isolated API/storage candidate adds scoped metadata-only commands/read and migration043; its tests/acceptance pending, mobileUI absent. See docs/PREDICTION_POLICY_RECONSTRUCTION.md; compare original before merge.
+Separate reconstruction from6e12b894, not recovered985e2bb: API82e0399 bounded ACCEPT_API_STORAGE with bothFULL11PASS. New mobile candidate adds RU/EN scheduling, explicit consent/read and RAM lifecycle fences; new tests/acceptance pending. See docs/PREDICTION_POLICY_RECONSTRUCTION.md; compare original before merge.

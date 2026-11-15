@@ -372,3 +372,5 @@ one immutable pending command only; default-off, native acceptance not establish
 Prediction consent/refusal reconstruction: see docs/PREDICTION_POLICY_RECONSTRUCTION.md; domain-only, no API/UI.
 
 Prediction API/storage candidate: migration043, services/api/src/predictions*.ts and scoped integration tests; see reconstruction document. Not yet accepted.
+
+Prediction mobile candidate: predictions controller/state and PredictionsPanel/Reader, RU/EN copy; isolated from accepted API82e0399. See reconstruction document.

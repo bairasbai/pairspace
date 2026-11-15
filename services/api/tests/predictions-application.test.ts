@@ -20,6 +20,8 @@ it('predictions has its own default-off boolean/loopback flag and guarded DELETE
     expect(() => createApiApplication({ ...config, enableSyntheticPredictions: 'true' as unknown as boolean })).toThrow('invalid_api_configuration');
     const remote = 'https://remote.invalid';
     expect(() => createApiApplication({ ...config, baseURL: remote, trustedOrigins: [remote], enableSyntheticPredictions: true })).toThrow('invalid_api_configuration');
+    expect(() => createApiApplication(config, { predictionsClock: 'bad' as unknown as () => Date })).toThrow('invalid_api_configuration');
+    expect((await createApiApplication(config, { predictionsClock: () => new Date() }).handle(get())).status).toBe(404);
     expect(pool.totalCount).toBe(0);
   } finally { await pool.end(); }
 });

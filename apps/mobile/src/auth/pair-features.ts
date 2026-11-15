@@ -1,5 +1,6 @@
 import { createSharedDoingsController } from './shared-doings';
 import { createStoriesController } from './stories';
+import { createPredictionsController } from './predictions';
 import { createHardQuestionsController } from './hard-questions';
 import {createStemsController} from './stems';
 import {createScaleController} from './scale';
@@ -31,6 +32,7 @@ export function createPairFeatures(config: SyntheticConfig, host: PairFeaturesHo
   request: (request: Request) => Promise<Response>, commandId: () => string, digest?: BodyDigest) {
   const sharedDoings = createSharedDoingsController(config, host, request, commandId);
   const stories = createStoriesController(config, host, request, commandId);
+  const predictions = createPredictionsController(config, host, request, commandId);
   const hardQuestions = createHardQuestionsController(config, host, request, commandId);
   const stems = createStemsController(config,host,request,commandId);
   const scale = createScaleController(config,host,request,commandId);
@@ -53,9 +55,9 @@ export function createPairFeatures(config: SyntheticConfig, host: PairFeaturesHo
   const morningPrepared = createMorningPreparedController(config, host, request, commandId);
   const morningDiscussions = createMorningDiscussionsController(config, host, request, commandId, digest);
   const leave = createLeaveController(config, host, request, commandId);
-  const ordinary = [sharedDoings,hardQuestions,stories,stems,scale,asks,loveWords,notificationPreferences, arrival, partings, invitations, care, letters, tasks, wishes, dates, memories, songs, blind, mornings, morningDraft, morningPrepared, morningDiscussions];
+  const ordinary = [predictions,sharedDoings,hardQuestions,stories,stems,scale,asks,loveWords,notificationPreferences, arrival, partings, invitations, care, letters, tasks, wishes, dates, memories, songs, blind, mornings, morningDraft, morningPrepared, morningDiscussions];
   return {
-    actions: { sharedDoings: sharedDoings.actions, hardQuestions: hardQuestions.actions, stories: stories.actions, stems: stems.actions, scale: scale.actions, asks: asks.actions, loveWords: loveWords.actions, notificationPreferences: notificationPreferences.actions, arrival: arrival.actions, partings: partings.actions, invitations: invitations.actions, care: care.actions, letters: letters.actions,
+    actions: { predictions: predictions.actions, sharedDoings: sharedDoings.actions, hardQuestions: hardQuestions.actions, stories: stories.actions, stems: stems.actions, scale: scale.actions, asks: asks.actions, loveWords: loveWords.actions, notificationPreferences: notificationPreferences.actions, arrival: arrival.actions, partings: partings.actions, invitations: invitations.actions, care: care.actions, letters: letters.actions,
       tasks: tasks.actions, wishes: wishes.actions, dates: dates.actions, memories: memories.actions,
       songs: songs.actions, blind: blind.actions, mornings: mornings.actions, morningDraft: morningDraft.actions, morningPrepared: morningPrepared.actions, morningDiscussions: morningDiscussions.actions, leave: leave.actions },
     resetLeave: leave.reset,

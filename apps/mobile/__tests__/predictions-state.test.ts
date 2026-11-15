@@ -1,0 +1,23 @@
+import { canReadPrediction, emptyPredictions, mergePrediction, predictionOrder } from '../src/auth/predictions-state';
+import { before, context, due, incoming, opened, own, removed, uuid } from './predictions-fixtures';
+it('merges bounded metadata without SQL sequence or completeness claims; tombstones erase readers', () => {
+  const view = { ...emptyPredictions, available: true, userId: context.userId, predictions: [own], used: 1 };
+  expect(mergePrediction(view, incoming, due).used).toBe(2);
+  expect(() => mergePrediction(view, { ...own, releaseAt: before }, due)).toThrow();
+  expect(() => mergePrediction({ ...view, predictions: [removed] }, opened, due)).toThrow();
+  const full = Array.from({ length: 100 }, (_, n) => ({ ...own, id: uuid(100 + n) }));
+  expect(() => mergePrediction({ ...view, predictions: full }, own, due)).toThrow();
+  const reader = { prediction: opened, text: 'Synthetic prediction', checkedAt: due };
+  const readView = { ...view, predictions: [opened], reader };
+  expect(mergePrediction(readView, opened, due).reader).toBe(reader);
+  expect(mergePrediction(readView, removed, due).reader).toBeNull();
+  expect(mergePrediction(readView, own, before).reader).toBeNull();
+  expect(canReadPrediction(own, context.userId, before)).toBe(true);
+  expect(canReadPrediction(incoming, context.userId, due)).toBe(false);
+  expect(canReadPrediction(opened, context.userId, before)).toBe(false);
+  expect(canReadPrediction(opened, context.userId, due)).toBe(true);
+  expect(canReadPrediction(opened, null, due)).toBe(false); expect(canReadPrediction(opened, context.userId, null)).toBe(false);
+  expect(predictionOrder(own, own)).toBe(0);
+  expect(predictionOrder(own, { ...own, createdAt: '2026-11-09T00:00:00.000Z' })).toBe(-1);
+  expect(predictionOrder({ ...own, createdAt: '2026-11-09T00:00:00.000Z' }, own)).toBe(1);
+});

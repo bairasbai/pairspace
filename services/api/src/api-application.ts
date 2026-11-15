@@ -16,6 +16,7 @@ import { createDayScaleHandler } from './day-scale-http.ts';
 import { createAsksHandler } from './asks-http.ts';
 import { createStoriesHandler } from './stories-http.ts';
 import { createSharedDoingsHandler } from './shared-doings-http.ts';
+import type { PredictionClock } from './predictions.ts';
 import { createPredictionsHandler } from './predictions-http.ts';
 import { createHardQuestionsHandler } from './hard-questions-http.ts';
 import { createLoveWordsHandler } from './love-words-http.ts';
@@ -173,7 +174,9 @@ function validate(config: ApiApplicationConfig): void {
 }
 
 /** Construction creates no listener, migrations, mappings, accounts or environment-based credentials. */
-export function createApiApplication(config: ApiApplicationConfig): ApiApplication {
+/** Trusted server dependency injection; never derive clocks from HTTP input or environment. */
+export function createApiApplication(config: ApiApplicationConfig, trustedDependencies: Readonly<{ predictionsClock?: PredictionClock }> = {}): ApiApplication {
+  if (trustedDependencies.predictionsClock !== undefined && typeof trustedDependencies.predictionsClock !== 'function') throw new Error('invalid_api_configuration');
   validate(config);
   const origins = new Set(config.trustedOrigins);
   const limits = { ...config.limits };
@@ -208,7 +211,7 @@ export function createApiApplication(config: ApiApplicationConfig): ApiApplicati
   const asks = config.enableSyntheticAsks === true ? createAsksHandler(bindSessionAuthority(database, authority)) : null;
   const stories = config.enableSyntheticStories === true ? createStoriesHandler(bindSessionAuthority(database, authority)) : null;
   const sharedDoings = config.enableSyntheticSharedDoings === true ? createSharedDoingsHandler(bindSessionAuthority(database, authority)) : null;
-  const predictions = config.enableSyntheticPredictions === true ? createPredictionsHandler(bindSessionAuthority(database, authority)) : null;
+  const predictions = config.enableSyntheticPredictions === true ? createPredictionsHandler(bindSessionAuthority(database, authority), trustedDependencies.predictionsClock) : null;
   const hardQuestions = config.enableSyntheticHardQuestions === true ? createHardQuestionsHandler(bindSessionAuthority(database, authority)) : null;
   const loveWords = config.enableSyntheticLoveWords === true ? createLoveWordsHandler(bindSessionAuthority(database, authority)) : null;
   const notificationPreferences = config.enableSyntheticNotificationPreferences === true ? createNotificationPreferencesHandler(bindSessionAuthority(database, authority)) : null;

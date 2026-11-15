@@ -98,3 +98,30 @@ it remains separate from actual session time. Default HTTP feature clock is db.n
 This API candidate has no mobile controller/composer/reader or device verification.
 New focused and real PostgreSQL/HTTP checks plus BOTH new exact FULL are required;
 domain2d31808 results are historical and cannot accept this changed source.
+
+## Mobile candidate after accepted API/storage82e0399
+
+A separate mobile slice adds an RU/EN Predictions tab, explicit schedule composer,
+immutable command retries and an in-memory reader. No device timezone/day is guessed:
+date/time/IANA zone/offset are supplied explicitly and server checkedAt is the only
+eligibility hint. The API remains authoritative after clock changes and lock waits.
+Metadata-only opening ACK never supplies text; a separate authenticated read may
+follow only while the original display intent/context remains current. Closing,
+navigation, logout or account/pair epoch replacement discard reader content.
+
+Real HTTP/mobile tests inject a trusted feature clock through the server factory's
+optional dependency argument, not through HTTP/config/environment and not through
+the authentication clock. The default implementation remains db.now. The default-off
+loopback feature flag, limits and request guards are unchanged.
+
+Component tests and JS export do not prove native iOS/Android or physical-device
+behaviour. Mobile source requires focused, real integration, author and independent
+exact FULL checks before bounded acceptance; API82e0399 evidence is historical.
+
+Mobile focused evidence before exact FULL:33 controller/state/UI/composition tests,
+real PostgreSQL18.6 +full HTTP/mobile scenario, API composition guard test, both
+typechecks and lint pass (3 pre-existing mobile warnings). Two initial real-mobile
+fixture failures are retained: missing full second schedule/history refresh, then
+stale author metadata after recipient decline. Tests now explicitly refresh and
+assert state before private reads; no production privacy guard was weakened.
+Native builds, device testing and production deployment remain unverified.

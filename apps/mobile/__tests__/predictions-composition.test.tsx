@@ -1,0 +1,31 @@
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { ConnectedTogether } from '../src/auth/ConnectedTogether';
+import { createPairFeatures } from '../src/auth/pair-features';
+import { fixture, prose } from './predictions-fixtures';
+
+it.each(['ru', 'en'] as const)('composes predictions with pair lifecycle and optional navigation %s', locale => {
+  const f = fixture();
+  const request = jest.fn(async () => { throw Error('Navigation must not fetch'); });
+  const host = { ...f.host, suspend: jest.fn(), finish: jest.fn(async () => {}) };
+  const features = createPairFeatures({ mode: 'synthetic-loopback', baseURL: 'http://localhost:8787' }, host, request, () => 'command');
+  features.sync();
+  expect(features.actions.predictions.getSnapshot().available).toBe(true);
+  features.actions.predictions.setDraft(prose);
+  expect(features.actions.predictions.getSnapshot().draft).toBe(prose);
+  const close = jest.spyOn(features.actions.predictions, 'close');
+  const view = render(<ConnectedTogether controller={features.actions} locale={locale}/>);
+  fireEvent.press(screen.getByRole('tab', { name: locale === 'ru' ? 'Предсказания' : 'Predictions' }));
+  expect(screen.getByRole('tab', { name: locale === 'ru' ? 'Предсказания' : 'Predictions' }).props.accessibilityState.selected).toBe(true);
+  fireEvent.press(screen.getByRole('tab', { name: locale === 'ru' ? 'Словарь' : 'Dictionary' }));
+  expect(close).toHaveBeenCalled();
+  fireEvent.press(screen.getByRole('tab', { name: locale === 'ru' ? 'Предсказания' : 'Predictions' }));
+  view.rerender(<ConnectedTogether controller={{ ...features.actions, predictions: undefined }} locale={locale}/>);
+  expect(screen.queryByRole('tab', { name: locale === 'ru' ? 'Предсказания' : 'Predictions' })).toBeNull();
+  expect(screen.getByRole('tab', { name: locale === 'ru' ? 'Словарь' : 'Dictionary' }).props.accessibilityState.selected).toBe(true);
+  act(() => features.resetOrdinary());
+  expect(features.actions.predictions.getSnapshot().draft).toBe('');
+  expect(features.actions.predictions.getSnapshot().reader).toBeNull();
+  f.set(null); act(() => features.sync());
+  expect(features.actions.predictions.getSnapshot().available).toBe(false);
+  expect(request).not.toHaveBeenCalled();
+});
