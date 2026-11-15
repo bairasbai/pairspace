@@ -370,3 +370,5 @@ one immutable pending command only; default-off, native acceptance not establish
 - No API/UI wiring. Not restored985e2bb, not accepted or production-ready.
 
 Prediction consent/refusal reconstruction: see docs/PREDICTION_POLICY_RECONSTRUCTION.md; domain-only, no API/UI.
+
+Prediction API/storage candidate: migration043, services/api/src/predictions*.ts and scoped integration tests; see reconstruction document. Not yet accepted.

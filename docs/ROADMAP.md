@@ -468,3 +468,5 @@ RU/EN mobile integration and full independent acceptance remain pending. See
 [PREDICTION_POLICY_RECONSTRUCTION](PREDICTION_POLICY_RECONSTRUCTION.md).
 
 Prediction second checkpoint adds explicit opening/refusal domain rules only; API/mobile integration and new exact FULL acceptance remain pending.
+
+Prediction API/storage candidate in separate branch: synthetic default-off loopback only, explicit body-free commands and separate read. Mobile and new exact acceptance pending.

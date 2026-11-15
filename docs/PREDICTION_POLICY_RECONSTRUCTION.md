@@ -79,3 +79,22 @@ bounded history, session/display generation and RU/EN UI remain NOT_IMPLEMENTED.
 This checkpoint must not inherit aggregate acceptance from `bd3df908`: it requires
 its own author and independent FULL on the new exact source. Focused tests are
 intermediate only. No original `985e2bb` files were recovered or overwritten.
+
+## API/storage candidate (separate work after domain checkpoint)
+
+New migration043 and synthetic default-off loopback route integrate the current
+reconstructed policy, not the unavailable original985e2bb. History is bounded at100
+including tombstones; sequence is SQL-only and never added to strict domain metadata.
+List/create/open/decline/remove ACKs are metadata-only. Text uses a separate explicit
+GET after current-session, current-couple epoch, consent and trusted-clock checks.
+Author can read own active text before release; refusal preserves author access.
+
+Mutation receipts store immutable applied metadata so replay can prove reachability
+and return current metadata without reenacting a stale operation. Fresh writes must
+roll back if authentication or calendar admissibility changes after blocking writes.
+A feature clock is injected only by trusted server/test code, never request input;
+it remains separate from actual session time. Default HTTP feature clock is db.now.
+
+This API candidate has no mobile controller/composer/reader or device verification.
+New focused and real PostgreSQL/HTTP checks plus BOTH new exact FULL are required;
+domain2d31808 results are historical and cannot accept this changed source.
