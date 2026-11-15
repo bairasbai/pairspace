@@ -474,3 +474,5 @@ Prediction API/storage candidate in separate branch: synthetic default-off loopb
 Prediction mobile candidate adds explicit scheduling and consent reader; new integration/full acceptance and real-device checks tracked separately.
 
 Native readiness after accepted91517f2: both offline prebuilds pass, not native builds. Missing Android SDK and macOS/Xcode, explicit preview IDs and development harness are the next bounded gates. See NATIVE_READINESS_2026_11_15.md.
+
+Android native checkpoint: assembleDebug x86_64 PASS; diagnostic Metro-dependent APK retained. Software emulator boot incomplete after450s; native runtime and iOS remain open. See ANDROID_BUILD_2026_11_15.md.

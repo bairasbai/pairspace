@@ -597,4 +597,4 @@ Real PG/HTTP/mobile scenarios added, first execution and both exact FULL still d
 Separate new WIP; accepted19/earlier WIPs unchanged. No native/two-device/production.
 
 ## Prediction reconstruction, 15 November 2026
-Native readiness after accepted91517f2: Android/iOS offline prebuild PASS only; missing SDK/Xcode/devices and explicit dev harness. See docs/NATIVE_READINESS_2026_11_15.md. No production/native claim.
+Android1762854 native assembleDebug x86_64 PASS; SDK licensed/installed, APK signature verified. Software emulator no boot_completed after450s; runtime/iOS unverified. See docs/ANDROID_BUILD_2026_11_15.md.

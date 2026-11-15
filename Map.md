@@ -376,3 +376,5 @@ Prediction API/storage candidate: migration043, services/api/src/predictions*.ts
 Prediction mobile candidate: predictions controller/state and PredictionsPanel/Reader, RU/EN copy; isolated from accepted API82e0399. See reconstruction document.
 
 Native readiness: offline Android/iOS prebuild passes; compilation/devices blocked by missing toolchains. See docs/NATIVE_READINESS_2026_11_15.md; default preview remains disconnected.
+
+Android native build evidence: docs/ANDROID_BUILD_2026_11_15.md. x86_64 debug APK compiles/signature verifies; emulator did not finish booting, runtime unverified.
