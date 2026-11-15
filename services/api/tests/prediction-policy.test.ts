@@ -167,3 +167,16 @@ describe('voluntary refusal', () => {
     expect(acknowledgePrediction(prediction, other, 'bad', 1, true)).toBeNull();
   });
 });
+
+
+describe('untrusted runtime values', () => {
+  it.each([['active'], ['removed'], { toString: () => 'active' }])('rejects coerced content state %#', contentState => {
+    expect(validPrediction({ ...prediction, contentState }, scope)).toBe(false);
+  });
+  it.each(['false', 'true', 1, {}, [], null, undefined])('requires literal confirmation true %#', input => {
+    const confirmation = input as boolean;
+    expect(acknowledgePrediction(prediction, other, due, 1, confirmation)).toBeNull();
+    expect(declinePrediction(prediction, other, due, 1, confirmation)).toBeNull();
+    expect(removePrediction(prediction, scope, 1, confirmation)).toBeNull();
+  });
+});

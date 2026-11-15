@@ -54,7 +54,7 @@ export function validPrediction(value: unknown, scope: PredictionScope): value i
     || value.coupleId !== scope.coupleId || value.membershipEpoch !== scope.membershipEpoch
     || ![value.authorId, value.recipientId].includes(scope.userId)
     || !instant(value.createdAt) || !instant(value.releaseAt) || value.releaseAt <= value.createdAt
-    || !canonicalZone(value.timezone) || !['active', 'removed'].includes(String(value.contentState))) return false;
+    || !canonicalZone(value.timezone) || (value.contentState !== 'active' && value.contentState !== 'removed')) return false;
   const schedule = parsePredictionSchedule({ localDate: value.localDate, localTime: value.localTime,
     timezone: value.timezone, offset: value.offset }, value.createdAt);
   if (!schedule || schedule.releaseAt !== value.releaseAt) return false;
@@ -73,7 +73,7 @@ export function mayReadPrediction(value: unknown, scope: PredictionScope, truste
 /** Explicit voluntary recipient opening. Only a separate authenticated read returns body. */
 export function acknowledgePrediction(value: unknown, scope: PredictionScope, trustedNow: string,
   expectedVersion: number, confirm: boolean): Prediction | null {
-  if (!confirm || !instant(trustedNow) || !validPrediction(value, scope)
+  if (confirm !== true || !instant(trustedNow) || !validPrediction(value, scope)
     || trustedNow < value.releaseAt || value.contentState !== 'active' || value.declinedAt !== null
     || scope.userId !== value.recipientId || value.openedAt !== null || value.version !== expectedVersion) return null;
   return { ...value, openedAt: trustedNow, version: value.version + 1 };
@@ -82,7 +82,7 @@ export function acknowledgePrediction(value: unknown, scope: PredictionScope, tr
 /** Refusal can occur while sealed; it is irreversible and never returns content. */
 export function declinePrediction(value: unknown, scope: PredictionScope, trustedNow: string,
   expectedVersion: number, confirm: boolean): Prediction | null {
-  if (!confirm || !instant(trustedNow) || !validPrediction(value, scope)
+  if (confirm !== true || !instant(trustedNow) || !validPrediction(value, scope)
     || trustedNow < value.createdAt || scope.userId !== value.recipientId
     || value.contentState !== 'active' || value.openedAt !== null || value.declinedAt !== null
     || value.version !== expectedVersion) return null;
@@ -92,7 +92,7 @@ export function declinePrediction(value: unknown, scope: PredictionScope, truste
 /** Logical removal is terminal; persistence must erase the body in the same transaction. */
 export function removePrediction(value: unknown, scope: PredictionScope,
   expectedVersion: number, confirm: boolean): Prediction | null {
-  if (!confirm || !validPrediction(value, scope) || scope.userId !== value.authorId
+  if (confirm !== true || !validPrediction(value, scope) || scope.userId !== value.authorId
     || value.contentState !== 'active' || value.version !== expectedVersion) return null;
   return { ...value, contentState: 'removed', version: value.version + 1 };
 }
