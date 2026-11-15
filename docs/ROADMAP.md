@@ -459,3 +459,10 @@ Dedicated realPG/HTTP/mobile cases are added but not yet executed at this checkp
 Exact author and independent FULL still required. Separate WIP; accepted19 unchanged.
 Native iOS/Android, two-device E2E, durable offline and production remain open.
 
+
+## Prediction policy reconstruction, 15 November 2026
+New pure-domain candidate based on the available shared-doings backup. Schedule,
+read eligibility, receipt/removal and metadata progression have 59 focused tests.
+This is not restored985e2bb and not an operational server/mobile feature. API, SQL,
+RU/EN mobile integration and full independent acceptance remain pending. See
+[PREDICTION_POLICY_RECONSTRUCTION](PREDICTION_POLICY_RECONSTRUCTION.md).

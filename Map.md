@@ -362,3 +362,9 @@ one immutable pending command only; default-off, native acceptance not establish
 - `services/api/tests/postgres/shared-doings*.mjs`: actual auth/HTTP/mobile and
   observed lock/expiry/revocation/CAS/capacity cases. Runtime and both FULL pending.
 - This checkpoint is synthetic/local; native/two-device and production not run.
+
+## Prediction policy reconstruction (15 November 2026)
+- `packages/domain/predictions/policy.ts`: pure schedule/visibility/receipt/removal policy.
+- `services/api/tests/prediction-policy.test.ts`: 59 focused synthetic cases.
+- `docs/PREDICTION_POLICY_RECONSTRUCTION.md`: provenance, limitations and next integration.
+- No API/UI wiring. Not restored985e2bb, not accepted or production-ready.
