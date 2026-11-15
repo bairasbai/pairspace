@@ -466,3 +466,5 @@ read eligibility, receipt/removal and metadata progression have 59 focused tests
 This is not restored985e2bb and not an operational server/mobile feature. API, SQL,
 RU/EN mobile integration and full independent acceptance remain pending. See
 [PREDICTION_POLICY_RECONSTRUCTION](PREDICTION_POLICY_RECONSTRUCTION.md).
+
+Prediction second checkpoint adds explicit opening/refusal domain rules only; API/mobile integration and new exact FULL acceptance remain pending.

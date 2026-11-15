@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parsePredictionSchedule, normalizePredictionBody, validPrediction, mayReadPrediction,
-  acknowledgePrediction, removePrediction, followsPrediction, type Prediction } from '../../../packages/domain/predictions/policy.ts';
+  acknowledgePrediction, declinePrediction, removePrediction, followsPrediction, type Prediction } from '../../../packages/domain/predictions/policy.ts';
 
 const author = '11111111-1111-4111-8111-111111111111';
 const recipient = '22222222-2222-4222-8222-222222222222';
@@ -12,7 +12,7 @@ const schedule = { localDate: '2026-11-16', localTime: '09:00', timezone: 'Europ
 const now = '2026-11-15T15:00:00.000Z';
 const prediction: Prediction = { id: '44444444-4444-4444-8444-444444444444', coupleId: couple,
   authorId: author, recipientId: recipient, membershipEpoch: 1, version: 1, createdAt: now,
-  ...schedule, releaseAt: due, contentState: 'active', openedAt: null };
+  ...schedule, releaseAt: due, contentState: 'active', openedAt: null, declinedAt: null };
 
 describe('prediction release schedule', () => {
   it('stores a canonical UTC snapshot without a default timezone', () => {
@@ -47,21 +47,21 @@ describe('prediction release schedule', () => {
 
 describe('prediction body bounds', () => {
   it('normalizes multiline Unicode without treating astral characters as two', () => {
-    expect(normalizePredictionBody('  e\u0301\r\ntext\rnext  ')).toBe('é\ntext\nnext');
+    expect(normalizePredictionBody('  e\u0301\r\ntext\r\nnext  ')).toBe('é\ntext\nnext');
     expect(normalizePredictionBody('😀'.repeat(2000))).toHaveLength(4000);
   });
-  it.each([null, '', ' \n ', 'a'.repeat(8001), 'a'.repeat(2001), '😀'.repeat(2001), '\ud800', '\udfff', 'a\ttext', 'a\u0000b', '\tsecret\t', '\u000bsecret\u000b', '\fsecret\f'])('rejects invalid text %#', body => {
+  it.each([null, '', ' \n ', '\rtext', 'text\r', 'a\rb', 'a'.repeat(8001), 'a'.repeat(2001), '😀'.repeat(2001), '\ud800', '\udfff', 'a\ttext', 'a\u0000b', '\tsecret\t', '\u000bsecret\u000b', '\fsecret\f'])('rejects invalid text %#', body => {
     expect(normalizePredictionBody(body)).toBeNull();
   });
 });
 
 describe('metadata and visibility', () => {
-  it('permits author immediately and recipient at exactly release instant, without receipt', () => {
+  it('permits author immediately but never silently opens for recipient', () => {
     expect(validPrediction(prediction, scope)).toBe(true);
     expect(mayReadPrediction(prediction, scope, now)).toBe(true);
     expect(mayReadPrediction(prediction, other, before)).toBe(false);
-    expect(mayReadPrediction(prediction, other, due)).toBe(true);
-    expect(mayReadPrediction(prediction, other, '2026-11-16T06:00:00.001Z')).toBe(true);
+    expect(mayReadPrediction(prediction, other, due)).toBe(false);
+    expect(mayReadPrediction(prediction, other, '2026-11-16T06:00:00.001Z')).toBe(false);
     expect(prediction.openedAt).toBeNull();
   });
   it.each([null, [], { ...prediction, body: 'do not leak' }, { ...prediction, id: 'bad' },
@@ -124,5 +124,46 @@ describe('explicit transitions and canonical history', () => {
       [prediction, { ...prediction, id: recipient }]]) {
       expect(followsPrediction(a, b, scope)).toBe(false);
     }
+  });
+});
+
+
+describe('voluntary refusal', () => {
+  const declined = { ...prediction, declinedAt: now, version: 2 };
+  it('allows explicit recipient refusal while sealed, without erasing author access', () => {
+    expect(declinePrediction(prediction, other, now, 1, true)).toEqual(declined);
+    expect(mayReadPrediction(declined, other, due)).toBe(false);
+    expect(mayReadPrediction(declined, scope, now)).toBe(true);
+    expect(acknowledgePrediction(declined, other, due, 2, true)).toBeNull();
+    expect(followsPrediction(prediction, declined, scope)).toBe(true);
+    expect(followsPrediction(declined, prediction, scope)).toBe(false);
+    expect(followsPrediction(declined, { ...declined, declinedAt: due }, scope)).toBe(false);
+    const removed = removePrediction(declined, scope, 2, true)!;
+    expect(removed.version).toBe(3);
+    expect(followsPrediction(declined, removed, scope)).toBe(true);
+    expect(mayReadPrediction(removed, scope, due)).toBe(false);
+    expect(followsPrediction({ ...prediction, contentState: 'removed', version: 2 }, removed, scope)).toBe(false);
+  });
+  it('fails closed on invalid state, role, consent, clock and CAS', () => {
+    for (const value of [null, declined, { ...prediction, openedAt: due, version: 2 },
+      { ...prediction, contentState: 'removed', version: 2 }]) {
+      expect(declinePrediction(value, other, due, 2, true)).toBeNull();
+    }
+    expect(declinePrediction(prediction, scope, due, 1, true)).toBeNull();
+    expect(declinePrediction(prediction, other, due, 1, false)).toBeNull();
+    expect(declinePrediction(prediction, other, due, 2, true)).toBeNull();
+    expect(declinePrediction(prediction, other, 'bad', 1, true)).toBeNull();
+    expect(declinePrediction(prediction, other, '2026-11-14T00:00:00.000Z', 1, true)).toBeNull();
+    for (const value of [{ ...declined, declinedAt: 'bad' }, { ...declined, declinedAt: '2026-11-14T00:00:00.000Z' },
+      { ...declined, openedAt: due }, { ...prediction, declinedAt: undefined }]) {
+      expect(validPrediction(value, scope)).toBe(false);
+    }
+  });
+  it('does not use a future opening after server clock rollback', () => {
+    const late = '2026-11-17T00:00:00.000Z';
+    const opened = acknowledgePrediction(prediction, other, late, 1, true)!;
+    expect(mayReadPrediction(opened, other, due)).toBe(false);
+    expect(mayReadPrediction(opened, other, late)).toBe(true);
+    expect(acknowledgePrediction(prediction, other, 'bad', 1, true)).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ export type Prediction = Readonly<{
   id: string; coupleId: string; authorId: string; recipientId: string;
   membershipEpoch: number; version: number; createdAt: string;
   releaseAt: string; timezone: string; localDate: string; localTime: string; offset: string; contentState: 'active' | 'removed';
-  openedAt: string | null;
+  openedAt: string | null; declinedAt: string | null;
 }>;
 export type PredictionScope = Readonly<{ coupleId: string; userId: string; membershipEpoch: number }>;
 export type PredictionSchedule = Readonly<{
@@ -37,7 +37,7 @@ export function parsePredictionSchedule(input: unknown, trustedNow: string): Pre
 }
 
 export function normalizePredictionBody(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > 8000
+  if (typeof value !== 'string' || value.length > 8000 || /\r(?!\n)/.test(value)
     || /[\uD800-\uDFFF]/u.test(value.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, ''))) return null;
   const normalized = value.normalize('NFC').replace(/\r\n?/g, '\n');
   if (/\p{Cc}/u.test(normalized.replace(/\n/g, ''))) return null;
@@ -48,7 +48,7 @@ export function normalizePredictionBody(value: unknown): string | null {
 /** Structural + scope gate only, NOT authentication/current membership verification. */
 export function validPrediction(value: unknown, scope: PredictionScope): value is Prediction {
   if (!record(value) || Object.keys(value).sort().join(',') !==
-    'authorId,contentState,coupleId,createdAt,id,localDate,localTime,membershipEpoch,offset,openedAt,recipientId,releaseAt,timezone,version'
+    'authorId,contentState,coupleId,createdAt,declinedAt,id,localDate,localTime,membershipEpoch,offset,openedAt,recipientId,releaseAt,timezone,version'
     || !uuid(scope.coupleId) || !uuid(scope.userId) || !epoch(scope.membershipEpoch)
     || !uuid(value.id) || !uuid(value.authorId) || !uuid(value.recipientId) || value.authorId === value.recipientId
     || value.coupleId !== scope.coupleId || value.membershipEpoch !== scope.membershipEpoch
@@ -59,21 +59,34 @@ export function validPrediction(value: unknown, scope: PredictionScope): value i
     timezone: value.timezone, offset: value.offset }, value.createdAt);
   if (!schedule || schedule.releaseAt !== value.releaseAt) return false;
   if (value.openedAt !== null && (!instant(value.openedAt) || value.openedAt < value.releaseAt)) return false;
-  return value.version === 1 + Number(value.openedAt !== null) + Number(value.contentState === 'removed');
+  if (value.declinedAt !== null && (!instant(value.declinedAt) || value.declinedAt < value.createdAt || value.openedAt !== null)) return false;
+  return value.version === 1 + Number(value.openedAt !== null || value.declinedAt !== null) + Number(value.contentState === 'removed');
 }
 
 /** No content is returned. The future API must authorize BEFORE fetching a body. */
 export function mayReadPrediction(value: unknown, scope: PredictionScope, trustedNow: string): boolean {
   return instant(trustedNow) && validPrediction(value, scope) && trustedNow >= value.createdAt
-    && value.contentState === 'active' && (value.authorId === scope.userId || trustedNow >= value.releaseAt);
+    && value.contentState === 'active' && (value.authorId === scope.userId
+      || (value.openedAt !== null && value.openedAt <= trustedNow && trustedNow >= value.releaseAt));
 }
 
-/** Receipt is not a gate for visibility; reading must never implicitly mutate it. */
+/** Explicit voluntary recipient opening. Only a separate authenticated read returns body. */
 export function acknowledgePrediction(value: unknown, scope: PredictionScope, trustedNow: string,
   expectedVersion: number, confirm: boolean): Prediction | null {
-  if (!confirm || !mayReadPrediction(value, scope, trustedNow) || !validPrediction(value, scope)
+  if (!confirm || !instant(trustedNow) || !validPrediction(value, scope)
+    || trustedNow < value.releaseAt || value.contentState !== 'active' || value.declinedAt !== null
     || scope.userId !== value.recipientId || value.openedAt !== null || value.version !== expectedVersion) return null;
   return { ...value, openedAt: trustedNow, version: value.version + 1 };
+}
+
+/** Refusal can occur while sealed; it is irreversible and never returns content. */
+export function declinePrediction(value: unknown, scope: PredictionScope, trustedNow: string,
+  expectedVersion: number, confirm: boolean): Prediction | null {
+  if (!confirm || !instant(trustedNow) || !validPrediction(value, scope)
+    || trustedNow < value.createdAt || scope.userId !== value.recipientId
+    || value.contentState !== 'active' || value.openedAt !== null || value.declinedAt !== null
+    || value.version !== expectedVersion) return null;
+  return { ...value, declinedAt: trustedNow, version: value.version + 1 };
 }
 
 /** Logical removal is terminal; persistence must erase the body in the same transaction. */
@@ -90,9 +103,10 @@ export function followsPrediction(old: unknown, next: unknown, scope: Prediction
   const fixed = ['id', 'coupleId', 'authorId', 'recipientId', 'membershipEpoch', 'createdAt', 'releaseAt', 'timezone', 'localDate', 'localTime', 'offset'] as const;
   if (!fixed.every(key => old[key] === next[key]) || next.version < old.version
     || (old.contentState === 'removed' && next.contentState !== 'removed')
-    || (old.openedAt !== null && old.openedAt !== next.openedAt)) return false;
+    || (old.openedAt !== null && old.openedAt !== next.openedAt)
+    || (old.declinedAt !== null && old.declinedAt !== next.declinedAt)) return false;
   // Once removed, no later receipt may appear, even with a higher version.
-  if (old.contentState === 'removed' && old.openedAt !== next.openedAt) return false;
+  if (old.contentState === 'removed' && (old.openedAt !== next.openedAt || old.declinedAt !== next.declinedAt)) return false;
   return next.version === old.version + Number(old.openedAt !== next.openedAt)
-    + Number(old.contentState !== next.contentState);
+    + Number(old.declinedAt !== next.declinedAt) + Number(old.contentState !== next.contentState);
 }

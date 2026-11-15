@@ -57,3 +57,25 @@ Focused tests: 59/59 pass, four coverage metrics 100% for new policy only.
 This is NOT whole-project coverage or full acceptance. No changed UI exists.
 No native build, real-device test, production deployment or E2EE claim.
 Independent review and aggregate verification results are reported separately.
+
+## Second checkpoint: explicit opening and refusal
+
+The initial candidate above followed only Tan Ata's time eligibility. Earlier Amio
+thread summaries recovered on 15 November additionally require voluntary opening
+and refusal, reader-generation fencing, replay proof and bare-CR rejection. Exact
+`ff1122a` contract documents remain inaccessible, so this is a bounded reconstruction,
+not a claim of byte-for-byte or complete semantic recovery.
+
+This checkpoint changes recipient read permission to require explicit `openedAt`,
+not merely time eligibility. Opening is due-only and CAS-protected. Refusal is
+recipient-only, explicit, irreversible, and allowed before release as a conservative
+adaptation; it prevents opening while preserving the author's own access. Opening
+and refusal are mutually exclusive. Author removal remains terminal and can follow
+either choice. A clock rollback before an already recorded opening denies recipient
+reading. Bare CR is rejected; CRLF is normalized. No body is held by this module.
+
+API persistence, fresh-write lock/clock checks, exactly-once operation replay,
+bounded history, session/display generation and RU/EN UI remain NOT_IMPLEMENTED.
+This checkpoint must not inherit aggregate acceptance from `bd3df908`: it requires
+its own author and independent FULL on the new exact source. Focused tests are
+intermediate only. No original `985e2bb` files were recovered or overwritten.

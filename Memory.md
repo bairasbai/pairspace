@@ -1,7 +1,5 @@
 # Память проекта: решения и доказательства
-
 Это версионируемая техническая память проекта, не хранилище личной переписки пользователей.
-
 ## 2026-11-10 — восстановленный пакет
 - Фактически проверенный main: ccbe5dfe013b29aee3ddfdcffd1705d51f3de4a2.
 - Сохранены веб-концепт Kimi и нейтральное ядро предыдущего 537601e.
@@ -598,11 +596,5 @@ preserved, applied-operation reachability now enforced with7 regressions PASS.
 Real PG/HTTP/mobile scenarios added, first execution and both exact FULL still due.
 Separate new WIP; accepted19/earlier WIPs unchanged. No native/two-device/production.
 
-## Resume from external snapshot, 15 November 2026
-User authorized continuing from available backup while prior Prediction985e2bb is
-inaccessible. Clone of6e12b894 is kept separate; no old history overwritten.
-New domain-only Prediction policy uses source sealed page/libtalk4822e213. Author
-reads own before due, recipient only due; receipt is not a visibility gate. Explicit
-zone/offset UTC snapshot, future local day, terminal removal and scope gates tested.
-59 focused cases pass with four100% new-file metrics; no API/UI or FULL acceptance.
-Compare recovered985e2bb before merging this independent partial reconstruction.
+## Prediction reconstruction, 15 November 2026
+Separate domain-only work from available6e12b894, not recovered985e2bb. Explicit opening/refusal, UTC scheduling, terminal removal, bare-CR rejection; 65 focused cases pass. API/UI and new exact FULL pending. See docs/PREDICTION_POLICY_RECONSTRUCTION.md; compare original before merge.

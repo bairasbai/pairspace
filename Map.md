@@ -368,3 +368,5 @@ one immutable pending command only; default-off, native acceptance not establish
 - `services/api/tests/prediction-policy.test.ts`: 59 focused synthetic cases.
 - `docs/PREDICTION_POLICY_RECONSTRUCTION.md`: provenance, limitations and next integration.
 - No API/UI wiring. Not restored985e2bb, not accepted or production-ready.
+
+Prediction consent/refusal reconstruction: see docs/PREDICTION_POLICY_RECONSTRUCTION.md; domain-only, no API/UI.
