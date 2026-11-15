@@ -374,3 +374,5 @@ Prediction consent/refusal reconstruction: see docs/PREDICTION_POLICY_RECONSTRUC
 Prediction API/storage candidate: migration043, services/api/src/predictions*.ts and scoped integration tests; see reconstruction document. Not yet accepted.
 
 Prediction mobile candidate: predictions controller/state and PredictionsPanel/Reader, RU/EN copy; isolated from accepted API82e0399. See reconstruction document.
+
+Native readiness: offline Android/iOS prebuild passes; compilation/devices blocked by missing toolchains. See docs/NATIVE_READINESS_2026_11_15.md; default preview remains disconnected.

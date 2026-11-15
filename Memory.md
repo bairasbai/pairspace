@@ -597,4 +597,4 @@ Real PG/HTTP/mobile scenarios added, first execution and both exact FULL still d
 Separate new WIP; accepted19/earlier WIPs unchanged. No native/two-device/production.
 
 ## Prediction reconstruction, 15 November 2026
-Separate reconstruction from6e12b894, not recovered985e2bb: API82e0399 bounded ACCEPT_API_STORAGE with bothFULL11PASS. New mobile candidate adds RU/EN scheduling, explicit consent/read and RAM lifecycle fences; new tests/acceptance pending. See docs/PREDICTION_POLICY_RECONSTRUCTION.md; compare original before merge.
+Native readiness after accepted91517f2: Android/iOS offline prebuild PASS only; missing SDK/Xcode/devices and explicit dev harness. See docs/NATIVE_READINESS_2026_11_15.md. No production/native claim.

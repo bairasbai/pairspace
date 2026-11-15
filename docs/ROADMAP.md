@@ -472,3 +472,5 @@ Prediction second checkpoint adds explicit opening/refusal domain rules only; AP
 Prediction API/storage candidate in separate branch: synthetic default-off loopback only, explicit body-free commands and separate read. Mobile and new exact acceptance pending.
 
 Prediction mobile candidate adds explicit scheduling and consent reader; new integration/full acceptance and real-device checks tracked separately.
+
+Native readiness after accepted91517f2: both offline prebuilds pass, not native builds. Missing Android SDK and macOS/Xcode, explicit preview IDs and development harness are the next bounded gates. See NATIVE_READINESS_2026_11_15.md.
