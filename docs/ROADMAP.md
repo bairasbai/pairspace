@@ -561,3 +561,9 @@ Synthetic UTC pin, authoritative pre-query today witness и post-lock auth пр�
 Этот статус заменяет предыдущий server WIP; historical evidence сохранён.
 Следующий отдельный gate: RU/EN client/disclosure, не принят в серверном этапе.
 Daily UI/native/devices/production/E2EE не приняты, GitHub не менялся.
+
+Daily Question synthetic mobile WIP from897bc05: RU/EN question/answer/history, explicit reads, historical-reveal disclosure, immutable retry and RAM lifecycle scrub. docs/DAILY_QUESTION_MOBILE_2026_11_16.md. No native/production/GitHub acceptance; heavy verification awaits coordinator GO.
+
+Daily mobile corrected WIP: empty older-page calendar descriptor now checked against retained slot pins and prior trusted today; focused62/62 PASS, no observed HTTP leak. DAILY_QUESTION_MOBILE_2026_11_16.md; heavy checks still NOT_RUN.
+
+Daily Question bounded synthetic mobile accepted b2f9fbf/treedeead6bed: both exact FULL11/11 sourceValid/clean, API1042/mobile3304/PG486; actual HTTP/auth/PG1/1 PASS. Reports/coverage and preserved assertion failure/calendar-pin hardening: docs/DAILY_QUESTION_MOBILE_2026_11_16.md. Explicit reads, RU/EN next-common-day disclosure and RAM lifecycle guards checked. Native/screenshots/devices NOT_RUN, no production/E2EE or mobile GitHub publication. Supersedes prior Daily mobile WIP markers only.

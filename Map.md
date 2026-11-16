@@ -404,3 +404,9 @@ Daily Question pure-domain accepted680b8ff/treef3757911: both serial FULL11/11 s
 Daily Question SQL/API WIP from f8a6fa8: scoped immutable day slots/zone pin, own answers/tombstones, metadata-only history/replay and pre-query partner-body gate. docs/DAILY_QUESTION_API_2026_11_16.md. No lifetime history cap; keyset100/page. No UI/production/GitHub acceptance; heavy verification awaits coordinated slot.
 
 Daily Question bounded SQL/API accepted6c811e0/treea76597dd: author/independent FULL11/11 sourceValid/clean, API1042/mobile3242/PG485; focused realPG+HTTP16/16. Exact reports/coverage and corrected SQL defense gap (not observed HTTP leak): docs/DAILY_QUESTION_API_2026_11_16.md. Synthetic configured UTC pin, current post-lock auth and canonical today witness before partner-body SELECT; keyset100/page without lifetime cap. No Daily UI/native/production/E2EE acceptance; no GitHub writes. Supersedes prior Daily server WIP status only.
+
+Daily Question synthetic mobile WIP from897bc05: RU/EN question/answer/history, explicit reads, historical-reveal disclosure, immutable retry and RAM lifecycle scrub. docs/DAILY_QUESTION_MOBILE_2026_11_16.md. No native/production/GitHub acceptance; heavy verification awaits coordinator GO.
+
+Daily mobile corrected WIP: empty older-page calendar descriptor now checked against retained slot pins and prior trusted today; focused62/62 PASS, no observed HTTP leak. DAILY_QUESTION_MOBILE_2026_11_16.md; heavy checks still NOT_RUN.
+
+Daily Question bounded synthetic mobile accepted b2f9fbf/treedeead6bed: both exact FULL11/11 sourceValid/clean, API1042/mobile3304/PG486; actual HTTP/auth/PG1/1 PASS. Reports/coverage and preserved assertion failure/calendar-pin hardening: docs/DAILY_QUESTION_MOBILE_2026_11_16.md. Explicit reads, RU/EN next-common-day disclosure and RAM lifecycle guards checked. Native/screenshots/devices NOT_RUN, no production/E2EE or mobile GitHub publication. Supersedes prior Daily mobile WIP markers only.
