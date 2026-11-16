@@ -101,3 +101,24 @@ export function removeCapsule(value: unknown, scope: CapsuleScope, trustedNow: s
     || value.version !== expectedVersion || value.version >= 2147483646) return null;
   return { ...value, contentState: 'removed', version: value.version + 1 };
 }
+
+/** Body-free receipt/current consistency. Storage enforces each intervening +1 transition. */
+export function followsCapsule(old: unknown, next: unknown, scope: CapsuleScope): boolean {
+  if (!validCapsule(old, scope) || !validCapsule(next, scope)) return false;
+  const fixed = ['id', 'coupleId', 'authorId', 'membershipEpoch', 'createdAt'] as const;
+  if (!fixed.every(key => old[key] === next[key]) || next.version < old.version || next.sealedAt < old.sealedAt) return false;
+  if (old.contentState === 'removed' || next.version === old.version) {
+    return Object.keys(old).every(key => old[key as keyof Capsule] === next[key as keyof Capsule]);
+  }
+  if (next.version === old.version + 1) {
+    if (next.contentState === 'removed') {
+      return (['sealedAt', 'releaseAt', 'localDate', 'localTime', 'timezone', 'offset'] as const)
+        .every(key => old[key] === next[key]);
+    }
+    return next.sealedAt < old.releaseAt;
+  }
+  // Two steps ending in removal leave room for exactly one reseal.
+  if (next.version === old.version + 2 && next.contentState === 'removed') return next.sealedAt < old.releaseAt;
+  // Multiple reseals may legitimately extend the previous deadline before it passes.
+  return true;
+}

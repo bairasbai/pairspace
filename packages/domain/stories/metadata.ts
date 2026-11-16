@@ -15,10 +15,13 @@ export function instant(v: unknown): v is string {
   return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v)
     && Number.isFinite(Date.parse(v)) && new Date(v).toISOString() === v;
 }
+// Runtime enum guard also protects typed consumers from malformed external values.
+const validStates = (v: unknown): boolean => record(v)
+  && typeof v.topicState === 'string' && ['active', 'removed'].includes(v.topicState)
+  && typeof v.storyState === 'string' && ['waiting', 'told', 'declined', 'withdrawn', 'story_removed'].includes(v.storyState);
 export function validStory(v: unknown, scope: StoryScope): v is StoryMetadata {
-  if (!record(v) || !['active', 'removed'].includes(String(v.topicState))
-    || !['waiting', 'told', 'declined', 'withdrawn', 'story_removed'].includes(String(v.storyState))) return false;
-  const active = v.topicState === 'active', timed = ['told', 'story_removed'].includes(String(v.storyState));
+  if (!record(v) || !validStates(v)) return false;
+  const active = v.topicState === 'active', timed = (v.storyState === 'told' || v.storyState === 'story_removed');
   if (!exact(v, 'id,coupleId,topicAuthorId,storyAuthorId,membershipEpoch,sequence,version,createdAt,topicState,storyState'
       + (active ? ',topic' : '') + (timed ? ',toldAt' : ''))
     || !uuid(v.id) || !uuid(v.topicAuthorId) || !uuid(v.storyAuthorId) || v.topicAuthorId === v.storyAuthorId
@@ -31,6 +34,7 @@ export function validStory(v: unknown, scope: StoryScope): v is StoryMetadata {
   return !timed || (instant(v.toldAt) && v.toldAt >= v.createdAt);
 }
 export function followsStory(old: StoryMetadata, next: StoryMetadata): boolean {
+  if (!validStates(old) || !validStates(next)) return false;
   if (!['id', 'coupleId', 'topicAuthorId', 'storyAuthorId', 'membershipEpoch', 'sequence', 'createdAt']
     .every(k => old[k as keyof StoryMetadata] === next[k as keyof StoryMetadata]) || next.version < old.version) return false;
   if (old.topicState === 'removed' && next.topicState !== 'removed') return false;

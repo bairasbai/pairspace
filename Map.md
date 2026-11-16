@@ -379,4 +379,28 @@ Native readiness: offline Android/iOS prebuild passes; compilation/devices block
 
 Android native build evidence: docs/ANDROID_BUILD_2026_11_15.md. x86_64 debug APK compiles/signature verifies; emulator did not finish booting, runtime unverified.
 
-Capsule domain accepted: owner-only time-lock, pre-due reseal/CAS and terminal removal; author/independent FULL11/11. API/UI not implemented; see docs/CAPSULE_POLICY_2026_11_16.md.
+Capsule domain accepted: owner-only time-lock, pre-due reseal/CAS and terminal removal; author/independent FULL11/11. Domain evidence: docs/CAPSULE_POLICY_2026_11_16.md; later API acceptance below.
+
+Capsule API accepted bounded slice: migration044, capsules.ts/capsules-http.ts, independent default-off loopback flag and PostgreSQL wait tests. Exact f81097cc author/independent FULL11/11, API642/mobile2808/PG450; see docs/CAPSULE_API_2026_11_16.md for both reports/coverage. GitHub publication awaits owner approval. No capsule UI/native/production/E2EE acceptance.
+
+Capsule synthetic client/controller/harness accepted: personal controller/proof/state, CapsulesPanel/Reader/RUENcopy and composition. Exact1e92e3a author/independent FULL11/11, API642/mobile2862/PG451. Submitted draft hidden before request, all payloads scrubbed on leave/background. Both reports/coverage: docs/CAPSULE_MOBILE_2026_11_16.md. Native runtime/screenshots/device NOT_RUN and not accepted; no E2EE/production claims. GitHub awaits owner approval.
+
+Dispute pure domain accepted67a606d/tree44350701: voluntary join/decline, nonbinding condition, calendar-zone set-once verdict and text-free terminal removal. Both FULL11/11, API789/mobile3009/PG451; reports/coverage/additional read-only review and future SQL gates in docs/DISPUTE_POLICY_2026_11_16.md. No Dispute SQL/API/UI or financial mechanics; no GitHub publication.
+
+Dispute API accepted bounded source8985a87/tree d9ced1a6: migration045, service/strictJSON/HTTP, body-free receipts/current replay and shared terms reader, default-off loopback. Both FULL11/11 sourceValid/clean; API872/mobile3028/PG468. Reports and exact coverage: docs/DISPUTE_API_2026_11_16.md. Inherited enum-coercion defect fixed; Stories/Doings/Hard validation fixes remain separate next stage, no observed HTTP leak. No UI/native/production/E2EE acceptance or GitHub publication.
+
+Strict enum-validation accepted22ceb7a/tree97a2f5fc: Stories/Doings/Hard primitive state guards and mirrored regressions. Both FULL11/11 sourceValid/clean, API880/mobile3036/PG468, original6repros rejected. Reports/coverage docs/ENUM_VALIDATION_2026_11_16.md. Runtime validation fix, no observed HTTP leak or global security/native/production acceptance. No GitHub writes.
+
+Dispute bounded synthetic mobile/controller/harness accepted ad06def/tree0bb59157: RU/EN panel/Together, explicit current read before join/resolve, immutable replay and privacy scrub. Both FULL11/11 sourceValid/clean; API880/mobile3093/PG469. Reports/coverage/read→join integration fix in docs/DISPUTE_MOBILE_2026_11_16.md. Native/screenshots/devices NOT_RUN and not accepted; no production/E2EE/GitHub acceptance.
+
+Authoritative current acceptance/recovery index: docs/RECOVERY_CHECKPOINT_2026_11_16.md. It supersedes historical WIP/pending labels for current status without rewriting their evidence; latest accepted code ad06def, prior docs2f7aafc. Source archives are not Git history; bundle/independent offline restore are separate pending packaging steps.
+
+Recovery initial904f965 independently restored from bundle:31commits/1303files, integrity and exact FULL11/11 PASS (ObuxpS), API880/mobile3093/PG469. Final docs-only update requires rebuilt32commit bundle and fresh-clone integrity only; no new FULL claimed on final docs HEAD. Details: docs/RECOVERY_CHECKPOINT_2026_11_16.md.
+
+Daily Question/daybook foundation WIP: pure daily-question catalogue/slot/answer policy only, cloned from verified bundle d5718a1. Stable original RU/EN prompts; today reciprocal/past historical reveal, own terminal removal. Contract/gates docs/DAILY_QUESTION_POLICY_2026_11_16.md; no SQL/API/UI or GitHub writes.
+
+Daily Question pure-domain accepted680b8ff/treef3757911: both serial FULL11/11 sourceValid/clean, API1029/mobile3242/PG469; reports and five preserved negative runs in docs/DAILY_QUESTION_POLICY_2026_11_16.md. Gregorian/sparse-array fixes verified. No Daily SQL/API/UI/native acceptance; pre-query authority and past-day reveal disclosure remain future gates. This update supersedes the earlier Daily WIP marker only.
+
+Daily Question SQL/API WIP from f8a6fa8: scoped immutable day slots/zone pin, own answers/tombstones, metadata-only history/replay and pre-query partner-body gate. docs/DAILY_QUESTION_API_2026_11_16.md. No lifetime history cap; keyset100/page. No UI/production/GitHub acceptance; heavy verification awaits coordinated slot.
+
+Daily Question bounded SQL/API accepted6c811e0/treea76597dd: author/independent FULL11/11 sourceValid/clean, API1042/mobile3242/PG485; focused realPG+HTTP16/16. Exact reports/coverage and corrected SQL defense gap (not observed HTTP leak): docs/DAILY_QUESTION_API_2026_11_16.md. Synthetic configured UTC pin, current post-lock auth and canonical today witness before partner-body SELECT; keyset100/page without lifetime cap. No Daily UI/native/production/E2EE acceptance; no GitHub writes. Supersedes prior Daily server WIP status only.

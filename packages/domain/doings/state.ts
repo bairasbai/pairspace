@@ -24,9 +24,12 @@ export function normalizeDoingTitle(v: unknown): string | null {
 }
 const positive = (v: number) => Number(v > 0);
 const within = (v: number, min: number, max: number) => v >= min && v <= max;
+// Runtime enum guard also protects typed consumers from malformed external values.
+const validStates = (v: unknown): boolean => record(v)
+  && typeof v.contentState === 'string' && ['active', 'removed'].includes(v.contentState)
+  && typeof v.decisionState === 'string' && ['invited', 'joined', 'declined', 'withdrawn'].includes(v.decisionState);
 export function validDoing(v: unknown, scope: DoingScope): v is SharedDoing {
-  if (!record(v) || !['active', 'removed'].includes(String(v.contentState))
-    || !['invited', 'joined', 'declined', 'withdrawn'].includes(String(v.decisionState))) return false;
+  if (!record(v) || !validStates(v)) return false;
   const active = v.contentState === 'active', joined = v.decisionState === 'joined';
   if (!exact(v, 'id,coupleId,authorId,recipientId,membershipEpoch,sequence,version,createdAt,contentState,decisionState'
     + (active ? ',title,kind,parts,authorAt' + (joined ? ',recipientAt' : '') : ''))
@@ -46,6 +49,7 @@ const signature = (d: SharedDoing) => JSON.stringify([d.id, d.coupleId, d.author
   d.sequence, d.version, d.createdAt, d.contentState, d.decisionState, ...(d.contentState === 'active'
     ? [d.title, d.kind, d.parts, d.authorAt, ...(d.decisionState === 'joined' ? [d.recipientAt] : [])] : [])]);
 export function followsDoing(old: SharedDoing, next: SharedDoing): boolean {
+  if (!validStates(old) || !validStates(next)) return false;
   if (!['id', 'coupleId', 'authorId', 'recipientId', 'membershipEpoch', 'sequence', 'createdAt']
     .every(k => old[k as keyof Identity] === next[k as keyof Identity]) || next.version < old.version) return false;
   if (next.version === old.version) return signature(old) === signature(next);
@@ -74,9 +78,9 @@ export function followsDoing(old: SharedDoing, next: SharedDoing): boolean {
   }
   return false;
 }
-export const completeDoing = (d: SharedDoing) => d.contentState === 'active' && d.decisionState === 'joined' && d.authorAt === d.parts && d.recipientAt === d.parts;
+export const completeDoing = (d: SharedDoing) => validStates(d) && d.contentState === 'active' && d.decisionState === 'joined' && d.authorAt === d.parts && d.recipientAt === d.parts;
 export function canAdvanceDoing(d: SharedDoing, actor: string): boolean {
-  return d.contentState === 'active' && d.decisionState !== 'declined'
+  return validStates(d) && d.contentState === 'active' && d.decisionState !== 'declined'
     && (actor === d.authorId ? d.authorAt < d.parts : actor === d.recipientId && d.decisionState === 'joined' && d.recipientAt < d.parts);
 }
 const bucket = (d: SharedDoing) => d.contentState === 'removed' ? 2 : d.decisionState === 'declined' || completeDoing(d) ? 1 : 0;

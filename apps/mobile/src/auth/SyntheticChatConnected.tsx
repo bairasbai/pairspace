@@ -25,7 +25,7 @@ import type { createSessionController } from './controller';
 import type { Locale } from '../copy';
 type CurrentSessionController = ReturnType<typeof createSessionController>;
 /** Older injected preview controllers may omit this new capability. Real composition supplies it. */
-export type SessionController = Omit<CurrentSessionController, 'stories' | 'hardQuestions' | 'sharedDoings' | 'predictions'> & Partial<Pick<CurrentSessionController, 'stories' | 'hardQuestions' | 'sharedDoings' | 'predictions'>>;
+export type SessionController = Omit<CurrentSessionController, 'stories' | 'hardQuestions' | 'sharedDoings' | 'predictions' | 'capsules' | 'disputes'> & Partial<Pick<CurrentSessionController, 'stories' | 'hardQuestions' | 'sharedDoings' | 'predictions' | 'capsules' | 'disputes'>>;
 export function SyntheticChatConnected({ controller, locale, ownsController = true, showCareSend = true }: { controller: SessionController; locale: Locale; ownsController?: boolean; showCareSend?: boolean }) {
   const view = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const reconciliation = controller.reconciliation;

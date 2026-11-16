@@ -16,6 +16,12 @@ import { createDayScaleHandler } from './day-scale-http.ts';
 import { createAsksHandler } from './asks-http.ts';
 import { createStoriesHandler } from './stories-http.ts';
 import { createSharedDoingsHandler } from './shared-doings-http.ts';
+import type { DailyQuestionClock, DailyQuestionTimezoneResolver } from './daily-questions.ts';
+import { createDailyQuestionsHandler } from './daily-questions-http.ts';
+import type { DisputeClock } from './disputes.ts';
+import { createDisputesHandler } from './disputes-http.ts';
+import type { CapsuleClock } from './capsules.ts';
+import { createCapsulesHandler } from './capsules-http.ts';
 import type { PredictionClock } from './predictions.ts';
 import { createPredictionsHandler } from './predictions-http.ts';
 import { createHardQuestionsHandler } from './hard-questions-http.ts';
@@ -79,6 +85,12 @@ export type ApiApplicationConfig = Readonly<{
   enableSyntheticHardQuestions?: boolean;
   /** Synthetic predictions; independent loopback-only opt-in. */
   enableSyntheticPredictions?: boolean;
+  /** Personal synthetic capsules; independent default-off loopback-only opt-in. */
+  enableSyntheticCapsules?: boolean;
+  /** Shared synthetic disputes; independent default-off loopback-only opt-in. */
+  enableSyntheticDisputes?: boolean;
+  /** Daily questions; independent default-off synthetic loopback-only opt-in. */
+  enableSyntheticDailyQuestions?: boolean;
   /** Synthetic shared doings; independent loopback-only opt-in. */
   enableSyntheticSharedDoings?: boolean;
   enableSyntheticDayScale?: boolean;
@@ -140,6 +152,9 @@ function validate(config: ApiApplicationConfig): void {
     || (config.enableSyntheticDayScale !== undefined && typeof config.enableSyntheticDayScale !== 'boolean')
     || (config.enableSyntheticAsks !== undefined && typeof config.enableSyntheticAsks !== 'boolean')
     || (config.enableSyntheticStories !== undefined && typeof config.enableSyntheticStories !== 'boolean')
+    || (config.enableSyntheticDailyQuestions !== undefined && typeof config.enableSyntheticDailyQuestions !== 'boolean')
+    || (config.enableSyntheticDisputes !== undefined && typeof config.enableSyntheticDisputes !== 'boolean')
+    || (config.enableSyntheticCapsules !== undefined && typeof config.enableSyntheticCapsules !== 'boolean')
     || (config.enableSyntheticPredictions !== undefined && typeof config.enableSyntheticPredictions !== 'boolean')
     || (config.enableSyntheticHardQuestions !== undefined && typeof config.enableSyntheticHardQuestions !== 'boolean')
     || (config.enableSyntheticSharedDoings !== undefined && typeof config.enableSyntheticSharedDoings !== 'boolean')
@@ -167,7 +182,7 @@ function validate(config: ApiApplicationConfig): void {
   }
   const base = new URL(config.baseURL);
   if ((base.protocol === 'http:' || config.enableSyntheticProfileProvisioning === true || config.enableSyntheticWaitingSpaceCreation === true
-    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true || config.enableSyntheticSharedSongs === true || config.enableSyntheticSharedMemories === true || config.enableSyntheticStems === true || config.enableSyntheticDayScale === true || config.enableSyntheticAsks === true || config.enableSyntheticStories === true || config.enableSyntheticHardQuestions === true || config.enableSyntheticPredictions === true || config.enableSyntheticSharedDoings === true || config.enableSyntheticLoveWords === true || config.enableSyntheticNotificationPreferences === true || config.enableSyntheticArrivalPlan === true || config.enableSyntheticPartings === true || config.enableSyntheticSharedDates === true || config.enableSyntheticSharedWishes === true || config.enableSyntheticSharedTasks === true || config.enableSyntheticBlindAnswers === true || config.enableSyntheticChatHistoryWindow === true || config.enableSyntheticChatReplies === true || config.enableSyntheticChatDeletion === true || config.enableSyntheticChatEditing === true || config.enableSyntheticChatVisibility === true || config.enableSyntheticChatReconciliation === true || config.enableSyntheticMornings === true || config.enableSyntheticMorningDiscussions === true || config.enableSyntheticMorningDiscussionEditing === true)
+    || config.enableSyntheticPairInvitations === true || config.enableSyntheticPairAcceptance === true || config.enableSyntheticCareSignals === true || config.enableSyntheticLetters === true || config.enableSyntheticPairLeave === true || config.enableSyntheticSharedSongs === true || config.enableSyntheticSharedMemories === true || config.enableSyntheticStems === true || config.enableSyntheticDayScale === true || config.enableSyntheticAsks === true || config.enableSyntheticStories === true || config.enableSyntheticHardQuestions === true || config.enableSyntheticDailyQuestions === true || config.enableSyntheticDisputes === true || config.enableSyntheticCapsules === true || config.enableSyntheticPredictions === true || config.enableSyntheticSharedDoings === true || config.enableSyntheticLoveWords === true || config.enableSyntheticNotificationPreferences === true || config.enableSyntheticArrivalPlan === true || config.enableSyntheticPartings === true || config.enableSyntheticSharedDates === true || config.enableSyntheticSharedWishes === true || config.enableSyntheticSharedTasks === true || config.enableSyntheticBlindAnswers === true || config.enableSyntheticChatHistoryWindow === true || config.enableSyntheticChatReplies === true || config.enableSyntheticChatDeletion === true || config.enableSyntheticChatEditing === true || config.enableSyntheticChatVisibility === true || config.enableSyntheticChatReconciliation === true || config.enableSyntheticMornings === true || config.enableSyntheticMorningDiscussions === true || config.enableSyntheticMorningDiscussionEditing === true)
     && !['127.0.0.1', '[::1]', 'localhost'].includes(base.hostname)) {
     throw new Error('invalid_api_configuration');
   }
@@ -175,8 +190,12 @@ function validate(config: ApiApplicationConfig): void {
 
 /** Construction creates no listener, migrations, mappings, accounts or environment-based credentials. */
 /** Trusted server dependency injection; never derive clocks from HTTP input or environment. */
-export function createApiApplication(config: ApiApplicationConfig, trustedDependencies: Readonly<{ predictionsClock?: PredictionClock }> = {}): ApiApplication {
+export function createApiApplication(config: ApiApplicationConfig, trustedDependencies: Readonly<{ predictionsClock?: PredictionClock; capsulesClock?: CapsuleClock; disputesClock?: DisputeClock; dailyQuestionsClock?: DailyQuestionClock; dailyQuestionsTimezone?: DailyQuestionTimezoneResolver }> = {}): ApiApplication {
   if (trustedDependencies.predictionsClock !== undefined && typeof trustedDependencies.predictionsClock !== 'function') throw new Error('invalid_api_configuration');
+  if (trustedDependencies.capsulesClock !== undefined && typeof trustedDependencies.capsulesClock !== 'function') throw new Error('invalid_api_configuration');
+  if (trustedDependencies.disputesClock !== undefined && typeof trustedDependencies.disputesClock !== 'function') throw new Error('invalid_api_configuration');
+  if (trustedDependencies.dailyQuestionsClock !== undefined && typeof trustedDependencies.dailyQuestionsClock !== 'function') throw new Error('invalid_api_configuration');
+  if (trustedDependencies.dailyQuestionsTimezone !== undefined && typeof trustedDependencies.dailyQuestionsTimezone !== 'function') throw new Error('invalid_api_configuration');
   validate(config);
   const origins = new Set(config.trustedOrigins);
   const limits = { ...config.limits };
@@ -211,6 +230,9 @@ export function createApiApplication(config: ApiApplicationConfig, trustedDepend
   const asks = config.enableSyntheticAsks === true ? createAsksHandler(bindSessionAuthority(database, authority)) : null;
   const stories = config.enableSyntheticStories === true ? createStoriesHandler(bindSessionAuthority(database, authority)) : null;
   const sharedDoings = config.enableSyntheticSharedDoings === true ? createSharedDoingsHandler(bindSessionAuthority(database, authority)) : null;
+  const dailyQuestions = config.enableSyntheticDailyQuestions === true ? createDailyQuestionsHandler(bindSessionAuthority(database, authority), trustedDependencies.dailyQuestionsClock, trustedDependencies.dailyQuestionsTimezone) : null;
+  const disputes = config.enableSyntheticDisputes === true ? createDisputesHandler(bindSessionAuthority(database, authority), trustedDependencies.disputesClock) : null;
+  const capsules = config.enableSyntheticCapsules === true ? createCapsulesHandler(bindSessionAuthority(database, authority), trustedDependencies.capsulesClock) : null;
   const predictions = config.enableSyntheticPredictions === true ? createPredictionsHandler(bindSessionAuthority(database, authority), trustedDependencies.predictionsClock) : null;
   const hardQuestions = config.enableSyntheticHardQuestions === true ? createHardQuestionsHandler(bindSessionAuthority(database, authority)) : null;
   const loveWords = config.enableSyntheticLoveWords === true ? createLoveWordsHandler(bindSessionAuthority(database, authority)) : null;
@@ -261,6 +283,9 @@ export function createApiApplication(config: ApiApplicationConfig, trustedDepend
         const isAsks = /^\/v1\/couples\/[^/]+\/asks(?:\/[^/]+\/(?:answer|skip|question))?$/.test(path) && asks !== null;
         const isStories = /^\/v1\/couples\/[^/]+\/stories(?:\/[^/]+\/(?:story|decline|topic|text))?$/.test(path) && stories !== null;
         const isSharedDoings = /^\/v1\/couples\/[^/]+\/shared-doings(?:\/[^/]+(?:\/(?:join|decline|advance))?)?$/.test(path) && sharedDoings !== null;
+        const isDailyQuestions = /^\/v1\/couples\/[^/]+\/daily-questions(?:\/answers\/[^/]+(?:\/text)?)?$/.test(path) && dailyQuestions !== null;
+        const isDisputes = /^\/v1\/couples\/[^/]+\/disputes(?:\/[^/]+(?:\/(?:join|decline|resolve|text))?)?$/.test(path) && disputes !== null;
+        const isCapsules = /^\/v1\/couples\/[^/]+\/capsules(?:\/[^/]+(?:\/text)?)?$/.test(path) && capsules !== null;
         const isPredictions = /^\/v1\/couples\/[^/]+\/predictions(?:\/[^/]+(?:\/(?:open|decline|text))?)?$/.test(path) && predictions !== null;
         const isHardQuestions = /^\/v1\/couples\/[^/]+\/hard-questions(?:\/[^/]+(?:\/(?:open|decline|text))?)?$/.test(path) && hardQuestions !== null;
         const isLoveWords = /^\/v1\/couples\/[^/]+\/love-words(?:\/[^/]+)?$/.test(path) && loveWords !== null;
@@ -281,18 +306,18 @@ export function createApiApplication(config: ApiApplicationConfig, trustedDepend
         const isAcceptance = ['/v1/pair-invitations/preview', '/v1/pair-invitations/accept'].includes(path) && acceptance !== null;
         const isLeave = path === '/v1/pair/leave' && leave !== null;
         const mutation = isLeave ? leave : isAcceptance ? acceptance : isInvitation ? invitation : isProfile ? profile : isWaiting ? waiting : null;
-        if (!isMorningDiscussionEditing && !isMorningDiscussions && !isMornings && !isReconciliation && !isVisibility && !isEditing && !isDeletion && !isReply && !isReplyWindow && !isWindow && !isAuth && !isChat && !isCare && !isLetters && !isTasks && !isWishes && !isStems && !isDayScale && !isAsks && !isStories && !isSharedDoings && !isHardQuestions && !isPredictions && !isLoveWords && !isNotificationPreferences && !isArrivalPlan && !isPartings && !isDates && !isSongs && !isMemories && !isBlind && !isContext && !mutation) return reject(404, 'not_found');
-        if (!isMorningDiscussionEditing && !isMornings && !isVisibility && !isEditing && !isDeletion && !isContext && !mutation && !isStems && !isDayScale && !isAsks && !isStories && !isSharedDoings && !isHardQuestions && !isPredictions && !isLoveWords && !isNotificationPreferences && !isArrivalPlan && !isPartingEdit && !isDateEdit && !isSongEdit && request.method !== 'GET' && request.method !== 'POST') return reject(405, 'method_not_allowed');
+        if (!isMorningDiscussionEditing && !isMorningDiscussions && !isMornings && !isReconciliation && !isVisibility && !isEditing && !isDeletion && !isReply && !isReplyWindow && !isWindow && !isAuth && !isChat && !isCare && !isLetters && !isTasks && !isWishes && !isStems && !isDayScale && !isAsks && !isStories && !isSharedDoings && !isHardQuestions && !isDailyQuestions && !isDisputes && !isCapsules && !isPredictions && !isLoveWords && !isNotificationPreferences && !isArrivalPlan && !isPartings && !isDates && !isSongs && !isMemories && !isBlind && !isContext && !mutation) return reject(404, 'not_found');
+        if (!isMorningDiscussionEditing && !isMornings && !isVisibility && !isEditing && !isDeletion && !isContext && !mutation && !isStems && !isDayScale && !isAsks && !isStories && !isSharedDoings && !isHardQuestions && !isDailyQuestions && !isDisputes && !isCapsules && !isPredictions && !isLoveWords && !isNotificationPreferences && !isArrivalPlan && !isPartingEdit && !isDateEdit && !isSongEdit && request.method !== 'GET' && request.method !== 'POST') return reject(405, 'method_not_allowed');
         const origin = request.headers.get('origin') ?? request.headers.get('expo-origin');
         if (!origin || !origins.has(origin)) return reject(403, 'forbidden');
         if (isContext) return context(request);
         if (mutation && !isInvitation && request.method !== 'POST') return mutation(request);
-        if ((request.method === 'POST' || (isStems && request.method === 'DELETE') || (isDayScale && (request.method === 'PUT' || request.method === 'DELETE')) || (isAsks && request.method === 'DELETE') || (isStories && request.method === 'DELETE') || (isSharedDoings && request.method === 'DELETE') || (isHardQuestions && request.method === 'DELETE') || (isPredictions && request.method === 'DELETE') || (isLoveWords && (request.method === 'PUT' || request.method === 'DELETE')) || (isMorningDiscussionEditing && (request.method==='PATCH' || request.method==='DELETE')) || ((isMornings || isNotificationPreferences || isArrivalPlan) && request.method === 'PUT') || (isVisibility && request.method==='PUT') || isEditing || (isDeletion && request.method === 'DELETE') || isPartingEdit || isDateEdit || isSongEdit || (isInvitation && request.method === 'DELETE'))
+        if ((request.method === 'POST' || (isStems && request.method === 'DELETE') || (isDayScale && (request.method === 'PUT' || request.method === 'DELETE')) || (isAsks && request.method === 'DELETE') || (isStories && request.method === 'DELETE') || (isSharedDoings && request.method === 'DELETE') || (isHardQuestions && request.method === 'DELETE') || (isDailyQuestions && (request.method === 'PUT' || request.method === 'DELETE')) || (isDisputes && request.method === 'DELETE') || (isCapsules && (request.method === 'PUT' || request.method === 'DELETE')) || (isPredictions && request.method === 'DELETE') || (isLoveWords && (request.method === 'PUT' || request.method === 'DELETE')) || (isMorningDiscussionEditing && (request.method==='PATCH' || request.method==='DELETE')) || ((isMornings || isNotificationPreferences || isArrivalPlan) && request.method === 'PUT') || (isVisibility && request.method==='PUT') || isEditing || (isDeletion && request.method === 'DELETE') || isPartingEdit || isDateEdit || isSongEdit || (isInvitation && request.method === 'DELETE'))
           && request.headers.get('content-type')?.split(';')[0].trim().toLowerCase() !== 'application/json') {
           return reject(415, 'unsupported_media_type');
         }
         const bounded = await limitRequestBody(request, limits);
-        const response = await (isStems ? stems!(bounded) : isDayScale ? dayScale!(bounded) : isAsks ? asks!(bounded) : isSharedDoings ? sharedDoings!(bounded) : isPredictions ? predictions!(bounded) : isHardQuestions ? hardQuestions!(bounded) : isStories ? stories!(bounded) : isLoveWords ? loveWords!(bounded) : isMorningDiscussionEditing ? morningDiscussionEditing!(bounded) : isMorningDiscussions ? morningDiscussions!(bounded) : isMornings ? mornings!(bounded) : isReconciliation ? reconciliation!(bounded) : isVisibility ? visibility!(bounded) : isEditing ? editing!(bounded) : isDeletion ? deletion!(bounded) : isReply ? replies!(bounded) : isReplyWindow ? replyWindow!(bounded) : isWindow ? chatWindow!(bounded) : mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : isCare ? care!(bounded) : isLetters ? letters!(bounded) : isBlind ? blind!(bounded) : isSongs ? songs!(bounded) : isMemories ? memories!(bounded) : isNotificationPreferences ? notificationPreferences!(bounded) : isArrivalPlan ? arrivalPlan!(bounded) : isPartings ? partings!(bounded) : isDates ? dates!(bounded) : isWishes ? wishes!(bounded) : isTasks ? tasks!(bounded) : chat(bounded));
+        const response = await (isStems ? stems!(bounded) : isDayScale ? dayScale!(bounded) : isAsks ? asks!(bounded) : isSharedDoings ? sharedDoings!(bounded) : isDailyQuestions ? dailyQuestions!(bounded) : isDisputes ? disputes!(bounded) : isCapsules ? capsules!(bounded) : isPredictions ? predictions!(bounded) : isHardQuestions ? hardQuestions!(bounded) : isStories ? stories!(bounded) : isLoveWords ? loveWords!(bounded) : isMorningDiscussionEditing ? morningDiscussionEditing!(bounded) : isMorningDiscussions ? morningDiscussions!(bounded) : isMornings ? mornings!(bounded) : isReconciliation ? reconciliation!(bounded) : isVisibility ? visibility!(bounded) : isEditing ? editing!(bounded) : isDeletion ? deletion!(bounded) : isReply ? replies!(bounded) : isReplyWindow ? replyWindow!(bounded) : isWindow ? chatWindow!(bounded) : mutation ? mutation(bounded) : isAuth ? auth.handler(bounded) : isCare ? care!(bounded) : isLetters ? letters!(bounded) : isBlind ? blind!(bounded) : isSongs ? songs!(bounded) : isMemories ? memories!(bounded) : isNotificationPreferences ? notificationPreferences!(bounded) : isArrivalPlan ? arrivalPlan!(bounded) : isPartings ? partings!(bounded) : isDates ? dates!(bounded) : isWishes ? wishes!(bounded) : isTasks ? tasks!(bounded) : chat(bounded));
         if (response.status >= 500) return reject(503, 'temporarily_unavailable');
         const headers = new Headers(response.headers);
         headers.set('cache-control', 'no-store'); headers.set('x-content-type-options', 'nosniff');

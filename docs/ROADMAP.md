@@ -477,4 +477,87 @@ Native readiness after accepted91517f2: both offline prebuilds pass, not native 
 
 Android native checkpoint: assembleDebug x86_64 PASS; diagnostic Metro-dependent APK retained. Software emulator boot incomplete after450s; native runtime and iOS remain open. See ANDROID_BUILD_2026_11_15.md.
 
-Capsule domain accepted: owner-only time-lock, pre-due reseal/CAS and terminal removal; author/independent FULL11/11. API/UI not implemented; see CAPSULE_POLICY_2026_11_16.md.
+Capsule domain accepted: owner-only time-lock, pre-due reseal/CAS and terminal removal; author/independent FULL11/11. Domain evidence: CAPSULE_POLICY_2026_11_16.md; later API acceptance below.
+
+### Личная капсула: ограниченный серверный срез принят, 16 ноября 2026
+API044/default-off loopback: exact f81097cc, author и independent FULL11/11 PASS,
+sourceValid/clean; API642/mobile2808/PG450. Оба отчёта и coverage приведены в
+CAPSULE_API_2026_11_16.md. Tombstone сохраняет единственный слот текущей эпохи.
+GitHub публикация ждёт явного разрешения владельца. Capsule UI, native, два
+устройства, production и E2EE этой приёмкой не подтверждены.
+
+### Личная капсула: принят ограниченный synthetic client/controller/harness
+Exact1e92e3a: author и independent FULL11/11 PASS, sourceValid/clean;
+API642/mobile2862/PG451. Оба отчёта и coverage: CAPSULE_MOBILE_2026_11_16.md.
+RU/EN подтверждения/CAS/чтение, очистка submitted draft до запроса и всех RAM
+payloads при уходе/фоне; immutable retry лишь на активном экране. Native runtime,
+скриншоты, устройства NOT_RUN и не приняты; production/E2EE не подтверждены.
+GitHub публикация по-прежнему ждёт явного разрешения владельца.
+
+### «Спор»: принят bounded pure domain
+Exact67a606d/tree44350701: author и independent FULL11/11 PASS, sourceValid/clean;
+API789/mobile3009/PG451. Одно утверждение, добровольное join до даты/выход до
+verdict, один исход по IANA-календарю и terminal удаление текста. Без денег/платежей.
+Оба отчёта, coverage, дополнительный read-only review и будущие SQL gates:
+DISPUTE_POLICY_2026_11_16.md. DisputeSQL/API/UI ещё отсутствуют и не приняты;
+существующие PG regression tests их не проверяют. GitHub ждёт разрешения владельца.
+
+### «Спор»: bounded server045 принят
+Metadata-only list/ACK/receipts, отдельное чтение условий обоими участниками,
+strict JSON duplicates и default-off loopback. Capacity100 включает tombstones.
+Exact8985a87: авторский и независимый FULL11/11 PASS, sourceValid/clean;
+API872/mobile3028/PG468, оба reports/coverage в DISPUTE_API_2026_11_16.md.
+Inherited domain enum bug исправлен. Следом отдельный strict validation fix
+Stories/Doings/Hard; это не наблюдавшиеся HTTP утечки. UI/native/production/E2EE
+не приняты. GitHub публикация ждёт разрешения владельца.
+
+### Strict enum validation: bounded fix принят
+Stories/Doings/Hard primitive state enums and fail-closed typed boolean consumers.
+No valid transition/product change. Exact22ceb7a: both FULL11/11 PASS, sourceValid/clean;
+API880/mobile3036/PG468, original6repros rejected; reports/coverage in linked doc.
+See ENUM_VALIDATION_2026_11_16.md. No observed HTTP leak or production acceptance.
+
+### «Спор»: bounded synthetic mobile/controller/harness принят
+RU/EN Together panel, explicit reader-bound consent, canonical retry/current replay,
+RAM lifecycle scrub. Exactad06def: both FULL11/11 PASS, sourceValid/clean;
+API880/mobile3093/PG469. Reports/coverage/read→join fix in DISPUTE_MOBILE_2026_11_16.md.
+Explicit current reader before join/resolve verified. Native/screenshots/devices NOT_RUN
+and not accepted; no production/E2EE/GitHub acceptance.
+
+### Recovery/current acceptance index
+Use RECOVERY_CHECKPOINT_2026_11_16.md as the authoritative current stage index,
+not historical WIP passages. Latest accepted code ad06def, prior docs2f7aafc.
+Docs-only recovery checkpoint; bundle packaging and independent offline restoration
+remain separate pending gates. No product/native/production/GitHub changes.
+
+Recovery initial904f965: independent bundle-only restore integrity + FULL11/11 PASS,
+sourceValid/clean (ObuxpS), API880/mobile3093/PG469. Final docs-only bundle rebuild
+(32commits) and independent fresh-clone integrity pending; no second FULL planned.
+
+### Вопрос дня: pure-domain WIP
+Stable versioned original RU/EN catalogue, common trusted day snapshot and answer
+policy; today reciprocal visibility, past historical reveal, voluntary skip, own
+terminal removal. DAILY_QUESTION_POLICY_2026_11_16.md defines adaptations/disclosure.
+No SQL/API/UI/full daybook yet; exact verification and independent acceptance pending.
+
+### Вопрос дня: bounded pure domain принят
+Exact680b8ff/treef3757911: оба serial FULL11/11 PASS, sourceValid/clean;
+API1029/mobile3242/PG469. DAILY_QUESTION_POLICY_2026_11_16.md contains both reports,
+coverage and preserved5negative runs. Earlier WIP marker is historical.
+Daily SQL/API/UI/native NOT_RUN; future pre-query authority and past-day visibility
+disclosure are required, not implemented. No new FULL on the docs-only checkpoint.
+
+### Вопрос дня: bounded SQL/API WIP
+Server-only immutable daily slot/zone pin, terminal own answers, pre-query body gate,
+CAS/idempotency and keyset history100/page without lifetimecap. Contract and gates:
+DAILY_QUESTION_API_2026_11_16.md. Heavy FULL/realPG waits coordination permission;
+no UI/native/production/GitHub changes or acceptance.
+
+### Вопрос дня: bounded SQL/API принято
+Exact6c811e0/treea76597dd, оба FULL11/11 sourceValid/clean; API1042/mobile3242/PG485.
+Focused realPG+official HTTP16/16. Reports/coverage: DAILY_QUESTION_API_2026_11_16.md.
+SQL current-scope defense gap исправлен; наблюдавшаяся HTTP-утечка не утверждается.
+Synthetic UTC pin, authoritative pre-query today witness и post-lock auth проверены.
+Этот статус заменяет предыдущий server WIP; historical evidence сохранён.
+Следующий отдельный gate: RU/EN client/disclosure, не принят в серверном этапе.
+Daily UI/native/devices/production/E2EE не приняты, GitHub не менялся.

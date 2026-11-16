@@ -12,9 +12,12 @@ export function instant(v: unknown): v is string {
   return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(v)
     && Number.isFinite(Date.parse(v)) && new Date(v).toISOString() === v;
 }
+// Runtime enum guard also protects typed consumers from malformed external values.
+const validStates = (v: unknown): boolean => record(v)
+  && typeof v.contentState === 'string' && ['active', 'removed'].includes(v.contentState)
+  && typeof v.decisionState === 'string' && ['sealed', 'opened', 'declined', 'withdrawn'].includes(v.decisionState);
 export function validQuestion(v: unknown, scope: HardScope): v is HardQuestion {
-  if (!record(v) || !['active', 'removed'].includes(String(v.contentState))
-    || !['sealed', 'opened', 'declined', 'withdrawn'].includes(String(v.decisionState))) return false;
+  if (!record(v) || !validStates(v)) return false;
   const active = v.contentState === 'active', opened = v.decisionState === 'opened';
   if (!exact(v, 'id,coupleId,authorId,recipientId,membershipEpoch,sequence,version,createdAt,contentState,decisionState' + (opened ? ',openedAt' : ''))
     || !uuid(v.id) || !uuid(v.authorId) || !uuid(v.recipientId) || v.authorId === v.recipientId
@@ -25,6 +28,7 @@ export function validQuestion(v: unknown, scope: HardScope): v is HardQuestion {
   return v.version === version && (!opened || (instant(v.openedAt) && v.openedAt >= v.createdAt));
 }
 export function followsQuestion(old: HardQuestion, next: HardQuestion): boolean {
+  if (!validStates(old) || !validStates(next)) return false;
   if (!['id', 'coupleId', 'authorId', 'recipientId', 'membershipEpoch', 'sequence', 'createdAt']
     .every(k => old[k as keyof HardQuestion] === next[k as keyof HardQuestion]) || next.version < old.version) return false;
   if (old.contentState === 'removed' && next.contentState !== 'removed') return false;
@@ -36,4 +40,4 @@ export function followsQuestion(old: HardQuestion, next: HardQuestion): boolean 
   return next.version === old.version + steps && (steps > 0 || Object.keys(old).every(k => old[k as keyof HardQuestion] === next[k as keyof HardQuestion]));
 }
 export const orderQuestions = (a: HardQuestion, b: HardQuestion) => Number(b.decisionState === 'sealed') - Number(a.decisionState === 'sealed') || b.sequence - a.sequence;
-export const canReadQuestion = (q: HardQuestion, actor: string) => q.contentState === 'active' && (q.authorId === actor || (q.recipientId === actor && q.decisionState === 'opened'));
+export const canReadQuestion = (q: HardQuestion, actor: string) => validStates(q) && q.contentState === 'active' && (q.authorId === actor || (q.recipientId === actor && q.decisionState === 'opened'));
