@@ -597,4 +597,4 @@ Real PG/HTTP/mobile scenarios added, first execution and both exact FULL still d
 Separate new WIP; accepted19/earlier WIPs unchanged. No native/two-device/production.
 
 ## Prediction/native and capsule continuation, 15–16 November 2026
-Android1762854 native assembleDebug x86_64 PASS; SDK licensed/installed, APK signature verified. Software emulator no boot_completed after450s; runtime/iOS unverified. See docs/ANDROID_BUILD_2026_11_15.md. Capsule policy is a new unaccepted domain-only slice; see docs/CAPSULE_POLICY_2026_11_16.md.
+Android1762854 native assembleDebug x86_64 PASS; SDK licensed/installed, APK signature verified. Software emulator no boot_completed after450s; runtime/iOS unverified. See docs/ANDROID_BUILD_2026_11_15.md. Capsule domain d5fdc14 accepted via tree-equivalent b951a5e author/independent FULL11/11; API/UI not implemented; see docs/CAPSULE_POLICY_2026_11_16.md.

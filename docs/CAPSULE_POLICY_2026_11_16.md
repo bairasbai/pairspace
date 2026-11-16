@@ -1,6 +1,6 @@
 # Personal time capsule: domain candidate, 16 November 2026
 
-Status: NOT ACCEPTED. Pure policy only, not an operational capsule feature.
+Status: ACCEPTED DOMAIN SLICE. Pure policy only, not an operational capsule feature.
 Based on restored Library v8 / GitHub fdaa9c59da6836351222f2de553ca22056742649.
 This work does not restore the historical missing prediction commit985e2bb.
 
@@ -63,3 +63,26 @@ Independent review reproduced two invalid metadata cases: resealed+removed with
 insufficient version, and active metadata at the removal-only version ceiling.
 Both now fail closed with regressions in both suites. Pre-fix FULL runs remain
 non-acceptance evidence; final source requires fresh FULL verification.
+
+## Exact-source acceptance
+
+Author and independent FULL each passed11/11 on local
+b951a5e5aff84dfc9d291e1141242db9aa08cf19, sourceValid:true. Each executed627 API/domain,
+2789 mobile and434 real PostgreSQL tests, safety, lint/typecheck and iOS/Android
+JS export. All four aggregate coverage metrics are at least90%; the new policy
+focused tests cover100% of all four metrics in both API and mobile engines.
+
+Published application candidate:
+https://github.com/bairasbai/pairspace/commit/d5fdc14fe0e88dc73a7055f05c17a643f42c25c6
+Its tree f6fe76ae23c876770bdc315c7bbda84c97bdc3ae equals the tested local tree across
+1236 tracked files, independently verified. Different commit IDs reflect the
+recovered local history, not different source bytes. No GitHub check runs exist
+for that candidate; these are cloud execution results, not GitHub CI success.
+
+The first pre-fix FULLs were interrupted exit130; their reports are incomplete,
+not PASS. An independent retry with symlinked dependencies completed9/11 but failed
+PostgreSQL's package-local path check and Metro resolution. Copying the same locked
+dependencies into that isolated checkout fixed the setup; no guard or source was
+relaxed. A fresh full run then passed. Earlier failure evidence is retained.
+This documentation update records those runs without claiming another full run on
+its documentation-only commit. No API, UI, native or production acceptance follows.

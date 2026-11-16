@@ -477,4 +477,4 @@ Native readiness after accepted91517f2: both offline prebuilds pass, not native 
 
 Android native checkpoint: assembleDebug x86_64 PASS; diagnostic Metro-dependent APK retained. Software emulator boot incomplete after450s; native runtime and iOS remain open. See ANDROID_BUILD_2026_11_15.md.
 
-Capsule domain candidate: owner-only time-lock, pre-due reseal/CAS and terminal removal. API/UI not implemented; see CAPSULE_POLICY_2026_11_16.md.
+Capsule domain accepted: owner-only time-lock, pre-due reseal/CAS and terminal removal; author/independent FULL11/11. API/UI not implemented; see CAPSULE_POLICY_2026_11_16.md.
