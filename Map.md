@@ -378,3 +378,5 @@ Prediction mobile candidate: predictions controller/state and PredictionsPanel/R
 Native readiness: offline Android/iOS prebuild passes; compilation/devices blocked by missing toolchains. See docs/NATIVE_READINESS_2026_11_15.md; default preview remains disconnected.
 
 Android native build evidence: docs/ANDROID_BUILD_2026_11_15.md. x86_64 debug APK compiles/signature verifies; emulator did not finish booting, runtime unverified.
+
+Capsule domain candidate: owner-only time-lock, pre-due reseal/CAS and terminal removal. API/UI not implemented; see docs/CAPSULE_POLICY_2026_11_16.md.

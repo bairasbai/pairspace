@@ -476,3 +476,5 @@ Prediction mobile candidate adds explicit scheduling and consent reader; new int
 Native readiness after accepted91517f2: both offline prebuilds pass, not native builds. Missing Android SDK and macOS/Xcode, explicit preview IDs and development harness are the next bounded gates. See NATIVE_READINESS_2026_11_15.md.
 
 Android native checkpoint: assembleDebug x86_64 PASS; diagnostic Metro-dependent APK retained. Software emulator boot incomplete after450s; native runtime and iOS remain open. See ANDROID_BUILD_2026_11_15.md.
+
+Capsule domain candidate: owner-only time-lock, pre-due reseal/CAS and terminal removal. API/UI not implemented; see CAPSULE_POLICY_2026_11_16.md.

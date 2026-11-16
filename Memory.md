@@ -596,5 +596,5 @@ preserved, applied-operation reachability now enforced with7 regressions PASS.
 Real PG/HTTP/mobile scenarios added, first execution and both exact FULL still due.
 Separate new WIP; accepted19/earlier WIPs unchanged. No native/two-device/production.
 
-## Prediction reconstruction, 15 November 2026
-Android1762854 native assembleDebug x86_64 PASS; SDK licensed/installed, APK signature verified. Software emulator no boot_completed after450s; runtime/iOS unverified. See docs/ANDROID_BUILD_2026_11_15.md.
+## Prediction/native and capsule continuation, 15–16 November 2026
+Android1762854 native assembleDebug x86_64 PASS; SDK licensed/installed, APK signature verified. Software emulator no boot_completed after450s; runtime/iOS unverified. See docs/ANDROID_BUILD_2026_11_15.md. Capsule policy is a new unaccepted domain-only slice; see docs/CAPSULE_POLICY_2026_11_16.md.
